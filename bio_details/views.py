@@ -1,0 +1,2017 @@
+from django.shortcuts import render, redirect
+from .models import Member, Product, Cart, CartItem, Order, OrderItem, Invoice, InvoiceItem
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
+from django.core.paginator import Paginator
+from datetime import datetime
+from .models import Invoice, InvoiceItem
+from decimal import Decimal
+from django.http import JsonResponse
+from django.db import models
+import json
+from .currency_utils import convert_currency, get_currency_info, COUNTRY_CURRENCY_MAP, get_live_exchange_rates
+
+def members(request):
+    if request.method == "POST":
+        # Get form data
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        cpassword = request.POST.get('cpassword')
+        phone = request.POST.get('phone')
+        
+        # Validation
+        if not all([name, email, password, cpassword, phone]):
+            messages.error(request, "Please fill all required fields!")
+            return render(request, "main_content.html")
+            
+        if password != cpassword:
+            messages.error(request, "Passwords do not match!")
+            return render(request, "main_content.html")
+        
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "Email already exists!")
+            return render(request, "main_content.html")
+        
+        if User.objects.filter(username=name).exists():
+            messages.error(request, "Username already exists!")
+            return render(request, "main_content.html")
+        
+        try:
+            # Create user
+            user = User.objects.create_user(
+                username=name,
+                email=email,
+                password=password
+            )
+            
+            # Create member profile
+            member = Member.objects.create(
+                user=user,
+                phone=phone,
+                designation=request.POST.get('designation'),
+                address1=request.POST.get('address1'),
+                city=request.POST.get('city'),
+                state=request.POST.get('state'),
+                pincode=request.POST.get('pincode'),
+                date_of_birth=request.POST.get('date_of_birth') or None,
+                gender=request.POST.get('gender'),
+                account_type=request.POST.get('account_type'),
+                bank_name=request.POST.get('bank_name'),
+                ifsc_code=request.POST.get('ifsc_code'),
+                account_number=request.POST.get('account_number'),
+                branch_loction=request.POST.get('branch_location'),
+                pan_num=request.POST.get('pan_num')
+            )
+            
+            # Handle profile picture
+            if request.FILES.get('profile_pic'):
+                member.profile_pic = request.FILES.get('profile_pic')
+                member.save()
+            
+            messages.success(request, f"Employee {name} registered successfully with ID: {member.emp_id}")
+            if request.user.is_superuser:
+                return redirect("bio_details:table")
+            else:
+                return redirect("bio_details:login")
+            
+        except Exception as e:
+            messages.error(request, f"Registration failed: {str(e)}")
+            return render(request, "main_content.html")
+    
+    return render(request, "main_content.html")
+
+
+
+def dashboard(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    total_employees = Member.objects.count()
+    active_employees = Member.objects.filter(account_status=True).count()
+    inactive_employees = Member.objects.filter(account_status=False).count()
+    
+    total_products = Product.objects.count()
+    available_products = Product.objects.filter(current_stock__gt=0).count()
+    out_of_stock_products = Product.objects.filter(current_stock=0).count()
+    
+    # Order counts based on user type
+    if request.user.is_superuser:
+        # Super admin sees all orders
+        total_orders = Order.objects.count()
+        paid_orders = Invoice.objects.filter(payment_status='paid').count()
+        pending_orders = Invoice.objects.filter(payment_status='pending').count()
+    else:
+        # Normal user sees only their own orders
+        total_orders = Order.objects.filter(user=request.user).count()
+        paid_orders = Invoice.objects.filter(order__user=request.user, payment_status='paid').count()
+        pending_orders = Invoice.objects.filter(order__user=request.user, payment_status='pending').count()
+    
+    context = {
+        'total_employees': total_employees,
+        'active_employees': active_employees,
+        'inactive_employees': inactive_employees,
+        'total_products': total_products,
+        'available_products': available_products,
+        'out_of_stock_products': out_of_stock_products,
+        'total_orders': total_orders,
+        'completed_orders': paid_orders,
+        'pending_orders': pending_orders
+    }
+    
+    return render(request, "dashboard.html", context)
+
+
+
+
+
+def login_page(request):
+
+    if request.user.is_authenticated:
+        return redirect('bio_details:dashboard')
+
+    if request.method == "POST":
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+
+        try:
+            # check email exists
+            user_obj = User.objects.get(email=email)
+
+            # check password
+            user = authenticate(request, username=user_obj.username, password=password)
+
+            if not User.objects.filter(email=email).exists():
+                messages.error(request,"Email not registered")
+
+            if user is not None:
+                login(request, user)
+                messages.success(request, "Login successful")
+                return redirect('bio_details:dashboard')
+            else:
+                messages.error(request, "Incorrect password")
+                return render(request, "login.html", {"email": email})
+
+        except User.DoesNotExist:
+            messages.error(request, "Email not found")
+            return render(request, "login.html", {"email": email})
+
+    return render(request, "login.html")
+
+def logout_view(request):
+    logout(request)
+    return redirect('bio_details:login')
+
+def table(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    search = request.GET.get('search')
+    per_page = request.GET.get('per_page', 5) 
+    try:
+        per_page = int(per_page)
+    except ValueError:
+        per_page = 5
+    
+    members = Member.objects.all().order_by('id')  # Ensure consistent ordering
+
+    if search:
+        members = members.filter(user__username__icontains=search)
+
+    paginator = Paginator(members, per_page) 
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, "tables.html", {"page_obj": page_obj, "members": page_obj})
+
+
+def delete_member(request, id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    member = Member.objects.get(id=id)
+    username = member.user.username
+    member.account_status = False
+    member.save()
+    return redirect("bio_details:table")
+
+def rewrite_member(request, emp_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    member = Member.objects.get(emp_id=emp_id)
+    if request.method == "POST":
+        member.user.username = request.POST.get('name')
+        member.user.email = request.POST.get('email')
+        member.user.save()
+        member.phone = request.POST.get('phone')
+        member.designation = request.POST.get('designation')
+        member.address1 = request.POST.get('address1')
+        member.city = request.POST.get('city')
+        member.state = request.POST.get('state')
+        member.pincode = request.POST.get('pincode')
+        member.date_of_birth = request.POST.get('date_of_birth')
+        member.gender = request.POST.get('gender')
+        member.account_type = request.POST.get('account_type')
+        member.bank_name = request.POST.get('bank_name')
+        member.ifsc_code = request.POST.get('ifsc_code')
+        member.account_number = request.POST.get('account_number')
+        member.branch_loction = request.POST.get('branch_loction')
+        member.pan_num = request.POST.get('pan_num')
+        member.account_status = bool(int(request.POST.get('account_status', '1')))
+        if request.FILES.get('profile_pic'):
+            member.profile_pic = request.FILES.get('profile_pic')
+        member.save()
+        messages.success(request, "Member updated successfully")
+        return redirect('/table/?updated=success')
+    return render(request, "rewrite.html", {"member": member})
+
+
+
+
+def product_management(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    search = request.GET.get('search')
+    per_page = request.GET.get('per_page', 5)  
+    try:
+        per_page = int(per_page)
+    except ValueError:
+        per_page = 5
+    
+    products = Product.objects.all().order_by('created_at')
+
+    if search:
+        products = products.filter(name__icontains=search)
+
+    paginator = Paginator(products, per_page) 
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, "product_table.html", {"page_obj": page_obj, "products": page_obj})
+
+def product_form(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    from .models import Brand, Category
+    brands = Brand.objects.all()
+    categories = Category.objects.all()
+    
+    if request.method == "POST":
+        try:
+            # Get or create brand
+            brand_name = request.POST.get('brand')
+            brand, created = Brand.objects.get_or_create(name=brand_name)
+            
+            # Get or create category
+            category_name = request.POST.get('category')
+            category, created = Category.objects.get_or_create(name=category_name)
+            
+            product = Product.objects.create(
+                name=request.POST.get('name'),
+                brand=brand,
+                category=category,
+                description=request.POST.get('description', ''),
+                rate=request.POST.get('price'),
+                discount=request.POST.get('discount', 5.00),
+                min_stock=request.POST.get('min_stock', 0),
+                current_stock=request.POST.get('current_stock'),
+            )
+            
+            if request.FILES.get('product_image'):
+                product.product_image = request.FILES.get('product_image')
+                product.save()
+            
+            messages.success(request, f"Product {product.name} created successfully with ID: {product.product_id}")
+            return redirect('bio_details:product_management')
+            
+        except Exception as e:
+            messages.error(request, f"Error creating product: {str(e)}")
+    
+    return render(request, "product_form.html", {'brands': brands, 'categories': categories})
+
+
+
+def product_rewrite(request, product_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    product = Product.objects.get(product_id=product_id)
+    from .models import Brand, Category
+    brands = Brand.objects.all()
+    categories = Category.objects.all()
+    
+    if request.method == "POST":
+        try:
+            # Get or create brand
+            brand_name = request.POST.get('brand')
+            brand, created = Brand.objects.get_or_create(name=brand_name)
+            
+            # Get or create category
+            category_name = request.POST.get('category')
+            category, created = Category.objects.get_or_create(name=category_name)
+            
+            # Update product
+            product.name = request.POST.get('name')
+            product.brand = brand
+            product.category = category
+            product.description = request.POST.get('description', '')
+            product.rate = request.POST.get('price')
+            product.discount = request.POST.get('discount', 5.00)
+            product.min_stock = request.POST.get('min_stock', 0)
+            product.current_stock = request.POST.get('current_stock')
+            
+            if request.FILES.get('product_image'):
+                product.product_image = request.FILES.get('product_image')
+            
+            product.save()
+            
+            messages.success(request, f"Product {product.name} updated successfully!")
+            return redirect('/product/?updated=success')
+            
+        except Exception as e:
+            messages.error(request, f"Error updating product: {str(e)}")
+    
+    return render(request, "product_rewrite.html", {"product": product, 'brands': brands, 'categories': categories})
+
+
+
+def product_view(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    products = Product.objects.all().order_by('created_at')
+    
+    # Get selected currency from session
+    selected_currency = request.session.get('selected_currency', 'IN')
+    
+    # Get currency object
+    from .models import Currency, Country
+    try:
+        country_obj = Country.objects.get(code=selected_currency, is_active=True)
+        currency_obj = Currency.objects.get(country=country_obj, is_active=True)
+        currency_symbol = currency_obj.symbol
+    except (Currency.DoesNotExist, Country.DoesNotExist):
+        country_obj = Country.objects.get(code='IN', is_active=True)
+        currency_obj = Currency.objects.get(country=country_obj, is_active=True)
+        currency_symbol = currency_obj.symbol
+        selected_currency = 'IN'
+    
+    # Get all active currencies for dropdown
+    currencies = Currency.objects.filter(is_active=True).select_related('country').order_by('name')
+    
+    paginator = Paginator(products, 8)  
+    page_number = request.GET.get('page')
+    products = paginator.get_page(page_number)
+    
+    context = {
+        'products': products,
+        'selected_currency': selected_currency,
+        'currency_symbol': currency_symbol,
+        'currencies': currencies
+    }
+    
+    return render(request, 'product.html', context)
+
+def search_products(request):
+    query = request.GET.get('search', '')
+    products = Product.objects.filter(name__icontains=query)
+    
+    paginator = Paginator(products, 8)  
+    page_number = request.GET.get('page')
+    products = paginator.get_page(page_number)
+    return render(request, "partials/product_results.html", {"products": products})
+
+
+def delete_product(request, product_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    try:
+        product = Product.objects.get(product_id=product_id)
+        product_name = product.name
+        product.delete()
+        messages.success(request, f"Product {product_name} deleted successfully!")
+    except Product.DoesNotExist:
+        messages.error(request, "Product not found!")
+    except Exception as e:
+        messages.error(request, f"Error deleting product: {str(e)}")
+    
+    return redirect('bio_details:product_management')
+
+
+def shop_detail(request, product_id):
+
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+
+    try:
+        product = Product.objects.get(product_id=product_id)
+        
+        # Get selected currency from session
+        selected_currency = request.session.get('selected_currency', 'IN')
+        
+        # Get currency object
+        from .models import Currency, Country
+        try:
+            country_obj = Country.objects.get(code=selected_currency, is_active=True)
+            currency_obj = Currency.objects.get(country=country_obj, is_active=True)
+            currency_symbol = currency_obj.symbol
+        except (Currency.DoesNotExist, Country.DoesNotExist):
+            country_obj = Country.objects.get(code='IN', is_active=True)
+            currency_obj = Currency.objects.get(country=country_obj, is_active=True)
+            currency_symbol = currency_obj.symbol
+            selected_currency = 'IN'
+        
+        # Convert price to selected currency
+        converted_price = product.get_converted_price(selected_currency)
+
+        # stock check
+        if product.current_stock == 0:
+            messages.error(request, "Out of stock!")
+
+        elif product.current_stock <= 5:
+            messages.warning(request, "Limited stock available!")
+
+        context = {
+            'product': product,
+            'converted_price': converted_price,
+            'currency_symbol': currency_symbol,
+            'selected_currency': selected_currency
+        }
+        
+        return render(request, 'shop.html', context)
+
+    except Product.DoesNotExist:
+        messages.error(request, "Product not found!")
+        return redirect('bio_details:product_view')
+
+
+
+def cart_view(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    cart_items = cart.items.all()
+    
+    # Get selected currency from session
+    selected_currency = request.session.get('selected_currency', 'IN')
+    currency_symbol = request.session.get('currency_symbol', '₹')
+    
+    # Get country-specific tax rate
+    country_code = selected_currency
+    
+    # Import models inside function to avoid circular import issues
+    from .models import Country, Tax
+    
+    # Get active taxes for the selected country
+    try:
+        country = Country.objects.get(code=country_code, is_active=True)
+        taxes = Tax.objects.filter(country=country, is_active=True)
+        print(f"Found country: {country.name}, Taxes count: {taxes.count()}")
+        for tax in taxes:
+            print(f"Tax: {tax.tax_name} - {tax.tax_rate}%")
+    except Country.DoesNotExist:
+        print(f"Country with code {country_code} not found, falling back to India")
+        # Fallback to India if country not found
+        country = Country.objects.get(code='IN', is_active=True)
+        taxes = Tax.objects.filter(country=country, is_active=True)
+        print(f"Fallback - Found country: {country.name}, Taxes count: {taxes.count()}")
+        for tax in taxes:
+            print(f"Fallback Tax: {tax.tax_name} - {tax.tax_rate}%")
+    
+    # Convert cart totals to selected currency
+    from .currency_utils import convert_currency
+    converted_subtotal = convert_currency(float(cart.subtotal), 'IN', selected_currency)
+    
+    # Calculate tax on subtotal first
+    tax_amount = 0
+    for tax in taxes:
+        tax_amount += (converted_subtotal * float(tax.tax_rate)) / 100
+    
+    # Calculate discount amount
+    converted_discount = convert_currency(float(cart.total_discount), 'IN', selected_currency)
+    
+    # Calculate grand total: subtotal + tax - discount
+    converted_grand_total = converted_subtotal + tax_amount - converted_discount
+    
+    context = {
+        'cart_items': cart_items,
+        'cart': cart,
+        'subtotal': converted_subtotal,
+        'total_tax': tax_amount,
+        'grand_total': converted_grand_total,
+        'selected_currency': selected_currency,
+        'currency_symbol': currency_symbol,
+        'country_code': country_code,
+        'taxes': taxes
+    }
+    
+    return render(request, 'add_cart.html', context)
+
+
+
+def add_to_cart(request, product_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    try:
+        product = Product.objects.get(product_id=product_id)
+        quantity = int(request.POST.get('quantity', 1))
+        
+        # Stock check
+        if product.current_stock < quantity:
+            messages.error(
+                request,
+                f"Only {product.current_stock} items available!",
+                extra_tags="cart-toast"
+            )
+            return redirect('bio_details:shop_detail', product_id=product_id)
+        
+        cart, created = Cart.objects.get_or_create(user=request.user)
+
+        cart_item, created = CartItem.objects.get_or_create(
+            cart=cart,
+            product=product,
+            defaults={'quantity': quantity}
+        )
+
+        if not created:
+            new_total_quantity = cart_item.quantity + quantity
+
+            if new_total_quantity > product.current_stock:
+                messages.error(
+                    request,
+                    f"Only {product.current_stock} items available!",
+                    extra_tags="cart-toast"
+                )
+                return redirect('bio_details:shop_detail', product_id=product_id)
+
+            cart_item.quantity = new_total_quantity
+            cart_item.save()
+
+        messages.success(
+            request,
+            f"{product.name} added to cart!",
+            extra_tags="cart-toast"
+        )
+
+        return redirect('bio_details:cart_view')
+
+    except Product.DoesNotExist:
+        messages.error(request, "Product not found!", extra_tags="cart-toast")
+        return redirect('bio_details:product_view')
+    
+def update_cart_item(request, item_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    try:
+        cart_item = CartItem.objects.get(id=item_id, cart__user=request.user)
+        change = int(request.POST.get('change', 0))
+        new_quantity = cart_item.quantity + change
+        
+        if new_quantity >= 1 and new_quantity <= cart_item.product.current_stock:
+            cart_item.quantity = new_quantity
+            cart_item.save()
+            messages.success(request, "Quantity updated!")
+        
+        return redirect('bio_details:cart_view')
+    except CartItem.DoesNotExist:
+        messages.error(request, "Item not found!")
+        return redirect('bio_details:cart_view')
+
+def remove_cart_item(request, item_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    try:
+        cart_item = CartItem.objects.get(id=item_id, cart__user=request.user)
+        cart_item.delete()
+        messages.success(request, "Item removed from cart!")
+    except CartItem.DoesNotExist:
+        messages.error(request, "Item not found!")
+    
+    return redirect('bio_details:cart_view')
+
+
+def apply_discount(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if request.method == 'POST':
+        discount_code = request.POST.get('discount_code', '')
+        
+        # Simple discount codes
+        discount_rates = {
+            'SAVE10': 10,
+            'SAVE20': 20,
+            'WELCOME': 15,
+            'STUDENT': 25
+        }
+        
+        discount = discount_rates.get(discount_code.upper(), 0)
+        
+        if discount > 0:
+            request.session['discount'] = discount
+            messages.success(request, f"Discount of {discount}% applied!")
+        else:
+            messages.error(request, "Invalid discount code!")
+    
+    return redirect('bio_details:cart_view')
+
+
+def checkout(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    try:
+        cart = Cart.objects.get(user=request.user)
+        cart_items = cart.items.all()
+        
+        if not cart_items:
+            messages.error(request, "Your cart is empty!")
+            return redirect('bio_details:cart_view')
+        
+        # Check stock for all items first
+        for item in cart_items:
+            if item.product.current_stock < item.quantity:
+                messages.error(request, f"Insufficient stock for {item.product.name}. Available: {item.product.current_stock}")
+                return redirect('bio_details:cart_view')
+        
+        # Get cart discount
+        cart_discount_percent = request.session.get('discount', 0)
+        
+        # Get selected currency from session
+        selected_currency = request.session.get('selected_currency', 'IN')
+        currency_symbol = request.session.get('currency_symbol', '₹')
+        
+        # Calculate totals in selected currency
+        from .currency_utils import convert_currency
+        
+        # Convert cart totals to selected currency
+        converted_subtotal = convert_currency(float(cart.subtotal), 'IN', selected_currency)
+        converted_total_tax = convert_currency(float(cart.get_total_tax(selected_currency)), 'IN', selected_currency)
+        converted_grand_total = convert_currency(float(cart.get_grand_total(selected_currency)), 'IN', selected_currency)
+        
+        subtotal = converted_grand_total
+        discount_amount = (subtotal * cart_discount_percent) / 100
+        final_total = subtotal - discount_amount
+        
+        # Create single order for all items with currency info
+        from .models import Currency
+        try:
+            currency_obj = Currency.objects.get(country__code=selected_currency, is_active=True)
+        except Currency.DoesNotExist:
+            # Fallback to INR if selected currency doesn't exist
+            currency_obj = Currency.objects.get(country__code='IN', is_active=True)
+            
+        order = Order.objects.create(
+            user=request.user,
+            total_amount=final_total,
+            currency=currency_obj
+        )
+        
+        # Store cart discount in session for invoice
+        if cart_discount_percent > 0:
+            request.session['cart_discount_percent'] = cart_discount_percent
+        
+        # Create order items with converted prices
+        for item in cart_items:
+            # Convert product price to selected currency
+            from .currency_utils import convert_currency
+            converted_price = convert_currency(float(item.product.rate), 'IN', selected_currency)
+            
+            OrderItem.objects.create(
+                order=order,
+                product_name=item.product.name,
+                price=converted_price,  # Use converted price
+                quantity=item.quantity
+            )
+            
+            # Reduce current stock immediately during checkout
+            item.product.current_stock -= item.quantity
+            item.product.save()
+        
+        # Clear cart and discount after checkout
+        cart_items.delete()
+        if 'discount' in request.session:
+            del request.session['discount']
+        
+        # Redirect to invoice without placing order
+        return redirect('bio_details:invoice_detail', order_id=order.id)
+        
+    except Cart.DoesNotExist:
+        messages.error(request, "Cart not found!")
+        return redirect('bio_details:cart_view')
+
+
+def order_view(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        return redirect('bio_details:dashboard')
+    
+    search = request.GET.get('search')
+    per_page = request.GET.get('per_page', 5)  
+    try:
+        per_page = int(per_page)
+    except ValueError:
+        per_page = 5
+    
+    # Get all orders with their related data
+    orders = Order.objects.select_related('user', 'invoice').prefetch_related('user__member').order_by('created_at')
+
+    if search:
+        orders = orders.filter(
+            models.Q(order_id__icontains=search) |
+            models.Q(user__username__icontains=search)
+        )
+    
+    paginator = Paginator(orders, per_page)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Get all invoices
+    invoices = Invoice.objects.all()
+
+    # Add terms data - make empty to show default terms in template
+    term = [ "Payment is due within 30 days from the invoice date",
+            "Late payment charges may apply as per company policy   ",
+            "Goods once sold cannot be returned or exchanged",
+            "All disputes are subject to local jurisdiction",
+            "Any damages or issues must be reported within 3 days of delivery",
+            "The company is not responsible for delays caused by unforeseen circumstances",
+            "Warranty or support will be provided only as per agreed terms",]
+
+    return render(request, 'order.html', {
+        'page_obj': page_obj,
+        'invoices': invoices,
+        'terms': term,
+    })
+
+
+
+
+def update_invoice_item(request, item_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if request.method == 'POST':
+        try:
+            item = InvoiceItem.objects.get(id=item_id)
+            change = int(request.POST.get('change', 0))
+            old_qty = item.qty
+            new_qty = item.qty + change
+            
+            if new_qty >= 1:
+                item.qty = new_qty
+                
+                # Recalculate discount based on new quantity
+                from decimal import Decimal
+                discount_per_unit = item.discount / old_qty if old_qty > 0 else Decimal('0')
+                item.discount = discount_per_unit * new_qty
+                
+                item.save()  # This will recalculate the total
+                
+                # Recalculate invoice totals
+                invoice = item.invoice
+                invoice_items = invoice.items.all()
+                invoice.subtotal = sum(item.unit_price * item.qty for item in invoice_items)
+                invoice.total_tax = sum((item.unit_price * item.qty * item.tax) / Decimal('100') for item in invoice_items)
+                invoice.total_discount = sum(item.discount for item in invoice_items)
+                invoice.total_amount = invoice.subtotal + invoice.total_tax - invoice.total_discount
+                invoice.save()
+                
+                messages.success(request, "Quantity updated successfully!")
+            else:
+                messages.error(request, "Quantity cannot be less than 1!")
+                
+            return redirect('bio_details:invoice_detail', order_id=item.invoice.order.id)
+            
+        except InvoiceItem.DoesNotExist:
+            messages.error(request, "Item not found!")
+            return redirect('bio_details:order')
+    
+    return redirect('bio_details:order')
+
+
+
+def invoice_view(request, order_id=None):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    # Handle POST request for payment method update
+    if request.method == 'POST' and order_id:
+        try:
+            order = Order.objects.get(id=order_id)
+            invoice = Invoice.objects.get(order=order)
+            payment_method = request.POST.get('payment_method', 'cash')
+            
+            invoice.payment_method = payment_method
+            invoice.save()
+            return redirect('bio_details:dashboard')
+            
+        except (Order.DoesNotExist, Invoice.DoesNotExist):
+            messages.error(request, "Order or Invoice not found!")
+            return redirect('bio_details:order')
+    
+    if order_id:
+        try:
+            order = Order.objects.get(id=order_id)
+            
+            # Get selected currency from session or use order currency
+            selected_currency = request.session.get('selected_currency', order.currency.country.code if order.currency else 'IN')
+            
+            # Get currency object for selected currency
+            from .models import Currency, Country
+            try:
+                country_obj = Country.objects.get(code=selected_currency, is_active=True)
+                display_currency = Currency.objects.get(country=country_obj, is_active=True)
+            except (Currency.DoesNotExist, Country.DoesNotExist):
+                country_obj = Country.objects.get(code='IN', is_active=True)
+                display_currency = Currency.objects.get(country=country_obj, is_active=True)
+                selected_currency = 'IN'
+            
+            # Get or create invoice for this order
+            invoice, created = Invoice.objects.get_or_create(
+                order=order,
+                defaults={
+                    'customer_name': order.user.get_full_name() or order.user.username,
+                    'invoice_date': order.created_at,
+                    'payment_method': 'cash',
+                    'payment_status': 'pending',
+                    'subtotal': Decimal('0'),
+                    'total_tax': Decimal('0'),
+                    'total_discount': Decimal('0'),
+                    'total_amount': Decimal('0'),
+                    'currency': order.currency
+                }
+            )
+            
+            if created:
+                # Get cart discount from session
+                cart_discount_percent = request.session.get('cart_discount_percent', 0)
+                
+                subtotal = Decimal('0')
+                total_tax = Decimal('0')
+                total_discount = Decimal('0')
+                
+                for order_item in order.items.all():
+                    # Get product to access its discount and tax rate
+                    try:
+                        product = Product.objects.get(name=order_item.product_name)
+                        product_discount_percent = product.discount
+                        # Get tax rate for the invoice currency country
+                        tax_rate = product.get_tax_rate(selected_currency)
+                    except Product.DoesNotExist:
+                        product_discount_percent = Decimal('0')
+                        tax_rate = Decimal('18')  # Default tax rate
+                    
+                    item_subtotal = order_item.price * order_item.quantity
+                    item_tax = (item_subtotal * Decimal(str(tax_rate))) / Decimal('100')
+                    
+                    # Apply product discount first
+                    product_discount_amount = (item_subtotal * product_discount_percent) / Decimal('100')
+                    
+                    # Apply cart discount on top of product discount
+                    if cart_discount_percent > 0:
+                        cart_discount_amount = (item_subtotal * Decimal(str(cart_discount_percent))) / Decimal('100')
+                    else:
+                        cart_discount_amount = Decimal('0')
+                    
+                    # Total discount is product discount + cart discount
+                    item_discount = product_discount_amount + cart_discount_amount
+                    item_total = item_subtotal + item_tax - item_discount
+                    
+                    InvoiceItem(
+                        invoice=invoice,
+                        product_name=order_item.product_name,
+                        qty=order_item.quantity,
+                        unit_price=order_item.price,
+                        tax=Decimal(str(tax_rate)),
+                        discount=item_discount,
+                        total=item_total
+                    ).save()
+                    
+                    subtotal += item_subtotal
+                    total_tax += item_tax
+                    total_discount += item_discount
+                
+                # Update invoice totals
+                invoice.subtotal = subtotal
+                invoice.total_tax = total_tax
+                invoice.total_discount = total_discount
+                invoice.total_amount = subtotal + total_tax - total_discount
+                invoice.save()
+                
+                # Clear cart discount from session after using it
+                if 'cart_discount_percent' in request.session:
+                    del request.session['cart_discount_percent']
+            
+            # Get list of product IDs already in the invoice
+            added_product_ids = []
+            if invoice.items.exists():
+                for item in invoice.items.all():
+                    try:
+                        product = Product.objects.get(name=item.product_name)
+                        added_product_ids.append(product.product_id)
+                    except Product.DoesNotExist:
+                        pass
+            
+            # Terms and conditions
+            terms_conditions = [
+                "Payment is due within 30 days from the invoice date",
+                "Late payment charges may apply as per company policy",
+                "Goods once sold cannot be returned or exchanged",
+                "All disputes are subject to local jurisdiction",
+                "Any damages or issues must be reported within 3 days of delivery",
+                "The company is not responsible for delays caused by unforeseen circumstances",
+                "Warranty or support will be provided only as per agreed terms"
+            ]
+            
+            # Get all active currencies for dropdown
+            currencies = Currency.objects.filter(is_active=True).select_related('country').order_by('name')
+            
+            context = {
+                'invoice_date': invoice.invoice_date,
+                'customer_name': invoice.customer_name,
+                'customer_email': order.user.email,
+                'customer_phone': getattr(order.user.member, 'phone', '+91 9876543210') if hasattr(order.user, 'member') else '+91 9876543210',
+                'payment_method': invoice.payment_method,  # Raw value instead of display
+                'payment_status': invoice.get_payment_status_display(),
+                'transaction_id': invoice.transaction_id,
+                'items': invoice.items.all(),
+                'subtotal': invoice.subtotal,
+                'total_tax': invoice.total_tax,
+                'total_discount': invoice.total_discount,
+                'total_amount': invoice.total_amount,
+                'invoice_number': invoice.invoice_number,
+                'invoice': invoice,
+                'products': Product.objects.filter(current_stock__gt=0),
+                'added_product_ids': added_product_ids,
+                'terms_conditions': terms_conditions,
+                'currency_symbol': display_currency.symbol,
+                'selected_currency': selected_currency,
+                'currencies': currencies,
+                'display_currency': display_currency,
+            }
+            
+        except Order.DoesNotExist:
+            messages.error(request, "Order not found!")
+            return redirect('bio_details:cart')
+    else:
+        messages.error(request, "Invoice not found!")
+        return redirect('bio_details:cart')
+    
+    return render(request, 'invoice.html', context)
+
+
+
+
+def invoice2_view(request, order_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    try:
+        order = Order.objects.get(id=order_id)
+        
+        # Allow access if user owns the order OR is superuser
+        if order.user != request.user and not request.user.is_superuser:
+            messages.error(request, "Access denied. You can only view your own orders.")
+            return redirect('bio_details:my_orders')
+        
+        invoice = Invoice.objects.get(order=order)
+        
+        # Get selected currency from URL parameter or use order currency
+        selected_currency = request.GET.get('currency', order.currency.country.code if order.currency else 'IN')
+        
+        # Get currency symbol from database based on selected currency
+        from .models import Currency, Country,Tax
+        try:
+            if selected_currency == 'IN':
+                selected_currency = 'INR'
+            
+            # Get currency object to get the symbol
+            currency_obj = Currency.objects.filter(code=selected_currency, is_active=True).first()
+            if not currency_obj:
+                # Try by country code
+                country_obj = Country.objects.filter(code=selected_currency[:2], is_active=True).first()
+                if country_obj:
+                    currency_obj = Currency.objects.filter(country=country_obj, is_active=True).first()
+            
+            currency_symbol = currency_obj.symbol if currency_obj else '₹'
+        except Exception:
+            currency_symbol = '₹'
+        
+        # Get currency object for selected currency
+        from .models import Currency, Country
+        try:
+            if selected_currency == 'IN':
+                selected_currency = 'INR'  # Convert IN to INR for consistency
+            
+            # Try to find currency by code first
+            display_currency = Currency.objects.filter(code=selected_currency, is_active=True).first()
+            if not display_currency:
+                # Fallback to country code lookup
+                country_obj = Country.objects.get(code=selected_currency[:2], is_active=True)
+                display_currency = Currency.objects.get(country=country_obj, is_active=True)
+        except (Currency.DoesNotExist, Country.DoesNotExist):
+            # Final fallback to INR
+            display_currency = Currency.objects.get(code='INR', is_active=True)
+            selected_currency = 'INR'
+            currency_symbol = '₹'
+        
+        # Get all active currencies for dropdown
+        currencies = Currency.objects.filter(is_active=True).order_by('name')
+        
+        context = {
+            'invoice_date': invoice.invoice_date,
+            'customer_name': invoice.customer_name,
+            'customer_email': order.user.email,
+            'customer_phone': getattr(order.user.member, 'phone', '+91 9876543210') if hasattr(order.user, 'member') else '+91 9876543210',
+            'payment_method': invoice.payment_method,
+            'payment_status': invoice.get_payment_status_display(),
+            'transaction_id': invoice.transaction_id,
+            'items': invoice.items.all(),
+            'subtotal': invoice.subtotal,
+            'total_tax': invoice.total_tax,
+            'total_discount': invoice.total_discount,
+            'total_amount': invoice.subtotal + invoice.total_tax - invoice.total_discount,
+            'invoice_number': invoice.invoice_number,
+            'invoice': invoice,
+            'currency_symbol': currency_symbol,
+            'selected_currency': selected_currency,
+            'currencies': currencies,
+            'display_currency': display_currency,
+        }
+        
+        return render(request, 'invoice2.html', context)
+        
+    except (Order.DoesNotExist, Invoice.DoesNotExist):
+        messages.error(request, "Invoice not found!")
+        if request.user.is_superuser:
+            return redirect('bio_details:order')
+        else:
+            return redirect('bio_details:my_orders')
+
+
+
+
+def add_product_to_invoice(request, order_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if request.method == 'POST':
+        from decimal import Decimal
+        
+        product_id = request.POST.get('product_id')
+        quantity = int(request.POST.get('quantity', 1))
+        # Clean and validate tax_rate input
+        tax_rate_str = request.POST.get('tax_rate', '18')
+        # Remove common problematic characters
+        tax_rate_str = tax_rate_str.replace('%', '').replace('&#39;', '').replace("'", '').strip()
+        # Extract only numeric characters and decimal point
+        import re
+        tax_rate_str = re.sub(r'[^0-9.]', '', tax_rate_str)
+        if not tax_rate_str:
+            tax_rate_str = '18'
+        tax_rate = Decimal(tax_rate_str)
+        # Clean and validate discount_rate input
+        discount_rate_str = request.POST.get('discount_rate', '5')
+        # Remove common problematic characters
+        discount_rate_str = discount_rate_str.replace('%', '').replace('&#39;', '').replace("'", '').strip()
+        # Extract only numeric characters and decimal point
+        discount_rate_str = re.sub(r'[^0-9.]', '', discount_rate_str)
+        if not discount_rate_str:
+            discount_rate_str = '5'
+        discount_rate = Decimal(discount_rate_str)
+        
+        try:
+            order = Order.objects.get(id=order_id)
+            product = Product.objects.get(product_id=product_id)
+            invoice = Invoice.objects.get(order=order)
+            
+            # Check if product already exists in invoice
+            if invoice.items.filter(product_name=product.name).exists():
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': 'Product already added to invoice'})
+                messages.error(request, 'Product already added to invoice')
+                return redirect('bio_details:invoice_detail', order_id=order_id)
+            
+            # Check stock
+            if product.current_stock < quantity:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': f'Insufficient stock! Only {product.current_stock} units available.'})
+                messages.error(request, f"Insufficient stock! Only {product.current_stock} units available.")
+                return redirect('bio_details:invoice_detail', order_id=order_id)
+            
+            # IMPORTANT: Convert product price to invoice currency
+            from .currency_utils import convert_currency
+            invoice_currency_code = invoice.currency.country.code if invoice.currency else 'IN'
+            converted_price = Decimal(str(convert_currency(float(product.rate), 'IN', invoice_currency_code)))
+            
+            # Create order item with converted price
+            order_item = OrderItem.objects.create(
+                order=order,
+                product_name=product.name,
+                price=converted_price,  # Use converted price
+                quantity=quantity
+            )
+            
+            # Create invoice item with custom tax and discount using converted price
+            item_subtotal = converted_price * quantity
+            item_tax_amount = (item_subtotal * tax_rate) / Decimal('100')
+            item_discount_amount = (item_subtotal * discount_rate) / Decimal('100')
+            item_total = item_subtotal + item_tax_amount - item_discount_amount
+            
+            invoice_item = InvoiceItem.objects.create(
+                invoice=invoice,
+                product_name=product.name,
+                qty=quantity,
+                unit_price=converted_price,  # Use converted price
+                tax=tax_rate,
+                discount=item_discount_amount,
+                total=item_total
+            )
+            
+            # Update product stock
+            product.current_stock -= quantity
+            product.save()
+            
+            # Recalculate invoice totals
+            invoice_items = invoice.items.all()
+            invoice.subtotal = sum(item.unit_price * item.qty for item in invoice_items)
+            invoice.total_tax = sum((item.unit_price * item.qty * item.tax) / Decimal('100') for item in invoice_items)
+            invoice.total_discount = sum(item.discount for item in invoice_items)
+            invoice.total_amount = invoice.subtotal + invoice.total_tax - invoice.total_discount
+            
+            # Update order total
+            order.total_amount = invoice.total_amount
+            order.save()
+            invoice.save()
+            
+            # Return JSON response for AJAX
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                # IMPORTANT: Convert all totals to the invoice currency before sending
+                from .currency_utils import convert_currency
+                
+                # Convert totals to invoice currency (they should already be in invoice currency, but ensure consistency)
+                converted_subtotal = invoice.subtotal
+                converted_total_tax = invoice.total_tax
+                converted_total_discount = invoice.total_discount
+                converted_total_amount = invoice.total_amount
+                
+                return JsonResponse({
+                    'success': True,
+                    'item': {
+                        'id': invoice_item.id,
+                        'product_name': invoice_item.product_name,
+                        'unit_price': str(invoice_item.unit_price),
+                        'qty': invoice_item.qty,
+                        'tax': str(item_tax_amount),
+                        'discount': str(invoice_item.discount),
+                        'total': str(invoice_item.total),
+                        'currency_symbol': invoice.currency_symbol
+                    },
+                    'subtotal': str(converted_subtotal),
+                    'total_tax': str(converted_total_tax),
+                    'total_discount': str(converted_total_discount),
+                    'total_amount': str(converted_total_amount),
+                    'currency_symbol': invoice.currency_symbol
+                })
+            
+            messages.success(request, f"{product.name} added to invoice successfully!")
+            
+        except (Order.DoesNotExist, Product.DoesNotExist, Invoice.DoesNotExist):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Order, Product or Invoice not found!'})
+            messages.error(request, "Order, Product or Invoice not found!")
+    
+    return redirect('bio_details:invoice_detail', order_id=order_id)
+
+
+def add_product_to_invoice_ajax(request, order_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if request.method == 'POST':
+        
+        try:
+            data = json.loads(request.body)
+            product_id = data.get('product_id')
+            quantity = int(data.get('quantity', 1))
+            
+            order = Order.objects.get(id=order_id)
+            product = Product.objects.get(product_id=product_id)
+            invoice = Invoice.objects.get(order=order)
+            
+            # Check if product already exists in invoice
+            if invoice.items.filter(product_name=product.name).exists():
+                return JsonResponse({'success': False, 'message': 'Product already added to invoice'})
+            
+            # Check stock
+            if product.current_stock < quantity:
+                return JsonResponse({'success': False, 'message': f'Insufficient stock! Only {product.current_stock} units available.'})
+            
+            # Create order item
+            order_item = OrderItem.objects.create(
+                order=order,
+                product_name=product.name,
+                price=product.rate,
+                quantity=quantity
+            )
+            
+            # Create invoice item
+            from decimal import Decimal
+            item_subtotal = product.rate * quantity
+            item_tax = (item_subtotal * Decimal('18')) / Decimal('100')
+            product_discount_amount = (item_subtotal * product.discount) / Decimal('100')
+            item_total = item_subtotal + item_tax - product_discount_amount
+            
+            InvoiceItem.objects.create(
+                invoice=invoice,
+                product_name=product.name,
+                qty=quantity,
+                unit_price=product.rate,
+                tax=Decimal('18.00'),
+                discount=product_discount_amount,
+                total=item_total
+            )
+            
+            # Update product stock
+            product.current_stock -= quantity
+            product.save()
+            
+            # Recalculate invoice totals
+            invoice_items = invoice.items.all()
+            invoice.subtotal = sum(item.unit_price * item.qty for item in invoice_items)
+            invoice.total_tax = sum((item.unit_price * item.qty * item.tax) / Decimal('100') for item in invoice_items)
+            invoice.total_discount = sum(item.discount for item in invoice_items)
+            invoice.total_amount = invoice.subtotal + invoice.total_tax - invoice.total_discount
+            
+            # Update order total
+            order.total_amount = invoice.total_amount
+            order.save()
+            invoice.save()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': f'{product.name} added successfully!',
+                'subtotal': str(invoice.subtotal),
+                'total_tax': str(invoice.total_tax),
+                'total_discount': str(invoice.total_discount),
+                'total_amount': str(invoice.total_amount)
+            })
+            
+        except (Order.DoesNotExist, Product.DoesNotExist, Invoice.DoesNotExist):
+            return JsonResponse({'success': False, 'message': 'Order, Product or Invoice not found!'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+    
+    return JsonResponse({'success': False, 'message': 'Invalid request method'})
+
+
+def place_order(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if request.method == 'POST':
+        order_id = request.POST.get('order_id')
+        
+        try:
+            order = Order.objects.get(id=order_id)
+            invoice = Invoice.objects.get(order=order)
+            
+            # Check if invoice has items
+            if not invoice.items.exists():
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'message': 'Cannot place order without items'})
+                messages.error(request, "Cannot place order without items")
+                return redirect('bio_details:invoice_detail', order_id=order_id)
+            
+            # Update invoice payment status
+            invoice.payment_status = 'pending'
+            invoice.save()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True, 
+                    'message': f'Order {order.order_id} placed successfully!',
+                    'redirect_url': '/my-orders/'
+                })
+            
+            messages.success(request, f"Order {order.order_id} placed successfully!")
+            return redirect('bio_details:my_orders')
+            
+        except (Order.DoesNotExist, Invoice.DoesNotExist):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'Order or Invoice not found!'})
+            messages.error(request, "Order or Invoice not found!")
+            return redirect('bio_details:my_orders')
+    
+    return redirect('bio_details:my_orders')
+
+
+def cancel_order(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if request.method == 'POST':
+        order_id = request.POST.get('order_id')
+        
+        try:
+            order = Order.objects.get(id=order_id)
+            invoice = Invoice.objects.get(order=order)
+            
+            # Restore stock for all items
+            for invoice_item in invoice.items.all():
+                try:
+                    product = Product.objects.get(name=invoice_item.product_name)
+                    product.current_stock += invoice_item.qty
+                    product.save()
+                except Product.DoesNotExist:
+                    pass
+            
+            # Delete invoice and order
+            invoice.delete()
+            order.delete()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Order cancelled successfully!',
+                    'redirect_url': '/cart/'
+                })
+            
+            messages.success(request, "Order cancelled successfully!")
+            return redirect('bio_details:cart_view')
+            
+        except (Order.DoesNotExist, Invoice.DoesNotExist):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'Order or Invoice not found!'})
+            messages.error(request, "Order or Invoice not found!")
+            return redirect('bio_details:cart_view')
+    
+    return redirect('bio_details:cart_view')
+
+
+def update_payment_method(request, invoice_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if request.method == 'POST':
+        from django.http import JsonResponse
+        import json
+        
+        try:
+            data = json.loads(request.body)
+            payment_method = data.get('payment_method', 'cash')
+            
+            invoice = Invoice.objects.get(id=invoice_id)
+            invoice.payment_method = payment_method
+            invoice.save()
+            
+            return JsonResponse({'success': True, 'message': 'Payment method updated successfully'})
+            
+        except Invoice.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Invoice not found'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+    
+    return JsonResponse({'success': False, 'message': 'Invalid request method'})
+
+def remove_invoice_item(request, item_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+
+    print(f"Remove item request - Method: {request.method}, Item ID: {item_id}")
+    
+    if request.method == 'POST':
+        try:
+            from decimal import Decimal
+            item = InvoiceItem.objects.get(id=item_id)
+            invoice = item.invoice
+            
+            print(f"Found item: {item.product_name}, Quantity: {item.qty}")
+            
+            # Restore stock
+            try:
+                product = Product.objects.get(name=item.product_name)
+                product.current_stock += item.qty
+                product.save()
+                print(f"Stock restored for {product.name}: {product.current_stock}")
+            except Product.DoesNotExist:
+                print(f"Product not found: {item.product_name}")
+                pass
+            
+            # Remove item
+            item.delete()
+            print("Item deleted successfully")
+            
+            # Recalculate invoice totals
+            invoice_items = invoice.items.all()
+            if invoice_items.exists():
+                invoice.subtotal = sum(item.unit_price * item.qty for item in invoice_items)
+                invoice.total_tax = sum((item.unit_price * item.qty * item.tax) / Decimal('100') for item in invoice_items)
+                invoice.total_discount = sum(item.discount for item in invoice_items)
+                invoice.total_amount = invoice.subtotal + invoice.total_tax - invoice.total_discount
+                
+                # Update order total
+                order = invoice.order
+                order.total_amount = invoice.total_amount
+                order.save()
+                invoice.save()
+                
+                print(f"Invoice updated - Total: {invoice.total_amount}")
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Item removed successfully!',
+                        'subtotal': str(invoice.subtotal),
+                        'total_tax': str(invoice.total_tax),
+                        'total_discount': str(invoice.total_discount),
+                        'total_amount': str(invoice.total_amount),
+                        'currency_symbol': invoice.currency_symbol
+                    })
+                
+                messages.success(request, 'Item removed successfully!')
+                return redirect('bio_details:invoice_detail', order_id=invoice.order.id)
+            else:
+                # If no items left, delete the entire order
+                order = invoice.order
+                invoice.delete()
+                order.delete()
+                
+                print("Last item removed, order cancelled")
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Item removed successfully! Order cancelled as no items remain.',
+                        'redirect': True,
+                        'redirect_url': '/cart/'
+                    })
+                
+                messages.success(request, 'Item removed successfully! Order cancelled as no items remain.')
+                return redirect('bio_details:cart_view')
+                
+        except InvoiceItem.DoesNotExist:
+            print(f"InvoiceItem not found: {item_id}")
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': 'Item not found!'})
+            messages.error(request, 'Item not found!')
+            return redirect('bio_details:order')
+        except Exception as e:
+            print(f"Error removing item: {str(e)}")
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': f'Error removing item: {str(e)}'})
+            messages.error(request, f'Error removing item: {str(e)}')
+            return redirect('bio_details:order')
+    
+    print("Invalid request method")
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'message': 'Invalid request method'})
+    return redirect('bio_details:order')
+
+
+
+def my_orders(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    # Get orders for the current user
+    search = request.GET.get('search')
+    per_page = request.GET.get('per_page', 5)
+    try:
+        per_page = int(per_page)
+    except ValueError:
+        per_page = 5
+    
+    user_orders = Order.objects.filter(user=request.user).select_related('invoice').prefetch_related('items', 'invoice__items').order_by('created_at')
+    
+    if search:
+        user_orders = user_orders.filter(
+            models.Q(order_id__icontains=search) |
+            models.Q(invoice__invoice_number__icontains=search)
+        )
+    
+    paginator = Paginator(user_orders, per_page)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'my_orders.html', {
+        'page_obj': page_obj,
+    })
+
+def get_product_stock(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Not authenticated'})
+    
+    product_name = request.GET.get('product_name')
+    if not product_name:
+        return JsonResponse({'success': False, 'error': 'Product name required'})
+    
+    try:
+        product = Product.objects.get(name=product_name)
+        return JsonResponse({
+            'success': True,
+            'current_stock': product.current_stock,
+            'product_name': product.name
+        })
+    except Product.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Product not found'})
+
+
+def update_invoice_item_qty(request, item_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if request.method == 'POST':
+        try:
+            print(f"=== UPDATE REQUEST FOR ITEM {item_id} ===")
+            
+            # Get the invoice item
+            item = InvoiceItem.objects.get(id=item_id)
+            print(f"Original product: {item.product_name}")
+            
+            # Get form data
+            quantity = int(request.POST.get('quantity', 1))
+            product_changed = request.POST.get('product_changed', 'false')
+            
+            print(f"Quantity: {quantity}")
+            print(f"Product changed: {product_changed}")
+            
+            # Store original product for comparison
+            original_product_name = item.product_name
+            
+            # Check if product was changed
+            if product_changed == 'true':
+                new_product_id = request.POST.get('product_id')
+                print(f"New product ID: {new_product_id}")
+                
+                if new_product_id:
+                    try:
+                        # Get the new product
+                        new_product = Product.objects.get(product_id=new_product_id)
+                        print(f"Found new product: {new_product.name}")
+                        
+                        # CRITICAL: Convert price to invoice currency
+                        from .currency_utils import convert_currency
+                        from decimal import Decimal
+                        invoice_currency_code = item.invoice.currency.country.code if item.invoice.currency else 'IN'
+                        converted_price = Decimal(str(convert_currency(float(new_product.rate), 'IN', invoice_currency_code)))
+                        
+                        # CRITICAL: Update the invoice item with new product
+                        from decimal import Decimal
+                        item.product_name = new_product.name
+                        item.unit_price = converted_price  # Use converted price
+                        
+                        print(f"Updated product from '{original_product_name}' to '{new_product.name}'")
+                        print(f"Converted price from {new_product.rate} to {converted_price} for currency {item.invoice.currency}")
+                        
+                        # Get tax and discount from form or product defaults
+                        from decimal import Decimal
+                        tax_rate = Decimal(str(request.POST.get('tax_rate', new_product.get_tax_rate('IN') or 18)))
+                        discount_rate = Decimal(str(request.POST.get('discount_rate', new_product.discount or 0)))
+                        
+                    except Product.DoesNotExist:
+                        print(f"Product with ID {new_product_id} not found")
+                        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                            return JsonResponse({
+                                'success': False,
+                                'error': f'Product with ID {new_product_id} not found'
+                            })
+                        messages.error(request, f'Product with ID {new_product_id} not found')
+                        return redirect('bio_details:invoice_detail', order_id=item.invoice.order.id)
+                else:
+                    print("No product ID provided for product change")
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({
+                            'success': False,
+                            'error': 'No product ID provided'
+                        })
+                    messages.error(request, 'No product ID provided')
+                    return redirect('bio_details:invoice_detail', order_id=item.invoice.order.id)
+            else:
+                # Just update quantity, keep same product
+                from decimal import Decimal
+                tax_rate = Decimal(str(request.POST.get('tax_rate', 18)))
+                discount_rate = Decimal(str(request.POST.get('discount_rate', 0)))
+                print("Only updating quantity, keeping same product")
+            
+            # Update quantity
+            item.qty = quantity
+            
+            # Recalculate amounts
+            from decimal import Decimal
+            subtotal = Decimal(str(item.unit_price)) * quantity
+            tax_amount = (subtotal * Decimal(str(tax_rate))) / Decimal('100')
+            discount_amount = (subtotal * Decimal(str(discount_rate))) / Decimal('100')
+            total = subtotal + tax_amount - discount_amount
+            
+            # Update calculated fields
+            item.tax = Decimal(str(tax_rate))
+            item.discount = discount_amount
+            item.total = total
+            
+            print(f"Calculated values:")
+            print(f"  Unit Price: {item.unit_price}")
+            print(f"  Quantity: {item.qty}")
+            print(f"  Tax Amount: {tax_amount}")
+            print(f"  Discount: {discount_amount}")
+            print(f"  Total: {total}")
+            
+            # CRITICAL: Save the changes to database
+            item.save()
+            print(f"SAVED TO DATABASE: {item.product_name}, Qty: {item.qty}")
+            
+            # Verify the save worked
+            saved_item = InvoiceItem.objects.get(id=item_id)
+            print(f"VERIFICATION - Saved product name: {saved_item.product_name}")
+            print(f"VERIFICATION - Saved quantity: {saved_item.qty}")
+            
+            # Recalculate invoice totals
+            invoice = item.invoice
+            invoice_items = invoice.items.all()
+            
+            invoice_subtotal = sum(Decimal(str(item.unit_price)) * item.qty for item in invoice_items)
+            invoice_total_tax = sum((Decimal(str(item.unit_price)) * item.qty * item.tax) / Decimal('100') for item in invoice_items)
+            invoice_total_discount = sum(item.discount for item in invoice_items)
+            invoice_total_amount = invoice_subtotal + invoice_total_tax - invoice_total_discount
+            
+            # Update invoice totals
+            invoice.subtotal = invoice_subtotal
+            invoice.total_tax = invoice_total_tax
+            invoice.total_discount = invoice_total_discount
+            invoice.total_amount = invoice_total_amount
+            
+            # CRITICAL: Save invoice totals
+            invoice.save()
+            print(f"SAVED INVOICE TOTALS")
+            
+            # Prepare response data
+            response_data = {
+                'success': True,
+                'item_unit_price': f"{item.unit_price:.2f}",
+                'item_tax_amount': f"{tax_amount:.2f}",
+                'item_discount': f"{item.discount:.2f}",
+                'item_total': f"{item.total:.2f}",
+                'subtotal': f"{invoice_subtotal:.2f}",
+                'total_tax': f"{invoice_total_tax:.2f}",
+                'total_discount': f"{invoice_total_discount:.2f}",
+                'total_amount': f"{invoice_total_amount:.2f}",
+                'currency_symbol': invoice.currency_symbol or '₹',
+                'message': f'Product updated successfully. Changed from "{original_product_name}" to "{item.product_name}"' if product_changed == 'true' else 'Quantity updated successfully'
+            }
+            
+            print(f"=== RESPONSE DATA ===")
+            print(json.dumps(response_data, indent=2))
+            print(f"=== END UPDATE ===")
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse(response_data)
+            
+            messages.success(request, response_data['message'])
+            return redirect('bio_details:invoice_detail', order_id=item.invoice.order.id)
+            
+        except InvoiceItem.DoesNotExist:
+            print(f"InvoiceItem not found: {item_id}")
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Item not found'})
+            messages.error(request, 'Item not found')
+            return redirect('bio_details:order')
+        except ValueError as e:
+            print(f"ValueError in update_invoice_item_qty: {str(e)}")
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Invalid quantity or data'})
+            messages.error(request, 'Invalid quantity or data')
+            return redirect('bio_details:order')
+        except Exception as e:
+            print(f"ERROR in update_invoice_item_qty: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Server error: {str(e)}'
+                })
+            messages.error(request, f'Server error: {str(e)}')
+            return redirect('bio_details:order')
+    
+    return redirect('bio_details:order')
+
+
+def delete_order(request, order_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    try:
+        order = Order.objects.get(id=order_id)
+        
+        # Restore stock for all items if invoice exists
+        try:
+            invoice = Invoice.objects.get(order=order)
+            for invoice_item in invoice.items.all():
+                try:
+                    product = Product.objects.get(name=invoice_item.product_name)
+                    product.current_stock += invoice_item.qty
+                    product.save()
+                except Product.DoesNotExist:
+                    pass
+            invoice.delete()
+        except Invoice.DoesNotExist:
+            pass
+        
+        # Delete the order
+        order.delete()
+        messages.success(request, "Order deleted successfully!", extra_tags="delete-toast")
+        
+    except Order.DoesNotExist:
+        messages.error(request, "Order not found!", extra_tags="delete-toast")
+    
+    # Preserve current page parameters when redirecting
+    if request.GET:
+        query_params = request.GET.urlencode()
+        return redirect(f"/order/?{query_params}")
+    
+    return redirect('bio_details:order')
+
+
+def save_terms_conditions(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Not authenticated'})
+    
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            invoice_id = data.get('invoice_id')
+            terms_conditions = data.get('terms_conditions', [])
+            
+            invoice = Invoice.objects.get(id=invoice_id)
+            invoice.terms_conditions = terms_conditions
+            invoice.save()
+            
+            return JsonResponse({'success': True, 'message': 'Terms & Conditions saved successfully'})
+            
+        except Invoice.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Invoice not found'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+def get_order_items(request, order_id):
+    """AJAX endpoint to fetch order items for the invoice modal"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Not authenticated'})
+    
+    try:
+        order = Order.objects.get(id=order_id)
+        invoice = Invoice.objects.get(order=order)
+        
+        items_data = []
+        for i, item in enumerate(invoice.items.all(), 1):
+            items_data.append({
+                'sno': i,
+                'product_name': item.product_name,
+                'unit_price': f"{item.unit_price:.2f}",
+                'qty': item.qty,
+                'tax': str(item.tax),
+                'tax_amount': f"{item.tax_amount:.2f}",
+                'discount': f"{item.discount:.2f}",
+                'total': f"{item.total:.2f}"
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'items': items_data,
+            'subtotal': f"{invoice.subtotal:.2f}",
+            'total_tax': f"{invoice.total_tax:.2f}",
+            'total_discount': f"{invoice.total_discount:.2f}",
+            'total_amount': f"{invoice.total_amount:.2f}"
+        })
+        
+    except (Order.DoesNotExist, Invoice.DoesNotExist):
+        return JsonResponse({'success': False, 'error': 'Order or Invoice not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+def convert_product_currency(request):
+    """AJAX endpoint to convert product prices using live rates and store currency in session"""
+    if request.method == 'GET':
+        country = request.GET.get('country', 'IN')
+        
+        try:
+            # Store selected currency in session
+            currency_info = get_currency_info(country)
+            request.session['selected_currency'] = country
+            request.session['currency_symbol'] = currency_info['symbol']
+            request.session['currency_code'] = currency_info['code']
+            
+            # Get live exchange rates
+            from .currency_utils import get_live_exchange_rates
+            live_rates = get_live_exchange_rates()
+            
+            products = Product.objects.all()
+            converted_products = []
+            
+            for product in products:
+                converted_rate = convert_currency(float(product.rate), 'IN', country)
+                converted_products.append({
+                    'product_id': product.product_id,
+                    'name': product.name,
+                    'original_rate': float(product.rate),
+                    'converted_rate': converted_rate,
+                    'currency_symbol': currency_info['symbol'],
+                    'currency_code': currency_info['code']
+                })
+            
+            return JsonResponse({
+                'success': True,
+                'products': converted_products,
+                'currency': currency_info,
+                'live_rates_used': True,
+                'rates_source': 'ExchangeRate API',
+                'rates': live_rates  # Include live rates for client-side fallback
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+def print_invoice(request, order_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    try:
+        order = Order.objects.get(id=order_id)
+        invoice = Invoice.objects.get(order=order)
+        
+        # Check access permissions
+        if order.user != request.user and not request.user.is_superuser:
+            messages.error(request, "Access denied.")
+            return redirect('bio_details:my_orders')
+        
+        # Get terms conditions from invoice or use defaults
+        terms_conditions = invoice.terms_conditions if hasattr(invoice, 'terms_conditions') and invoice.terms_conditions else [
+            "Payment is due within 30 days from the invoice date",
+            "Late payment charges may apply as per company policy   ",
+            "Goods once sold cannot be returned or exchanged",
+            "All disputes are subject to local jurisdiction",
+            "Any damages or issues must be reported within 3 days of delivery",
+            "The company is not responsible for delays caused by unforeseen circumstances",
+            "Warranty or support will be provided only as per agreed terms",
+        ]
+        
+        # Import and use number to words converter
+        from .utils import number_to_words
+        total_amount_words = number_to_words(invoice.total_amount, invoice.currency.code  )
+        
+        context = {
+            'invoice_number': invoice.invoice_number,
+            'invoice_date': invoice.invoice_date,
+            'customer_name': invoice.customer_name,
+            'customer_email': order.user.email,
+            'customer_phone': getattr(order.user.member, 'phone', '+91 9876543210') if hasattr(order.user, 'member') else '+91 9876543210',
+            'items': invoice.items.all(),
+            'subtotal': invoice.subtotal,
+            'total_tax': invoice.total_tax,
+            'total_discount': invoice.total_discount,
+            'total_amount': invoice.total_amount,
+            'total_amount_words': total_amount_words,
+            'total_qty': sum(item.qty for item in invoice.items.all()),
+            'terms_conditions': terms_conditions,
+            'currency_symbol': invoice.currency.symbol,
+            'selected_currency': invoice.currency.code,
+            
+            
+        }
+        
+        return render(request, 'print_invoice.html', context)
+        
+    except (Order.DoesNotExist, Invoice.DoesNotExist):
+        messages.error(request, "Invoice not found!")
+        return redirect('bio_details:my_orders')
+
+
+def my_profile(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if request.method == 'POST':
+        try:
+            # Update user fields
+            if request.POST.get('full_name'):
+                names = request.POST.get('full_name').split(' ', 1)
+                request.user.first_name = names[0]
+                request.user.last_name = names[1] if len(names) > 1 else ''
+                # Also update username to the full name
+                request.user.username = request.POST.get('full_name')
+            
+            if request.POST.get('email'):
+                request.user.email = request.POST.get('email')
+            
+            request.user.save()
+            
+            # Update member fields
+            try:
+                member = request.user.member
+            except Member.DoesNotExist:
+                # Create member if doesn't exist
+                member = Member.objects.create(
+                    user=request.user,
+                    phone='',
+                    city='',
+                    state='',
+                    gender='',
+                    designation=''
+                )
+            
+            if request.POST.get('phone'):
+                member.phone = request.POST.get('phone')
+            if request.POST.get('designation'):
+                member.designation = request.POST.get('designation')
+            if request.POST.get('gender'):
+                member.gender = request.POST.get('gender')
+            if request.POST.get('date_of_birth'):
+                member.date_of_birth = request.POST.get('date_of_birth')
+            if request.POST.get('city'):
+                member.city = request.POST.get('city')
+            if request.POST.get('state'):
+                member.state = request.POST.get('state')
+            if request.POST.get('pincode'):
+                member.pincode = request.POST.get('pincode')
+            if request.POST.get('address1'):
+                member.address1 = request.POST.get('address1')
+            if request.POST.get('bank_name'):
+                member.bank_name = request.POST.get('bank_name')
+            if request.POST.get('account_number'):
+                member.account_number = request.POST.get('account_number')
+            if request.POST.get('ifsc_code'):
+                member.ifsc_code = request.POST.get('ifsc_code')
+            if request.POST.get('pan_num'):
+                member.pan_num = request.POST.get('pan_num')
+            
+            # Handle profile picture upload
+            if request.FILES.get('profile_pic'):
+                member.profile_pic = request.FILES.get('profile_pic')
+            
+            member.save()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': 'Profile updated successfully'})
+            
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('bio_details:my_profile')
+            
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': str(e)})
+            
+            messages.error(request, f'Error updating profile: {str(e)}')
+    
+    return render(request, 'my_profile.html')

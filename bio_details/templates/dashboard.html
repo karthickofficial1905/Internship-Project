@@ -1,0 +1,299 @@
+{% extends "main.html" %}
+{% block content %}
+{% load static %}
+
+
+<div class="dashboard">
+    <div id="toast-container">
+        {% if messages %}
+            {% for message in messages %}
+                {% if 'cart-toast' in message.tags %}
+                    <div class="toast {{ message.tags }}">
+                        {{ message }}
+                        <div class="toast-timer"></div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </div>
+    <div>
+        <div class="dash-main">
+                <div class="dash-icon">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                        <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="white" stroke-width="2"/>
+                        <path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" stroke="white" stroke-width="2"/>
+                    </svg>
+                </div>
+                <div class="dash-content">
+                    <h1>Total Employee</h1>
+                </div>
+                <div class="dash-content">
+                    <h1 class="count">Count: {{ total_employees }}</h1>
+                </div>
+        </div>
+        <div class="dash-2">
+                <div class="dash-main-2">
+                    <div class="dash-icon-small">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="#28a745" stroke-width="2"/>
+                            <path d="m9 12 2 2 4-4" stroke="#28a745" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <div class="dash-content-small">
+                        <h1>Active</h1>
+                        <h1 class="count-small">{{ active_employees }}</h1>
+                    </div>
+                </div>
+                <div class="dash-main-2">
+                    <div class="dash-icon-small">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="#dc3545" stroke-width="2"/>
+                            <path d="m15 9-6 6" stroke="#dc3545" stroke-width="2"/>
+                            <path d="m9 9 6 6" stroke="#dc3545" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <div class="dash-content-small">
+                        <h1>Deactive</h1>
+                        <h1 class="count-small">{{ inactive_employees }}</h1>
+                    </div>
+                </div>
+        </div>
+    </div>
+
+    <div>
+        <div class="dash-main">
+                <div class="dash-icon">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                        <path d="M3 7V17C3 18.1046 3.89543 19 5 19H19C20.1046 19 21 18.1046 21 17V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7Z" stroke="white" stroke-width="2"/>
+                        <path d="M8 12H16" stroke="white" stroke-width="2"/>
+                        <path d="M12 8V16" stroke="white" stroke-width="2"/>
+                    </svg>
+                </div>
+                <div class="dash-content">
+                    <h1>Total Products</h1>
+                </div>
+                <div class="dash-content">
+                    <h1 class="count">Count: {{ total_products }}</h1>
+                </div>
+        </div>
+        <div class="dash-2">
+                <div class="dash-main-2">
+                    <div class="dash-icon-small">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="#28a745" stroke-width="2"/>
+                            <path d="m9 12 2 2 4-4" stroke="#28a745" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <div class="dash-content-small">
+                        <h1>Available</h1>
+                        <h1 class="count-small">{{ available_products }}</h1>
+                    </div>
+                </div>
+                <div class="dash-main-2">
+                    <div class="dash-icon-small">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="#dc3545" stroke-width="2"/>
+                            <path d="m15 9-6 6" stroke="#dc3545" stroke-width="2"/>
+                            <path d="m9 9 6 6" stroke="#dc3545" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <div class="dash-content-small">
+                        <h1>Out of Stock</h1>
+                        <h1 class="count-small">{{ out_of_stock_products }}</h1>
+                    </div>
+                </div>
+        </div>
+    </div>
+    
+    <div>
+        <div class="dash-main">
+                <div class="dash-icon">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                        <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="white" stroke-width="2"/>
+                        <path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" stroke="white" stroke-width="2"/>
+                    </svg>
+                </div>
+                <div class="dash-content">
+                    <h1>Total Orders</h1>
+                </div>
+                <div class="dash-content">
+                    <h1 class="count">Count: {{ total_orders }}</h1>
+                </div>
+        </div>
+        <div class="dash-2">
+                <div class="dash-main-2">
+                    <div class="dash-icon-small">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="#28a745" stroke-width="2"/>
+                            <path d="m9 12 2 2 4-4" stroke="#28a745" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <div class="dash-content-small">
+                        <h1>Completed</h1>
+                        <h1 class="count-small">{{ completed_orders }}</h1>
+                    </div>
+                </div>
+                <div class="dash-main-2">
+                    <div class="dash-icon-small">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="#dc3545" stroke-width="2"/>
+                            <path d="m15 9-6 6" stroke="#dc3545" stroke-width="2"/>
+                            <path d="m9 9 6 6" stroke="#dc3545" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <div class="dash-content-small">
+                        <h1>Pending</h1>
+                        <h1 class="count-small">{{ pending_orders }}</h1>
+                    </div>
+                </div>
+        </div>
+    </div>
+
+</div>
+
+
+
+
+
+
+
+<style>
+.dashboard {
+    display: flex;
+    gap: 10px;
+   
+}
+
+.dashboard > div {
+    flex: 1;
+    min-width: 0;
+}
+
+
+    #toast-container{
+            position:fixed;
+            top:30px;
+            right:40px;
+            z-index:9999;
+            display:flex;
+            flex-direction:column;
+            gap:12px;
+        } 
+
+        .toast{
+            background:linear-gradient(135deg,#ffffff,#f8f9ff);
+            padding:20px 20px;
+            border-radius:10px;
+            min-width:270px;
+            box-shadow:0 8px 20px rgba(0,0,0,0.15);
+            font-size:18px;
+            position:relative;
+            font-weight:900;
+            display:flex;
+            align-items:center;
+            gap:10px;
+            animation:slideIn 0.4s ease;
+        }
+
+        /* success message */
+        .toast.success{
+            border-left:6px solid #2ecc71;
+            color:#155724;
+        }
+
+        /* error message */
+        .toast.error{
+            border-left:6px solid #e74c3c;
+            color:#721c24;
+        }
+
+        /* warning message */
+        .toast.warning{
+            border-left:6px solid #f39c12;
+            color:#7a5200;
+        }
+
+        /* timer bar */
+        .toast-timer{
+            position:absolute;
+            bottom:0;
+            left:0;
+            height:4px;
+            width:100%;
+            background:linear-gradient(90deg,#4e73df,#1cc88a);
+            animation:timerBar 3s linear forwards;
+        }
+
+        /* slide animation */
+        @keyframes slideIn{
+            from{
+                transform:translateX(100%);
+                opacity:0;
+            }
+            to{
+                transform:translateX(0);
+                opacity:1;
+            }
+        }
+
+        /* timer animation */
+        @keyframes timerBar{
+            from{width:100%;}
+            to{width:0%;}
+        }
+    @media(max-width: 1024px) {
+        .shop-main {
+            margin-left: 20px;
+            margin-right: 20px;
+        }
+        .product-detail {
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+        #toast-container{
+        right:50px;
+        left:10px;
+        top:15px;
+        }
+
+        .toast{
+            width:100%;
+            max-width:100%;
+            font-size:14px;
+            padding:12px 15px;
+            border-radius:8px;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+        const dashboard = document.querySelector('.dashboard');
+        const menuBar2 = document.querySelector('.menu-bar2');
+        const svg1 = document.querySelector('.svg1');
+        const svg3 = document.querySelector('.svg3');
+
+        svg1.addEventListener('click', () => {
+            menuBar2.classList.remove('active');
+            dashboard.classList.remove('shifted');
+        });
+
+        svg3.addEventListener('click', () => {
+            menuBar2.classList.add('active');
+            dashboard.classList.add('shifted');
+        });
+
+    });
+</script>
+<script>
+setTimeout(function(){
+    document.querySelectorAll(".toast").forEach(function(toast){
+        toast.style.opacity="0";
+        toast.style.transform="translateX(100%)";
+        setTimeout(()=>toast.remove(),400);
+    });
+},3000);
+</script>
+
+{% endblock%}

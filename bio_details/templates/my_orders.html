@@ -1,0 +1,1345 @@
+{% extends "main.html" %}
+{% block content %}
+{% load static %}
+{% load currency_filters %}
+
+<div class="orders-wrapper">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon-wrap">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 17H7V10L9 12M13 16.5H11L13 14.5M15 14H13L15 12M19 15H17L19 13M5 7H19L17 9H7M5 21V7L7 5H17L19 7V21L17 19H7Z" fill="white"/>
+        </svg>
+      </div>
+      <div>
+        <p class="header-eyebrow">Dashboard</p>
+        <h1 class="header-title">My Orders</h1>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="order-stat">
+        <span class="stat-lbl">Total Orders : </span>
+        <span class="stat-num">{{ page_obj.paginator.count }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls Bar -->
+  <div class="controls-bar">
+    <form method="GET" class="controls-form">
+      <input type="hidden" name="search" value="{{ request.GET.search }}">
+      <div class="per-page-wrap">
+        <label class="ctrl-label">Show</label>
+        <select name="per_page" onchange="this.form.submit()" class="ctrl-select">
+          <option value="5"  {% if request.GET.per_page == '5'  %}selected{% endif %}>5</option>
+          <option value="10" {% if request.GET.per_page == '10' %}selected{% endif %}>10</option>
+          <option value="25" {% if request.GET.per_page == '25' %}selected{% endif %}>25</option>
+          <option value="50" {% if request.GET.per_page == '50' %}selected{% endif %}>50</option>
+        </select>
+        <label class="ctrl-label">entries</label>
+      </div>
+    </form>
+
+    <form method="GET" class="search-form">
+      <div class="search-input-wrap">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+          <path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input type="text" name="search" placeholder="Search orders, clients…" value="{{ request.GET.search }}" class="search-input">
+        {% if request.GET.search %}
+          <a href="?" class="search-clear">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table class="orders-table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Client</th>
+          <th>Items</th>
+          <th>Subtotal</th>
+          <th>Tax</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in page_obj %}
+        <tr class="order-row">
+          <td>
+            <span class="order-id">{{ order.order_id }}</span>
+          </td>
+          <td>
+            {% if order.user %}
+              <div class="client-cell">
+                <div class="client-avatar">{{ order.user.username|slice:":1"|upper }}</div>
+                <span class="client-name">{{ order.user.username }}</span>
+              </div>
+            {% else %}
+              <span class="no-client">— No Client</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="items-list">
+              {% if order.invoice %}
+                {% for item in order.invoice.items.all %}
+                  <div class="item-chip">
+                    <span class="item-name">{{ item.product_name }}</span>
+                    <span class="item-qty">×{{ item.qty }}</span>
+                  </div>
+                {% endfor %}
+              {% else %}
+                {% for item in order.items.all %}
+                  <div class="item-chip">
+                    <span class="item-name">{{ item.product_name }}</span>
+                    <span class="item-qty">×{{ item.quantity }}</span>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            </div>
+          </td>
+          <td>
+            <span class="amount">{{ order.invoice.currency_symbol|default:"₹" }}{{ order.invoice.total_amount }}</span>
+          </td>
+          <td>
+            <span class="tax-amount">{{ order.invoice.currency_symbol|default:"₹" }}{{ order.invoice.total_tax|default:"0.00" }}</span>
+          </td>
+          <td>
+            {% if order.invoice %}
+              {% if order.invoice.payment_status == 'paid' %}
+                <span class="badge badge-paid">
+                  <span class="badge-dot"></span>Paid
+                </span>
+              {% elif order.invoice.payment_status == 'pending' %}
+                <span class="badge badge-pending">
+                  <span class="badge-dot"></span>Pending
+                </span>
+              {% else %}
+                <span class="badge badge-failed">
+                  <span class="badge-dot"></span>Failed
+                </span>
+              {% endif %}
+            {% else %}
+              <span class="badge badge-draft">
+                <span class="badge-dot"></span>Draft
+              </span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="date-cell">{{ order.created_at|date:"d M, Y" }}</span>
+          </td>
+          <td>
+            <div class="action-group">
+              {% if order.invoice %}
+                <button class="act-btn act-view" title="View Invoice"
+                  onclick="openInvoiceModal('{{ order.invoice.invoice_number|default:'#INV-001' }}', '{{ order.created_at|date:'d/m/Y' }}', '{{ order.user.username|default:'N/A'|escapejs }}', '{{ order.user.email|default:'customer@example.com' }}', '{{ order.user.member.phone|default:'+91 9876543210' }}', '{{ order.invoice.total_discount|default:'0.00' }}', '{{ order.invoice.subtotal|default:'0.00' }}', '{{ order.invoice.total_tax|default:'0.00' }}', '{{ order.invoice.total_amount|default:'0.00' }}', [{% for item in order.invoice.items.all %}{'product_name':'{{ item.product_name|escapejs }}','unit_price':'{{ item.unit_price }}','qty':'{{ item.qty }}','tax':'{{ item.tax }}','discount':'{{ item.discount }}','total':'{{ item.total }}'}{% if not forloop.last %},{% endif %}{% endfor %}], {{ order.invoice.terms_conditions|default:'[]'|safe }}, {{ order.id }}, '{{ order.invoice.currency_symbol|default:'₹'|escapejs }}', '{{ order.invoice.payment_status|default:'pending' }}')">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
+                  View
+                </button>
+                <a href="{% url 'bio_details:print_invoice' order.id %}" class="act-btn act-print" title="Print Invoice" target="_blank">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Print
+                </a>
+              {% else %}
+                <span class="no-action">No actions</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="empty-state">
+            <div class="empty-inner">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" class="empty-icon">
+                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <p class="empty-title">No orders found</p>
+              <p class="empty-sub">You haven't placed any orders yet.</p>
+              <a href="{% url 'bio_details:product_view' %}" class="empty-cta">Browse Products</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+  <div class="pagination-bar">
+    <span class="page-info">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </span>
+    <div class="page-links">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}" class="page-btn">«</a>
+      {% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+          <span class="page-btn page-active">{{ num }}</span>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}" class="page-btn">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}" class="page-btn">»</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div><!-- /.orders-wrapper -->
+
+
+<!-- ===================== INVOICE SIDEBAR ===================== -->
+<div id="invoiceModal" class="inv-sidebar">
+  <div class="inv-panel">
+
+    <div class="inv-top">
+      <div class="inv-top-left">
+        <span class="inv-label">INVOICE</span>
+        <span id="modalInvoiceNumber" class="inv-number"></span>
+      </div>
+      <button class="inv-close" onclick="closeInvoiceModal()" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="black"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="inv-body">
+
+      <!-- Meta info -->
+      <div class="inv-meta-grid">
+        <div class="inv-meta-card">
+          <p class="meta-lbl">Date</p>
+          <p class="meta-val" id="modalInvoiceDate">—</p>
+        </div>
+        <div class="inv-meta-card">
+          <p class="meta-lbl">Status</p>
+          <p class="meta-val"><span id="modalPaymentStatus" class="badge badge-paid"><span class="badge-dot"></span>Paid</span></p>
+        </div>
+        <div class="inv-meta-card">
+          <p class="meta-lbl">Customer</p>
+          <p class="meta-val" id="modalCustomerName">—</p>
+        </div>
+        <div class="inv-meta-card">
+          <p class="meta-lbl">Phone</p>
+          <p class="meta-val" id="modalCustomerPhone">—</p>
+        </div>
+        <div class="inv-meta-card" style="grid-column: 1/-1;">
+          <p class="meta-lbl">Email</p>
+          <p class="meta-val" id="modalCustomerEmail">—</p>
+        </div>
+      </div>
+
+      <!-- Items table -->
+      <div class="inv-section">
+        <h4 class="inv-section-title">Line Items</h4>
+        <div class="inv-table-wrap" style="max-height: 300px; overflow-y: auto;">
+          <table class="inv-table">
+            <thead>
+              <tr>
+                <th>S.NO</th>
+                <th>Product</th>
+                <th>MRP</th>
+                <th>Qty</th>
+                <th>Tax</th>
+                <th>discount</th>
+              </tr>
+            </thead>
+            <tbody id="invoiceItemsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="inv-section">
+        <h4 class="inv-section-title">Summary</h4>
+        <div class="inv-summary">
+          <div class="sum-row">
+            <span>Subtotal</span>
+            <span><span id="modalCurrencySymbol">₹</span><span id="modalSubtotal">—</span></span>
+          </div>
+          <div class="sum-row">
+            <span>Tax</span>
+            <span><span id="modalCurrencySymbol2">₹</span><span id="modalTax">—</span></span>
+          </div>
+          <div class="sum-row">
+            <span>Discount</span>
+            <span>−<span id="modalCurrencySymbol3">₹</span><span id="modalSummaryDiscount">—</span></span>
+          </div>
+          <div class="sum-row sum-total">
+            <span>Total</span>
+            <span><span id="modalCurrencySymbol4">₹</span><span id="modalTotal">—</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Terms -->
+      <div class="inv-section">
+        <h4 class="inv-section-title">Terms &amp; Conditions</h4>
+        <ul class="inv-terms" id="modalTermsConditions">
+          <li>Payment due within 30 days</li>
+          <li>Late payment charges may apply</li>
+          <li>Goods once sold cannot be returned</li>
+          <li>Subject to local jurisdiction</li>
+        </ul>
+      </div>
+
+    </div><!-- /.inv-body -->
+
+    <div class="inv-footer">
+      <a href="#" id="modalPrintBtn" class="inv-btn inv-btn-print" target="_blank">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Print Invoice
+      </a>
+      <button class="inv-btn inv-btn-close" onclick="closeInvoiceModal()">Close</button>
+    </div>
+
+  </div>
+</div>
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="closeInvoiceModal()"></div>
+
+
+<!-- Toast -->
+{% if messages %}
+<div id="toast-container">
+  {% for message in messages %}
+    <div class="toast {% if 'delete-toast' in message.tags %}toast-delete{% elif 'success' in message.tags %}toast-success{% elif 'error' in message.tags %}toast-error{% else %}toast-info{% endif %}">
+      <div class="toast-bar"></div>
+      <span>{{ message }}</span>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+
+<script>
+    
+  let currentOrderId = null;
+  let currentInvoiceData = {};
+
+  function openInvoiceModal(invoiceNumber, invoiceDate, customerName, customerEmail, customerPhone, totalDiscount, subtotal, totalTax, totalAmount, items, termsConditions, orderId, currencySymbol, paymentStatus) {
+    currentOrderId = orderId;
+    currentInvoiceData = { invoiceNumber, invoiceDate, customerName, customerEmail, customerPhone, totalDiscount, subtotal, totalTax, totalAmount, items, termsConditions, currencySymbol, paymentStatus };
+
+    document.getElementById('invoiceModal').classList.add('open');
+    document.getElementById('sidebarOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    const printBtn = document.getElementById('modalPrintBtn');
+    if (printBtn && orderId) {
+      printBtn.href = `/print-invoice/${orderId}/`;
+    }
+
+    document.getElementById('modalInvoiceNumber').textContent = invoiceNumber;
+    document.getElementById('modalInvoiceDate').textContent   = invoiceDate;
+    document.getElementById('modalCustomerName').textContent  = customerName;
+    document.getElementById('modalCustomerPhone').textContent = customerPhone;
+    document.getElementById('modalCustomerEmail').textContent = customerEmail;
+
+    // Update payment status
+    const statusElement = document.getElementById('modalPaymentStatus');
+    const status = paymentStatus || 'pending';
+    statusElement.className = `badge badge-${status.toLowerCase()}`;
+    statusElement.innerHTML = `<span class="badge-dot"></span>${status.charAt(0).toUpperCase() + status.slice(1)}`;
+
+    const sym = currencySymbol || '₹';
+    ['modalCurrencySymbol','modalCurrencySymbol2','modalCurrencySymbol3','modalCurrencySymbol4'].forEach(id => {
+      document.getElementById(id).textContent = sym;
+    });
+    document.getElementById('modalSubtotal').textContent       = subtotal;
+    document.getElementById('modalTax').textContent            = totalTax;
+    document.getElementById('modalSummaryDiscount').textContent= parseFloat(totalDiscount || 0).toFixed(0);
+    document.getElementById('modalTotal').textContent          = totalAmount;
+
+    // Items
+    const tbody = document.getElementById('invoiceItemsBody');
+    let html = '', totalQty = 0, grandTotal = 0, totalTaxAmt = 0, totalDiscountAmt = 0;
+
+    if (items && items.length) {
+      items.forEach((item, i) => {
+        totalQty   += parseInt(item.qty);
+        grandTotal += parseFloat(item.total);
+        totalTaxAmt += (parseFloat(item.unit_price) * parseInt(item.qty) * parseFloat(item.tax)) / 100;
+        totalDiscountAmt += parseFloat(item.discount || 0);
+         html += `<tr>
+          <td style="font-size:15px;">${i+1}</td>
+          <td style="text-align:left; font-size:15px; ">${item.product_name}</td>
+          <td style="font-size:15px;">${sym}${parseFloat(item.unit_price|| 0).toFixed(2)}</td>
+          <td style="font-size:15px;">${item.qty}</td>
+          <td style="font-size:15px;">${parseFloat(item.tax|| 0).toFixed(0)}%</td>
+          <td style="font-size:15px;">${sym}${parseFloat(item.discount || 0).toFixed(0)}</td>
+        </tr>`;
+      });
+      html += `<tr class="inv-table-total">
+        <td style="font-size:15px;"></td>
+        <td style="text-align:left; font-size:15px; font-weight:600;">Total</td>
+        <td style="font-size:15px;">${sym}${parseFloat(subtotal|| 0).toFixed(2)}</td>
+        <td style="font-size:15px;">${totalQty}</td>
+        <td style="font-size:15px;">${sym}${totalTaxAmt.toFixed(2)}</td>
+        <td style="font-size:15px;">${sym}${totalDiscountAmt.toFixed(0)}</td>
+      </tr>`;
+    } else {
+      html = `<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px;">No items found</td></tr>`;
+    }
+    tbody.innerHTML = html;
+
+    // Terms
+    const termsList = document.getElementById('modalTermsConditions');
+    let termsHtml = '';
+    if (termsConditions && termsConditions.length) {
+      termsConditions.forEach(t => termsHtml += `<li>${t}</li>`);
+      const due = new Date(Date.now() + 30*24*60*60*1000).toLocaleDateString('en-GB');
+      termsHtml += `<li>Due Date: ${due}</li>`;
+    } else {
+      termsHtml = `<li>Payment due within 30 days</li><li>Late payment charges may apply</li><li>Goods once sold cannot be returned</li><li>Subject to local jurisdiction</li>`;
+    }
+    termsList.innerHTML = termsHtml;
+  }
+
+  function closeInvoiceModal() {
+    document.getElementById('invoiceModal').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // Toasts
+  setTimeout(() => {
+    document.querySelectorAll('.toast').forEach(t => {
+      t.style.opacity = '0';
+      t.style.transform = 'translateY(-12px)';
+      setTimeout(() => t.remove(), 400);
+    });
+  }, 3500);
+
+  // Sidebar toggle for mobile nav
+  document.addEventListener('DOMContentLoaded', () => {
+    const container = document.querySelector('.orders-wrapper');
+    ['svg1','svg3'].forEach(cls => {
+      const el = document.querySelector('.' + cls);
+      if (el) el.addEventListener('click', () => container.classList.toggle('shifted'));
+    });
+  });
+</script>
+
+
+<style>
+    
+  /* ============================================================
+    BASE VARIABLES
+    ============================================================ */
+  :root {
+    --navy:    #1e3a8a;
+    --blue:    #1a47a0;
+    --blue-lt: #e8edf8;
+    --accent:  #2563eb;
+    --green:   #059669;
+    --amber:   #d97706;
+    --red:     #dc2626;
+    --slate:   #64748b;
+    --border:  #e2e8f0;
+    --bg:      #f1f5fb;
+    --white:   #ffffff;
+    --text:    #0f172a;
+    --text-sm: #475569;
+    --radius:  10px;
+    --shadow:  0 4px 24px rgba(15,37,87,0.09);
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+
+  /* ============================================================
+    WRAPPER
+    ============================================================ */
+  .orders-wrapper {
+    font-family: "Roboto", sans-serif;
+    color: var(--text);
+    margin-top: 120px;
+    margin-left: 360px;
+    margin-right: 40px;
+    margin-bottom: 120px;
+    transition: margin-left 0.3s ease;
+  }
+
+  .orders-wrapper.shifted { margin-left: 90px; }
+
+  /* ============================================================
+    PAGE HEADER
+    ============================================================ */
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+      background: linear-gradient(135deg,#002560 0%,#1d4ed8 100%);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 32px rgba(15,37,87,0.22);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .header-icon-wrap {
+    width: 48px; height: 48px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .header-eyebrow {
+     font-family: "Roboto", sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+    margin: 0 0 4px;
+  }
+
+  .header-title {
+    font-family: var(--font-head);
+    font-size: 26px;
+    font-weight: 800;
+    color: #fff;
+    margin: 0;
+    letter-spacing: -0.5px;
+  }
+
+  .order-stat {
+    display: flex;
+    gap:10px;
+    text-align:center;
+    align-items: center;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
+    padding: 10px 10px;
+  }
+
+  .stat-num {
+    font-family: var(--font-head);
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+  }
+
+
+  .stat-lbl {
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+    margin-top: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ============================================================
+    CONTROLS BAR
+    ============================================================ */
+  .controls-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0px;
+    margin-bottom: 16px;
+    gap: 16px;
+    box-shadow: var(--shadow);
+  }
+
+  .controls-form, .search-form { display: flex; align-items: center; }
+
+  .per-page-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ctrl-label {
+    font-size: 13px;
+    color: var(--slate);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .ctrl-select {
+     font-family: "Roboto", sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--navy);
+    background: var(--blue-lt);
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    padding: 6px 10px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color .2s;
+  }
+
+  .ctrl-select:hover, .ctrl-select:focus { border-color: var(--accent); }
+
+  .search-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    color: var(--slate);
+    pointer-events: none;
+  }
+
+  .search-input {
+     font-family: "Roboto", sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 36px 9px 38px;
+    width: 280px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+
+  .search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    background: var(--white);
+  }
+
+  .search-clear {
+    position: absolute;
+    right: 10px;
+    color: var(--slate);
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    transition: color .2s;
+  }
+
+  .search-clear:hover { color: var(--red); }
+
+  /* ============================================================
+    TABLE
+    ============================================================ */
+  .table-wrap {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+  }
+
+  .orders-table {
+    width: 100%;
+    border-collapse: collapse;
+     font-family: "Roboto", sans-serif;
+  }
+
+  .orders-table thead th {
+   background-color: #1e3a8a;
+    color: rgba(255,255,255,0.85);
+    font-family: var(--font-head);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 15px 16px;
+    text-align: left;
+    white-space: nowrap;
+    border: none;
+  }
+
+  .orders-table thead th:first-child { border-radius: 0; }
+
+  .orders-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .15s;
+  }
+
+  .orders-table tbody tr:last-child { border-bottom: none; }
+
+  .orders-table tbody tr:hover { background: #f8faff; }
+
+  .orders-table td {
+    padding: 14px 16px;
+    font-size: 14px;
+    vertical-align: middle;
+    border: none;
+  }
+
+  .order-id {
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--blue);
+    background: var(--blue-lt);
+    padding: 4px 10px;
+    border-radius: 6px;
+    letter-spacing: 0.02em;
+  }
+
+  .client-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .client-avatar {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--blue), var(--accent));
+    color: white;
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .client-name {
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .no-client {
+    color: var(--slate);
+    font-style: italic;
+    font-size: 13px;
+  }
+
+  .items-list { display: flex; flex-direction: column; gap: 4px; }
+
+  .item-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 8px;
+    width: fit-content;
+  }
+
+  .item-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .item-qty {
+    font-size: 15px;
+    color: var(--slate);
+    background: var(--border);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  .amount {
+    font-family: var(--font-head);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  .tax-amount {
+    font-size: 15px;
+    color: var(--slate);
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  .badge-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .badge-paid   { background: #d1fae5; color: #065f46; }
+  .badge-paid   .badge-dot { background: #059669; box-shadow: 0 0 0 3px rgba(5,150,105,0.2); }
+  .badge-pending{ background: #fef9c3; color: #854d0e; }
+  .badge-pending .badge-dot{ background: #ca8a04; box-shadow: 0 0 0 3px rgba(202,138,4,0.2); }
+  .badge-failed { background: #fee2e2; color: #991b1b; }
+  .badge-failed .badge-dot { background: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.2); }
+  .badge-cancelled { background: #f3f4f6; color: #374151; }
+  .badge-cancelled .badge-dot { background: #6b7280; box-shadow: 0 0 0 3px rgba(107,114,128,0.2); }
+  .badge-draft  { background: #f1f5f9; color: #475569; }
+  .badge-draft  .badge-dot { background: #94a3b8; }
+
+  .date-cell {
+    font-size: 15px;
+    color: var(--text-sm);
+    white-space: nowrap;
+  }
+
+  /* Action buttons */
+  .action-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .act-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+     font-family: "Roboto", sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 13px;
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+
+  .act-view {
+    background: var(--navy);
+    color: white;
+  }
+
+  .act-view:hover {
+    background: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+    color: white;
+  }
+
+  .act-print {
+    background: #ecfdf5;
+    color: var(--green);
+    border: 1.5px solid #bbf7d0;
+  }
+
+  .act-print:hover {
+    background: var(--green);
+    color: white;
+    border-color: var(--green);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(5,150,105,0.25);
+  }
+
+  .no-action {
+    font-size: 12px;
+    color: var(--slate);
+    font-style: italic;
+  }
+
+  /* Empty state */
+  .empty-state { padding: 0 !important; }
+
+  .empty-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px 20px;
+    gap: 10px;
+  }
+
+  .empty-icon { opacity: 0.45; }
+
+  .empty-title {
+    font-family: var(--font-head);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 6px 0 0;
+  }
+
+  .empty-sub {
+    font-size: 14px;
+    color: var(--slate);
+    margin: 0;
+  }
+
+  .empty-cta {
+    margin-top: 12px;
+    background: var(--navy);
+    color: white;
+     font-family: "Roboto", sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 22px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background .2s;
+  }
+
+  .empty-cta:hover { background: var(--accent); }
+
+  /* ============================================================
+    PAGINATION
+    ============================================================ */
+  .pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px;
+  }
+
+  .page-info {
+    font-size: 13px;
+    color: var(--slate);
+  }
+
+  .page-links {
+    display: flex;
+    gap: 6px;
+  }
+
+  .page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px; height: 36px;
+     font-family: "Roboto", sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--navy);
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all .18s;
+    cursor: pointer;
+    padding: 0 8px;
+  }
+
+  .page-btn:hover {
+    background: var(--navy);
+    color: white;
+    border-color: var(--navy);
+  }
+
+  .page-active {
+    background: var(--navy);
+    color: white;
+    border-color: var(--navy);
+    cursor: default;
+  }
+
+  /* ============================================================
+    INVOICE SIDEBAR
+    ============================================================ */
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,37,87,0.35);
+    backdrop-filter: blur(3px);
+    z-index: 9998;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s;
+  }
+
+  .sidebar-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .inv-sidebar {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 520px;
+    background: var(--white);
+    box-shadow: -8px 0 40px rgba(15,37,87,0.18);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform .35s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .inv-sidebar.open { transform: translateX(0); }
+
+  .inv-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .inv-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 28px;
+    background: linear-gradient(135deg, var(--navy), var(--blue));
+    flex-shrink: 0;
+  }
+
+  .inv-top-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .inv-label {
+     font-family: "Roboto", sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+  }
+
+  .inv-number {
+    font-family: var(--font-head);
+    font-size: 20px;
+    font-weight: 800;
+    color: white;
+    letter-spacing: -0.3px;
+  }
+
+  .inv-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+  }
+
+  .inv-close:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+  }
+
+  .inv-close svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+  }
+
+  .inv-close:hover { background: rgba(255,255,255,0.25); }
+
+  .inv-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* Scrollbar */
+  .inv-body::-webkit-scrollbar { width: 4px; }
+  .inv-body::-webkit-scrollbar-track { background: transparent; }
+  .inv-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .inv-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .inv-meta-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+
+  .meta-lbl {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--slate);
+    margin: 0 0 4px;
+  }
+
+  .meta-val {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+  }
+
+  .inv-section-title {
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--slate);
+    margin: 0 0 12px;
+  }
+
+  .inv-table-wrap {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+
+  }
+
+  .inv-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .inv-table thead th {
+    background: var(--navy);
+    color: rgba(255,255,255,0.8);
+    font-family: var(--font-head);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 10px 10px;
+    text-align: center;
+    border: none;
+  }
+
+  .inv-table td {
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    border-left: none;
+    border-right: none;
+    color: var(--text);
+  }
+
+  .inv-table tbody tr:last-child td { border-bottom: none; }
+
+  .inv-table-total td {
+    background: var(--blue-lt);
+    font-weight: 700;
+    border-top: 2px solid var(--border) !important;
+    border-bottom: none !important;
+  }
+
+  .inv-summary {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .sum-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 16px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-sm);
+  }
+
+  .sum-row:last-child { border-bottom: none; }
+
+  .sum-total {
+    background: var(--navy);
+    color: white !important;
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  .inv-terms {
+    list-style: none;
+    padding: 0; margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .inv-terms li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-sm);
+    padding: 8px 12px;
+    background: var(--bg);
+    border-radius: 7px;
+  }
+
+  .inv-terms li::before {
+    content: '✓';
+    color: var(--green);
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .inv-footer {
+    display: flex;
+    gap: 10px;
+    padding: 18px 28px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--white);
+  }
+
+  .inv-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+     font-family: "Roboto", sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all .2s;
+  }
+
+  .inv-btn-print {
+    background: var(--green);
+    color: white;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .inv-btn-print:hover {
+    background: #047857;
+    box-shadow: 0 4px 14px rgba(5,150,105,0.3);
+    color: white;
+  }
+
+  .inv-btn-close {
+    background: #f1f5f9;
+    color: var(--slate);
+  }
+
+  .inv-btn-close:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  /* ============================================================
+    TOASTS
+    ============================================================ */
+  #toast-container {
+    position: fixed;
+    top: 24px; right: 24px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .toast {
+    background: var(--white);
+    border-radius: 10px;
+    padding: 14px 18px;
+    min-width: 260px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.13);
+     font-family: "Roboto", sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+    animation: toastIn .35s ease;
+    transition: opacity .3s, transform .3s;
+  }
+
+  .toast-success { border-left: 4px solid var(--green); color: #065f46; }
+  .toast-error   { border-left: 4px solid var(--red); color: #991b1b; }
+  .toast-delete  { border-left: 4px solid var(--red); background: #fef2f2; color: #7f1d1d; }
+  .toast-info    { border-left: 4px solid var(--accent); color: var(--navy); }
+
+  .toast-bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--green));
+    animation: barShrink 3.5s linear forwards;
+  }
+
+  @keyframes toastIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+
+  @keyframes barShrink {
+    from { width: 100%; }
+    to   { width: 0; }
+  }
+
+  /* ============================================================
+    RESPONSIVE
+    ============================================================ */
+  @media (max-width: 1200px) {
+    .orders-wrapper {
+      margin-left: 20px;
+      margin-right: 20px;
+      margin-top: 90px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .orders-wrapper { margin: 100px 12px 100px; }
+
+    .page-header {
+      flex-direction: column;
+      gap: 16px;
+      align-items: flex-start;
+      padding: 20px;
+    }
+
+    .order-stat { align-items: flex-start; }
+
+    .controls-bar {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .search-input { width: 100%; }
+
+    .table-wrap { overflow-x: auto; }
+
+    .orders-table { min-width: 700px; }
+
+    .inv-sidebar { width: 100%; }
+
+    .pagination-bar { flex-direction: column; gap: 12px; }
+  }
+</style>
+
+{% endblock %}

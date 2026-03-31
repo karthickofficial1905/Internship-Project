@@ -1,0 +1,179 @@
+{% extends "main.html" %}
+{% block content %}
+{% load static %}
+
+
+<section>
+    <div class="content">
+        <div class="breadcrumbs">
+            {% if user.is_superuser %}
+                <a href="/product/">Product Management</a> > <span>Add Product</span>
+            {% else %}
+                 <a href="/">Login</a> > <span>Add Product</span>
+            {% endif %}
+            <h1>Add Product</h1>
+        </div>
+        
+       <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+           <h2>Product Information</h2>
+           
+            <div class="profile-layout">
+                <div class="left-section">
+                    <div class="details">
+                        <h3 style="display: flex; align-items: center; gap: 5px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> Product Name :</h3>
+                        <input class="input1 input-60" type="text" name='name' placeholder="Enter Product Name" required/>
+                    </div>
+
+                    <div class="details">
+                        <h3 style="display: flex; align-items: center; gap: 5px;"> Rate (₹) :</h3>
+                        <input class="input1 input-60" type="number" name='price' step="0.01" placeholder="0.00" required/>
+                    </div>
+
+                    <div class="details">
+                        <h3 style="display: flex; align-items: center; gap: 5px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h16c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg> GST.Tax (%) :</h3>
+                        <input class="input1 input-60" type="number" name='gst' step="0.01" placeholder="18.00" required/>
+                    </div>
+
+                    <div class="details">
+                        <h3 style="display: flex; align-items: center; gap: 5px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg> Discount (%) :</h3>
+                        <input class="input1 input-60" type="number" name='discount' step="0.01" placeholder="5.00" required/>
+                    </div>
+                </div>
+
+                <div class="right-section">
+                    <div class="profile-pic-container">
+                        <div class="file-preview" id="filePreview">
+                            <img class="preview-image" id="previewImage" src="" >
+                        </div>
+                        <h3 style="display: flex; align-items: center; gap: 5px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg> Product Image :</h3>
+                        <input class="input1" type="file" name='product_image' id="productImage" accept="image/*" required/>
+                    </div>
+                </div>
+            </div>
+
+            <div class="name">
+                <div class="details">
+                    <h3 style="display: flex; align-items: center; gap: 5px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Brand :</h3>
+                    <select class="input1" name="brand" id="brandSelect" required>
+                        <option value="">Select Brand</option>
+                        {% for brand in brands %}
+                            <option value="{{ brand.name }}">{{ brand.name }}</option>
+                        {% endfor %}
+                        <option value="add_new">+ Add New Brand</option>
+                    </select>
+                    <input class="input1" type="text" name="new_brand" id="newBrandInput" placeholder="Enter New Brand Name" style="display:none; margin-top:10px;" />
+                </div>
+                <div class="details">
+                    <h3 style="display: flex; align-items: center; gap: 5px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg> Category :</h3>
+                    <select class="input1" name="category" id="categorySelect" required>
+                        <option value="">Select Category</option>
+                        {% for category in categories %}
+                            <option value="{{ category.name }}">{{ category.name }}</option>
+                        {% endfor %}
+                        <option value="add_new">+ Add New Category</option>
+                    </select>
+                    <input class="input1" type="text" name="new_category" id="newCategoryInput" placeholder="Enter New Category Name" style="display:none; margin-top:10px;" />
+                </div>
+                <div class="details">
+                    <h3 style="display: flex; align-items: center; gap: 5px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h16c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg> Product ID :</h3>
+                    <input class="input1" type="text" name='product_id' placeholder="Auto-generated" readonly/>
+                </div>
+            </div>
+
+            <div class="address">
+                <div class="address2">
+                    <h3 style="display: flex; align-items: center; gap: 5px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h16c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg> Product Description</h3>
+                    <textarea style="font-size:18px;" name="description" class="Address-text" placeholder="Enter Product Description"></textarea>
+                </div>
+            </div>
+
+            <h2 class="invoice">Invoice Information</h2>
+
+            <div class="bank-details">
+                <div class="bank">
+                    <h3 style="display: flex; align-items: center; gap: 5px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> Minimum Stock :</h3>
+                    <input class="bank-input" type="number" name='min_stock' placeholder="Enter Minimum Stock" />
+                </div>
+                <div class="bank">
+                    <h3 style="display: flex; align-items: center; gap: 5px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> Current Stock :</h3>
+                    <input class="bank-input" type="number" name='current_stock' placeholder="Enter Current Stock" required/>
+                </div>     
+            </div>
+
+            <div class="button-container">
+                <button class="button2" type="reset">Cancel</button>
+                <button type="submit" id="saveButton">Save Product</button>
+            </div>  
+       </form>
+    </div>
+</section>
+
+
+
+<script>
+    // Image preview functionality
+    document.getElementById('productImage').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const previewImage = document.getElementById('previewImage');
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                previewImage.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            previewImage.src = '';
+            previewImage.style.display = 'none';
+        }
+    });
+
+    // Brand dropdown functionality
+    document.getElementById('brandSelect').addEventListener('change', function(e) {
+        const newBrandInput = document.getElementById('newBrandInput');
+        if (e.target.value === 'add_new') {
+            newBrandInput.style.display = 'block';
+            newBrandInput.required = true;
+            newBrandInput.name = 'brand';
+            e.target.name = '';
+        } else {
+            newBrandInput.style.display = 'none';
+            newBrandInput.required = false;
+            newBrandInput.name = 'new_brand';
+            e.target.name = 'brand';
+        }
+    });
+
+    // Category dropdown functionality
+    document.getElementById('categorySelect').addEventListener('change', function(e) {
+        const newCategoryInput = document.getElementById('newCategoryInput');
+        if (e.target.value === 'add_new') {
+            newCategoryInput.style.display = 'block';
+            newCategoryInput.required = true;
+            newCategoryInput.name = 'category';
+            e.target.name = '';
+        } else {
+            newCategoryInput.style.display = 'none';
+            newCategoryInput.required = false;
+            newCategoryInput.name = 'new_category';
+            e.target.name = 'category';
+        }
+    });
+</script>
+        
+
+<style>
+    @media (max-width: 768px) {
+        .psvg {
+            right: 10px !important;
+        }
+        .bank-input {
+            padding-right: 40px !important;
+        }
+    }
+</style>
+
+{% endblock %}
+

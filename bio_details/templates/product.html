@@ -1,0 +1,419 @@
+{% extends "main.html" %}
+{% block content %}
+{% load static %}
+
+
+
+
+<style>
+    .section-title{
+        margin-bottom:50px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .section-title-text h1{
+        font-size:36px;
+        margin-bottom:10px;
+        color:#222;
+    }
+
+    .section-title-text p{
+        color:#777;
+        font-size:18px;
+    }
+
+    .search-box {
+        display: flex;
+        align-items: center;
+    }
+    .search-box a:hover svg{
+        fill:#1e3a8a;
+         transform:scale(1.1);
+    }
+    .search-input {
+        padding: 12px 20px;
+        border: 2px solid #ddd;
+        border-radius: 25px;
+        font-size: 16px;
+        width: 300px;
+        outline: none;
+        transition: all 0.3s ease;
+    }
+
+    .search-input:focus {
+        border-color: #e67e22;
+        box-shadow: 0 0 10px rgba(230, 126, 34, 0.2);
+    }
+    .product-main{
+        margin-top:150px;
+        transition: margin-left 0.3s ease;
+        margin-left:360px;
+        margin-right:50px;
+        margin-bottom: 200px;
+
+    }
+
+    .product-main.shifted{
+        margin-left:100px;
+    }
+
+    .product-container{
+        display:grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px,1fr));
+        gap:40px;
+       
+        
+    }
+
+    .product-card{
+        background:#f0ece9;
+        border-radius:15px;
+        overflow:hidden;
+        transition:0.3s;
+        margin-bottom:50px;
+        max-width:400px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .product-card:hover{
+        transform:translateY(-8px);
+    }
+
+    .product-image{
+        padding:40px;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+    }
+
+    .product-image img{
+        width:100%;
+        max-width:280px;
+        height:280px;
+        object-fit:contain;
+    }
+
+    .product-info{
+        background:#fff;
+        padding:20px 25px;
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+    }
+
+    .product-text h3{
+        font-size:18px;
+        margin-bottom:8px;
+        color:#222;
+    }
+
+    .product-text span{
+        font-size:20px;
+        color:#e67e22;
+        font-weight:bold;
+    }
+    .product-text a{
+        font-size:20px;
+        color:#1e3a8a;
+        font-weight:bold;
+    }
+    .product-text a:hover{
+        color:#e67e22 !important;
+    }
+
+    .cart-btn{
+        width:45px;
+        height:45px;
+        background:#e67e22;
+        border-radius:50%;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        cursor:pointer;
+        transition:0.3s;
+    }
+
+    .cart-btn:hover{
+        background:#d35400;
+        transform:scale(1.1);
+    }
+
+    .cart-btn i{
+        color:white;
+        font-size:18px;
+    }
+
+    .pagination a {
+        transition: all 0.3s ease;
+        transform: scale(1);
+    }
+
+    .pagination a:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(53, 83, 205, 0.3);
+    }
+
+    @media(max-width:1024px){
+        .product-main{
+            margin-top:120px;
+            margin-left:20px;
+            margin-right:20px;
+        }
+        .product-card{
+            margin-bottom:10px;
+        }
+        .section-title{
+            flex-direction:column;
+            gap:20px;
+            align-items:flex-start;
+        }
+        .search-input{
+            width:100%;
+            max-width:300px;
+        }
+    }
+
+</style>
+
+<div class="product-main">
+
+    <div class="section-title">
+        <div class="section-title-text">
+            <h1>Our Products</h1>
+            <p>Discover our curated collection of premium products</p>
+        </div>
+        <div class="search-box">
+            <select id="countrySelect" style="padding: 12px;  border: 2px solid #ddd; border-radius: 25px; margin-right: 10px;">
+                {% for currency in currencies %}
+                    <option value="{{ currency.country.code }}" {% if currency.country.code == selected_currency %}selected{% endif %}>
+                        {{ currency.name }} ({{ currency.symbol }})
+                    </option>
+                {% endfor %}
+            </select>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search products..." value="{{ request.GET.search }}">
+            <a href="/cart/"><svg xmlns="http://www.w3.org/2000/svg" height="35px" viewBox="0 -960 960 960" width="35px" fill="#e67e22" id="cartIcon" style="cursor: pointer; margin-left: 10px;"><path d="M280-80q-33 0-56.5-23.5T200-160q0-33 23.5-56.5T280-240q33 0 56.5 23.5T360-160q0 33-23.5 56.5T280-80Zm400 0q-33 0-56.5-23.5T600-160q0-33 23.5-56.5T680-240q33 0 56.5 23.5T760-160q0 33-23.5 56.5T680-80ZM246-720l96 200h280l110-200H246Zm-38-80h590q23 0 35 20.5t1 41.5L692-482q-11 20-29.5 31T622-440H324l-44 80h480v80H280q-45 0-68-39.5t-2-78.5l54-98-144-304H40v-80h130l38 80Zm134 280h280-280Z"/></svg></a>
+        </div>
+    </div>
+
+    <div class="product-container" id="productContainer">
+        {% include "partials/product_results.html" %}
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" style="justify-content: center; gap:20px;">
+        {% if products.has_previous %}
+            <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">&laquo;&laquo;</a>
+        {% else %}
+            <span class="current">&laquo;&laquo;</span>
+        {% endif %}
+        
+        {% for num in products.paginator.page_range %}
+            {% if products.number == num %}
+                <span class="current">{{ num }}</span>
+            {% elif num > products.number|add:'-3' and num < products.number|add:'3' %}
+                <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if products.has_next %}
+            <a href="?page={{ products.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">&raquo;&raquo;</a>
+        {% else %}
+            <span class="current">&raquo;&raquo;</span>
+        {% endif %}
+    </div>
+
+</div>
+
+
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function(){
+        const productMain = document.querySelector(".product-main");
+        const svg1 = document.querySelector(".svg1");
+        const svg3 = document.querySelector(".svg3");
+        const searchInput = document.getElementById("searchInput");
+        const productContainer = document.getElementById("productContainer");
+        const countrySelect = document.getElementById("countrySelect");
+        let isMenuOpen = false;
+        let currentCurrency = 'IN';
+
+        function toggleMenu() {
+            if(isMenuOpen) {
+                productMain.classList.remove("shifted");
+                isMenuOpen = false;
+            } else {
+                productMain.classList.add("shifted");
+                isMenuOpen = true;
+            }
+        }
+
+        if(svg1) {
+            svg1.addEventListener("click", toggleMenu);
+        }
+
+        if(svg3) {
+            svg3.addEventListener("click", toggleMenu);
+        }
+
+        
+
+        // AJAX search functionality
+        if(searchInput) {
+            searchInput.addEventListener("keyup", function() {
+                let query = this.value;
+                
+                fetch(`/search-products/?search=${query}`)
+                    .then(response => response.text())
+                    .then(data => {
+                        productContainer.innerHTML = data;
+                        updatePricesForCountry(currentCurrency);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            });
+        }
+
+        // Country change functionality
+        if(countrySelect) {
+            // Get saved country from localStorage or use default
+            const savedCountry = localStorage.getItem('selectedCountry') || 'IN';
+            countrySelect.value = savedCountry;
+            currentCurrency = savedCountry;
+            
+            // Fetch live rates on page load
+            fetchLiveRates();
+            
+            // Update prices immediately on page load with saved country
+            updatePricesForCountry(currentCurrency);
+            
+            countrySelect.addEventListener("change", function() {
+                currentCurrency = this.value;
+                // Save selection to localStorage
+                localStorage.setItem('selectedCountry', this.value);
+                updatePricesForCountry(currentCurrency);
+            });
+        }
+
+        // Store live rates globally
+        let liveRates = null;
+        
+        // Fetch live rates on page load
+        function fetchLiveRates() {
+            fetch('/convert-currency/?country=IN') // Get rates data
+                .then(response => response.json())
+                .then(data => {
+                    if(data.success && data.live_rates_used) {
+                        // Store the live rates for fallback use
+                        liveRates = data.rates || {};
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to fetch live rates:', error);
+                });
+        }
+        
+        function updatePricesForCountry(country) {
+            fetch(`/convert-currency/?country=${country}`)
+                .then(response => response.json())
+                .then(data => {
+                    if(data.success) {
+                        // Update all product prices
+                        data.products.forEach(product => {
+                            const productCard = document.querySelector(`[data-product-id="${product.product_id}"]`);
+                            if(productCard) {
+                                const priceElement = productCard.querySelector('.product-price');
+                                if(priceElement) {
+                                    priceElement.textContent = `${data.currency.symbol}${product.converted_rate.toFixed(2)}`;
+                                }
+                            }
+                        });
+                        
+                        // Store live rates for fallback
+                        if(data.live_rates_used && data.rates) {
+                            liveRates = data.rates;
+                        }
+                    } else {
+                        console.error('Currency conversion failed:', data.error);
+                        // Fallback to client-side conversion with live rates
+                        updatePricesClientSide(country);
+                    }
+                })
+                .catch(error => {
+                    console.error('Currency conversion error:', error);
+                    // Fallback to client-side conversion with live rates
+                    updatePricesClientSide(country);
+                });
+        }
+        
+        function updatePricesClientSide(country) {
+            const priceElements = document.querySelectorAll('.product-price');
+            
+            // Get currency info from the select options
+            const countrySelect = document.getElementById('countrySelect');
+            const selectedOption = countrySelect.querySelector(`option[value="${country}"]`);
+            const currencyText = selectedOption ? selectedOption.textContent : '';
+            const symbol = currencyText.match(/\(([^)]+)\)$/)?.[1] || '₹';
+            
+            priceElements.forEach(priceElement => {
+                const originalPrice = parseFloat(priceElement.dataset.originalPrice);
+                if(originalPrice) {
+                    let convertedPrice;
+                    
+                    if(liveRates && country !== 'IN') {
+                        // Use live rates if available
+                        const targetCurrencyCode = getCurrencyCodeByCountry(country);
+                        const rate = liveRates[targetCurrencyCode] || 1;
+                        convertedPrice = (originalPrice * rate).toFixed(0);
+                    } else {
+                        // Fallback to hardcoded rates only if live rates not available
+                        switch(country) {
+                            case 'US':
+                                convertedPrice = (originalPrice * 0.012).toFixed(2);
+                                break;
+                            case 'GB':
+                                convertedPrice = (originalPrice * 0.0095).toFixed(2);
+                                break;
+                            case 'EU':
+                                convertedPrice = (originalPrice * 0.011).toFixed(2);
+                                break;
+                            case 'JP':
+                                convertedPrice = (originalPrice * 1.8).toFixed(0);
+                                break;
+                            case 'AU':
+                                convertedPrice = (originalPrice * 0.018).toFixed(2);
+                                break;
+                            case 'CA':
+                                convertedPrice = (originalPrice * 0.016).toFixed(2);
+                                break;
+                            default: // IN
+                                convertedPrice = originalPrice.toFixed(2);
+                        }
+                    }
+                    
+                    priceElement.textContent = `${symbol}${convertedPrice}`;
+                }
+            });
+        }
+        
+        function getCurrencyCodeByCountry(country) {
+            const currencyMap = {
+                'US': 'USD',
+                'GB': 'GBP', 
+                'EU': 'EUR',
+                'JP': 'JPY',
+                'AU': 'AUD',
+                'CA': 'CAD',
+                'IN': 'INR'
+            };
+            return currencyMap[country] || 'INR';
+        }
+    });
+</script>
+
+
+
+{% endblock %}

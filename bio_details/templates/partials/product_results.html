@@ -1,0 +1,34 @@
+{% load currency_filters %}
+{% for product in products %}
+<div class="product-card" data-product-id="{{ product.product_id }}">
+    <div class="product-image">
+        {% if product.product_image %}
+            <img src="{{ product.product_image.url }}" alt="{{ product.name }}">
+        {% else %}
+            <img src="https://via.placeholder.com/280x280?text=No+Image" alt="{{ product.name }}">
+        {% endif %}
+    </div>
+    <div class="product-info">
+        <div class="product-text">
+            <h3>{{ product.name }}</h3>
+            <h4>{{ product.brand.name }}</h4>
+            <span class="product-price" data-original-price="{{ product.rate }}">
+                {% if selected_currency and selected_currency != 'IN' %}
+                    {{ currency_symbol }}{{ product|convert_product_price:selected_currency|floatformat:0 }}
+                {% else %}
+                    ₹{{ product.rate|floatformat:0  }}
+                {% endif %}
+            </span><br></br>
+            <a href="{% url 'bio_details:shop_detail' product.product_id %}">Shop</a> 
+        </div>
+        <div class="cart-btn">
+            <i class="fa-solid fa-bag-shopping"></i>
+        </div>
+    </div>
+</div>
+{% empty %}
+<div style="text-align: center; grid-column: 1 / -1; padding: 50px;">
+    <h3>No products found.</h3>
+    <p>Try searching with different keywords!</p>
+</div>
+{% endfor %}

@@ -1,0 +1,462 @@
+{% extends "main.html" %}
+{% block content %}
+{% load static %}
+
+
+<div class="shop-main">
+    {% if request.resolver_match.url_name == 'shop_detail' %}
+    <div id="toast-container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="toast {{ message.tags }}">
+                    {{ message }}
+                    <div class="toast-timer"></div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="product-detail">
+        <div class="product-image-section">
+            {% if product.product_image %}
+                <img src="{{ product.product_image.url }}" alt="{{ product.name }}">
+            {% else %}
+                <img src="https://via.placeholder.com/400x400?text=No+Image" alt="{{ product.name }}">
+            {% endif %}
+        </div>
+
+        <div class="product-info-section">
+            <h1>{{ product.name }}</h1>
+            <div class="brand">Brand: {{ product.brand.name }}</div>
+            <div class="price">
+                {% if converted_price and currency_symbol %}
+                    {{ currency_symbol }}{{ converted_price }}
+                {% else %}
+                    ₹{{ product.rate }}
+                {% endif %}
+            </div>
+            <div class="category">{{ product.category.name }}</div>
+            
+            {% if product.description %}
+            <div class="description">
+                <h3>Description</h3>
+                <p>{{ product.description }}</p>
+            </div>
+            {% endif %}
+            
+            <div class="stock-info">
+                <div class="stock-status 
+                    {% if product.current_stock > product.min_stock %}in-stock
+                    {% elif product.current_stock > 0 %}low-stock
+                    {% else %}out-stock{% endif %}">
+                    {% if product.current_stock > product.min_stock %}
+                        In Stock ({{ product.current_stock }} available)
+                    {% elif product.current_stock > 0 %}
+                        Low Stock ({{ product.current_stock }} left)
+                    {% else %}
+                        Out of Stock
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if product.current_stock > 0 %}
+            <form method="POST" action="{% url 'bio_details:add_to_cart' product.product_id %}">
+                {% csrf_token %}
+                <div class="buy-section">
+                    <input type="number" class="quantity-input" name="quantity" value="1" min="1" max="{{ product.purchase_limit }}" id="quantityInput">
+                    <button type="submit" class="buy-btn">Add to Cart</button>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function(){
+        const shopMain = document.querySelector(".shop-main");
+        const svg1 = document.querySelector(".svg1");
+        const svg3 = document.querySelector(".svg3");
+        const quantityInput = document.getElementById("quantityInput");
+        let isMenuOpen = false;
+
+        function toggleMenu() {
+            if(isMenuOpen) {
+                shopMain.classList.remove("shifted");
+                isMenuOpen = false;
+            } else {
+                shopMain.classList.add("shifted");
+                isMenuOpen = true;
+            }
+        }
+
+        if(svg1) {
+            svg1.addEventListener("click", toggleMenu);
+        }
+
+        if(svg3) {
+            svg3.addEventListener("click", toggleMenu);
+        }
+
+        if(quantityInput) {
+            quantityInput.addEventListener("input", function() {
+                let value = parseInt(this.value);
+                let max = parseInt(this.getAttribute("max"));
+                
+                if(value > max) {
+                    this.value = max;
+                    alert(`Your limit is ${max}`);
+                }
+            });
+        }
+    });
+
+    function closeMessageModal() {
+        document.getElementById('messageModal').style.display = 'none';
+    }
+</script>
+
+
+
+<style>
+    .alert-modal{
+    display:block;
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.6);
+    backdrop-filter:blur(3px);
+    z-index:1000;
+    }
+
+    .alert-box{
+        position:absolute;
+        top:50%;
+        left:50%;
+        transform:translate(-50%,-50%);
+        background:white;
+        padding:40px;
+        border-radius:12px;
+        text-align:center;
+        width:320px;
+        box-shadow:0 10px 30px rgba(0,0,0,0.3);
+        animation:popup 0.3s ease;
+    }
+
+    @keyframes popup{
+        from{
+            opacity:0;
+            transform:translate(-50%,-60%) scale(0.9);
+        }
+        to{
+            opacity:1;
+            transform:translate(-50%,-50%) scale(1);
+        }
+    }
+
+    .alert-icon{
+        width:65px;
+        height:65px;
+        background:#dc2626;
+        color:white;
+        font-size:35px;
+        font-weight:bold;
+        border-radius:50%;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        margin:0 auto 20px;
+    }
+
+    .alert-box h3{
+        color:#991b1b;
+        margin-bottom:25px;
+        font-size:18px;
+    }
+
+    .alert-box button{
+        background:#dc2626;
+        color:white;
+        border:none;
+        padding:12px 28px;
+        border-radius:6px;
+        font-size:15px;
+        cursor:pointer;
+        transition:0.3s;
+    }
+
+    .alert-box button:hover{
+        background:#991b1b;
+    }
+    .shop-main {
+        margin-top: 150px;
+        margin-left: 360px;
+        margin-right: 50px;
+        margin-bottom: 200px;
+        transition: margin-left 0.3s ease;
+    }
+
+    .shop-main.shifted {
+        margin-left: 100px;
+    }
+
+    .product-detail {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 50px;
+        align-items: start;
+        background: #fff;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+
+    .product-detail:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    }
+
+    .product-image-section {
+        margin-top: 30px;
+        text-align: center;
+    }
+
+    .product-image-section img {
+        width: 100%;
+        max-width: 400px;
+        height: 400px;
+        object-fit: contain;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .product-image-section img:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    }
+
+    .product-info-section {
+        padding: 20px;
+    }
+
+    .product-info-section h1 {
+        font-size: 32px;
+        color: #222;
+        margin-bottom: 10px;
+    }
+
+    .product-info-section .brand {
+        font-size: 18px;
+        color: #666;
+        margin-bottom: 20px;
+    }
+
+    .product-info-section .price {
+        font-size: 28px;
+        color: #e67e22;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    .product-info-section .category {
+        background: #f8f9fa;
+        padding: 8px 15px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-bottom: 20px;
+        color: #555;
+    }
+
+    .description {
+        margin-bottom: 20px;
+        line-height: 1.6;
+        color: #555;
+    }
+
+    .description h3 {
+        font-size: 18px;
+        color: #222;
+        margin-bottom: 10px;
+    }
+
+    .stock-info {
+        margin-bottom: 30px;
+    }
+
+    .stock-info .stock-status {
+        padding: 8px 15px;
+        border-radius: 5px;
+        font-weight: bold;
+        display: inline-block;
+    }
+
+    .in-stock { background: #d4edda; color: #155724; }
+    .low-stock { background: #fff3cd; color: #856404; }
+    .out-stock { background: #f8d7da; color: #721c24; }
+
+    .buy-section {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        
+    }
+
+    .quantity-input {
+        width: 80px;
+        padding: 10px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        text-align: center;
+    }
+
+    .buy-btn {
+        background: #e67e22;
+        color: white;
+        padding: 12px 25px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }
+
+    .buy-btn:hover {
+        background: #d35400;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(230, 126, 34, 0.4);
+    }
+    form{
+        padding:0px;
+    }
+    #toast-container{
+            position:fixed;
+            top:30px;
+            right:40px;
+            z-index:9999;
+            display:flex;
+            flex-direction:column;
+            gap:12px;
+        } 
+
+        .toast{
+            background:linear-gradient(135deg,#ffffff,#f8f9ff);
+            padding:20px 20px;
+            border-radius:10px;
+            min-width:270px;
+            box-shadow:0 8px 20px rgba(0,0,0,0.15);
+            font-size:18px;
+            position:relative;
+            font-weight:900;
+            display:flex;
+            align-items:center;
+            gap:10px;
+            animation:slideIn 0.4s ease;
+        }
+
+        /* success message */
+        .toast.success{
+            border-left:6px solid #2ecc71;
+            color:#155724;
+        }
+
+        /* error message */
+        .toast.error{
+            border-left:6px solid #e74c3c;
+            color:#721c24;
+        }
+
+        /* warning message */
+        .toast.warning{
+            border-left:6px solid #f39c12;
+            color:#7a5200;
+        }
+
+        /* timer bar */
+        .toast-timer{
+            position:absolute;
+            bottom:0;
+            left:0;
+            height:4px;
+            width:100%;
+            background:linear-gradient(90deg,#4e73df,#1cc88a);
+            animation:timerBar 3s linear forwards;
+        }
+
+        /* slide animation */
+        @keyframes slideIn{
+            from{
+                transform:translateX(100%);
+                opacity:0;
+            }
+            to{
+                transform:translateX(0);
+                opacity:1;
+            }
+        }
+
+        /* timer animation */
+        @keyframes timerBar{
+            from{width:100%;}
+            to{width:0%;}
+        }
+    @media(max-width: 1024px) {
+        .product-info-section {
+        padding: 20px;
+        text-align:center;
+    }
+         .buy-section {
+        justify-content:center;
+    }
+        .shop-main {
+            margin-left: 10px;
+            margin-right: 10px;
+        }
+        .product-detail {
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+        #toast-container{
+        right:50px;
+        left:10px;
+        top:15px;
+        }
+
+        .toast{
+            width:100%;
+            max-width:100%;
+            font-size:14px;
+            padding:12px 15px;
+            border-radius:8px;
+        }
+    }
+</style>
+
+<script>
+    setTimeout(function(){
+        document.querySelectorAll(".toast").forEach(function(toast){
+            toast.style.opacity="0";
+            toast.style.transform="translateX(100%)";
+            setTimeout(()=>toast.remove(),400);
+        });
+    },3000);
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+{% endblock %}
