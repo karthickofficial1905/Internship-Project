@@ -1,6 +1,7 @@
 {% extends "main.html" %}
 {% block content %}
 {% load static %}
+{% csrf_token %}
 
 
 
@@ -187,6 +188,15 @@
         <div class="search-box">
             <select id="countrySelect" style="padding: 12px;  border: 2px solid #ddd; border-radius: 25px; margin-right: 10px;">
                 {% for currency in currencies %}
+                    {% if currency.country %}
+                        <option value="{{ currency.country.code }}" {% if currency.country.code == selected_currency %}selected{% elif currency.country.code == 'IN' and not selected_currency %}selected{% endif %}>
+                            {{ currency.country.name }} 
+                        </option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+            <select id="currencySelect" style="padding: 12px;  border: 2px solid #ddd; border-radius: 25px; margin-right: 10px;">
+                {% for currency in currencies %}
                     <option value="{{ currency.country.code }}" {% if currency.country.code == selected_currency %}selected{% endif %}>
                         {{ currency.name }} ({{ currency.symbol }})
                     </option>
@@ -237,6 +247,7 @@
         const searchInput = document.getElementById("searchInput");
         const productContainer = document.getElementById("productContainer");
         const countrySelect = document.getElementById("countrySelect");
+        const currencySelect = document.getElementById("currencySelect");
         let isMenuOpen = false;
         let currentCurrency = 'IN';
 
@@ -277,25 +288,68 @@
             });
         }
 
-        // Country change functionality
+        // Country change functionality (independent)
         if(countrySelect) {
-            // Get saved country from localStorage or use default
             const savedCountry = localStorage.getItem('selectedCountry') || 'IN';
             countrySelect.value = savedCountry;
-            currentCurrency = savedCountry;
             
-            // Fetch live rates on page load
-            fetchLiveRates();
+            // Set India as default if no saved country
+            if(!localStorage.getItem('selectedCountry')) {
+                countrySelect.value = 'IN';
+                localStorage.setItem('selectedCountry', 'IN');
+            }
             
-            // Update prices immediately on page load with saved country
-            updatePricesForCountry(currentCurrency);
-            
-            countrySelect.addEventListener("change", function() {
-                currentCurrency = this.value;
-                // Save selection to localStorage
-                localStorage.setItem('selectedCountry', this.value);
-                updatePricesForCountry(currentCurrency);
+            countrySelect.addEventListener('change', function() {
+                const selectedCountry = this.value;
+                localStorage.setItem('selectedCountry', selectedCountry);
+                console.log('Country changed to:', selectedCountry);
+                
+                // Save country selection to session via AJAX
+                fetch('/save-country-selection/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        'country': selectedCountry
+                    })
+                });
+                
+                // Update the display to show selected country
+                updateCountryDisplay(selectedCountry);
             });
+        }
+
+        // Currency change functionality (independent)
+        if(currencySelect) {
+            const savedCurrency = localStorage.getItem('selectedCurrency') || 'IN';
+            currencySelect.value = savedCurrency;
+            currentCurrency = savedCurrency;
+            
+            currencySelect.addEventListener('change', function() {
+                const selectedCurrency = this.value;
+                localStorage.setItem('selectedCurrency', selectedCurrency);
+                currentCurrency = selectedCurrency;
+                updatePricesForCountry(selectedCurrency);
+            });
+        }
+
+        // Function to update product prices on the page
+        function updateProductPrices(products, currency) {
+            products.forEach(product => {
+                const priceElements = document.querySelectorAll(`[data-product-id="${product.product_id}"] .product-price`);
+                priceElements.forEach(element => {
+                    element.textContent = `${currency.symbol}${product.converted_rate.toFixed(2)}`;
+                });
+            });
+        }
+
+        // Function to update country display
+        function updateCountryDisplay(countryCode) {
+            const countryName = countrySelect.options[countrySelect.selectedIndex].text;
+            console.log(`Selected country: ${countryName} (${countryCode})`);
+            // You can add more display updates here if needed
         }
 
         // Store live rates globally

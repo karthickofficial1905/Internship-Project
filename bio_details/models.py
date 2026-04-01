@@ -362,6 +362,7 @@ class Invoice(models.Model):
     total_discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT, default=1, help_text="Invoice currency")
+    country = models.ForeignKey(Country, on_delete=models.PROTECT, default=1, help_text="Invoice country")
     terms_conditions = models.JSONField(default=get_default_terms, blank=True)
     
     @property

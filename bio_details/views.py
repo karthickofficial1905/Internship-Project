@@ -369,7 +369,7 @@ def product_view(request):
     
     products = Product.objects.all().order_by('created_at')
     
-    # Get selected currency from session
+    # Get selected currency from session, default to India
     selected_currency = request.session.get('selected_currency', 'IN')
     
     # Get currency object
@@ -379,10 +379,13 @@ def product_view(request):
         currency_obj = Currency.objects.get(country=country_obj, is_active=True)
         currency_symbol = currency_obj.symbol
     except (Currency.DoesNotExist, Country.DoesNotExist):
+        # Fallback to India if selected currency doesn't exist
         country_obj = Country.objects.get(code='IN', is_active=True)
         currency_obj = Currency.objects.get(country=country_obj, is_active=True)
         currency_symbol = currency_obj.symbol
         selected_currency = 'IN'
+        # Update session with fallback
+        request.session['selected_currency'] = 'IN'
     
     # Get all active currencies for dropdown
     currencies = Currency.objects.filter(is_active=True).select_related('country').order_by('name')
@@ -674,8 +677,9 @@ def checkout(request):
         # Get cart discount
         cart_discount_percent = request.session.get('discount', 0)
         
-        # Get selected currency from session
+        # Get selected currency and country from session
         selected_currency = request.session.get('selected_currency', 'IN')
+        selected_country = request.session.get('selected_country', 'IN')  # Get country selection
         currency_symbol = request.session.get('currency_symbol', '₹')
         
         # Calculate totals in selected currency
@@ -690,13 +694,17 @@ def checkout(request):
         discount_amount = (subtotal * cart_discount_percent) / 100
         final_total = subtotal - discount_amount
         
-        # Create single order for all items with currency info
-        from .models import Currency
+        # Create single order for all items with selected country and currency
+        from .models import Currency, Country
         try:
+            # Use the selected country from product view
+            country_obj = Country.objects.get(code=selected_country, is_active=True)
+            # Get currency for the selected currency (not necessarily same country)
             currency_obj = Currency.objects.get(country__code=selected_currency, is_active=True)
-        except Currency.DoesNotExist:
-            # Fallback to INR if selected currency doesn't exist
-            currency_obj = Currency.objects.get(country__code='IN', is_active=True)
+        except (Currency.DoesNotExist, Country.DoesNotExist):
+            # Fallback to India if selected country/currency doesn't exist
+            country_obj = Country.objects.get(code='IN', is_active=True)
+            currency_obj = Currency.objects.get(country=country_obj, is_active=True)
             
         order = Order.objects.create(
             user=request.user,
@@ -853,18 +861,23 @@ def invoice_view(request, order_id=None):
         try:
             order = Order.objects.get(id=order_id)
             
-            # Get selected currency from session or use order currency
-            selected_currency = request.session.get('selected_currency', order.currency.country.code if order.currency else 'IN')
+            # Get selected currency and country from session (independent selections)
+            selected_currency = request.session.get('selected_currency', 'IN')
+            selected_country = request.session.get('selected_country', 'IN')
             
             # Get currency object for selected currency
             from .models import Currency, Country
             try:
-                country_obj = Country.objects.get(code=selected_currency, is_active=True)
-                display_currency = Currency.objects.get(country=country_obj, is_active=True)
+                # Get the country object for selected country
+                country_obj = Country.objects.get(code=selected_country, is_active=True)
+                # Get the currency object for selected currency (independent of country)
+                currency_obj = Currency.objects.get(country__code=selected_currency, is_active=True)
+                display_currency = currency_obj
             except (Currency.DoesNotExist, Country.DoesNotExist):
                 country_obj = Country.objects.get(code='IN', is_active=True)
                 display_currency = Currency.objects.get(country=country_obj, is_active=True)
                 selected_currency = 'IN'
+                selected_country = 'IN'
             
             # Get or create invoice for this order
             invoice, created = Invoice.objects.get_or_create(
@@ -878,7 +891,8 @@ def invoice_view(request, order_id=None):
                     'total_tax': Decimal('0'),
                     'total_discount': Decimal('0'),
                     'total_amount': Decimal('0'),
-                    'currency': order.currency
+                    'currency': display_currency,
+                    'country': country_obj
                 }
             )
             
@@ -986,6 +1000,8 @@ def invoice_view(request, order_id=None):
                 'terms_conditions': terms_conditions,
                 'currency_symbol': display_currency.symbol,
                 'selected_currency': selected_currency,
+                'selected_country': selected_country,
+                'selected_country_name': country_obj.name,
                 'currencies': currencies,
                 'display_currency': display_currency,
             }
@@ -2015,3 +2031,41 @@ def my_profile(request):
             messages.error(request, f'Error updating profile: {str(e)}')
     
     return render(request, 'my_profile.html')
+
+
+def save_country_selection(request):
+    """Save selected country to session"""
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body)
+            country = data.get('country', 'IN')
+            request.session['selected_country'] = country
+            return JsonResponse({'success': True, 'message': 'Country saved'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+def save_currency_selection(request):
+    """Save selected currency to session"""
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body)
+            currency = data.get('currency', 'IN')
+            request.session['selected_currency'] = currency
+            
+            # Also get currency symbol and save it
+            from .models import Currency, Country
+            try:
+                country_obj = Country.objects.get(code=currency, is_active=True)
+                currency_obj = Currency.objects.get(country=country_obj, is_active=True)
+                request.session['currency_symbol'] = currency_obj.symbol
+            except (Currency.DoesNotExist, Country.DoesNotExist):
+                request.session['currency_symbol'] = '₹'
+            
+            return JsonResponse({'success': True, 'message': 'Currency saved'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})

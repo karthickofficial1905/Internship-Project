@@ -44,4 +44,6 @@ urlpatterns = [
     path('print-invoice/<int:order_id>/', views.print_invoice, name='print_invoice'),
     path('my-profile/', views.my_profile, name='my_profile'),
     path('convert-currency/', views.convert_product_currency, name='convert_currency'),
+    path('save-country-selection/', views.save_country_selection, name='save_country_selection'),
+    path('save-currency-selection/', views.save_currency_selection, name='save_currency_selection'),
 ]

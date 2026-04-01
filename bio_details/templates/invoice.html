@@ -43,6 +43,16 @@
                     <input type="text" value="Adhoc Software" class="file-input" readonly>
                 </div>
             </div>
+            <div class="info-section">
+                <div class="input-row">
+                    <strong>Country:</strong>
+                    <input type="text" value="{{ selected_country_name|default:'India' }}" class="file-input" readonly>
+                </div>
+                <div class="input-row">
+                    <strong>Currency:</strong>
+                    <input type="text" value="{{ display_currency.name|default:'Indian Rupee' }} ({{ currency_symbol }})" class="file-input" readonly>
+                </div>
+            </div>
         </div>
     </div>
 
