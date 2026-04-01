@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from bio_details.models import Currency
+from bio_details.models import Currency, Country
 
 CURRENCIES = [
     ('AED', 'UAE Dirham',                           'د.إ',   'AE'),
@@ -129,13 +129,22 @@ class Command(BaseCommand):
         created_count = 0
         updated_count = 0
 
-        for code, name,  symbol, country_code in CURRENCIES:
+        for code, name, symbol, country_code in CURRENCIES:
+            # Try to get the country object
+            try:
+                country = Country.objects.get(code=country_code)
+            except Country.DoesNotExist:
+                country = None
+                self.stdout.write(
+                    self.style.WARNING(f'Country with code {country_code} not found for currency {code}')
+                )
+
             obj, created = Currency.objects.update_or_create(
                 code=code,
                 defaults={
                     'name': name,
                     'symbol': symbol,
-                    'country_code': country_code,
+                    'country': country,
                     'is_active': True,
                 }
             )
