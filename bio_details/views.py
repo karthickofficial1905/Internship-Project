@@ -1942,9 +1942,14 @@ def print_invoice(request, order_id):
             'total_qty': sum(item.qty for item in invoice.items.all()),
             'terms_conditions': terms_conditions,
             'currency_symbol': invoice.currency.symbol,
+            'currency_name': invoice.currency.name,
             'selected_currency': invoice.currency.code,
-            
-            
+            'customer': {
+                'country': {
+                    'name': invoice.country.name if invoice.country else 'India'
+                }
+            },
+            'customer_country_name': invoice.country.name if invoice.country else 'India'
         }
         
         return render(request, 'print_invoice.html', context)
