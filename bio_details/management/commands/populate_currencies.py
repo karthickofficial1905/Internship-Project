@@ -45,7 +45,7 @@ CURRENCIES = [
     ('EGP', 'Egyptian Pound',                        'Pound',        '£',     'EG'),
     ('ERN', 'Eritrean Nakfa',                        'Nakfa',        'Nfk',   'ER'),
     ('ETB', 'Ethiopian Birr',                        'Birr',         'Br',    'ET'),
-    ('EUR', 'Euro',                                  'Euro',         '€',     None),
+    ('EUR', 'Euro',                                  'Euro',         '€',     'DE'),
     ('FJD', 'Fijian Dollar',                         'Dollar',       '$',     'FJ'),
     ('GBP', 'British Pound',                         'Pound',        '£',     'GB'),
     ('GEL', 'Georgian Lari',                         'Lari',         '₾',     'GE'),
