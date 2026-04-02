@@ -288,10 +288,26 @@
             });
         }
 
-        // Country change functionality (independent)
-        if(countrySelect) {
+        // Country and currency functionality
+        if(countrySelect && currencySelect) {
             const savedCountry = localStorage.getItem('selectedCountry') || 'IN';
             countrySelect.value = savedCountry;
+            currencySelect.value = savedCountry;
+            
+            countrySelect.addEventListener('change', function() {
+                // Country changes currency but country stays the same
+                currencySelect.value = this.value;
+                localStorage.setItem('selectedCountry', this.value);
+                currentCurrency = this.value;
+                updatePricesForCountry(currentCurrency);
+            });
+            
+            currencySelect.addEventListener('change', function() {
+                // Currency changes independently, country stays unchanged
+                localStorage.setItem('selectedCurrency', this.value);
+                currentCurrency = this.value;
+                updatePricesForCountry(currentCurrency);
+            });
             
             // Set India as default if no saved country
             if(!localStorage.getItem('selectedCountry')) {

@@ -54,6 +54,14 @@
         <div class="inv-meta-card__label">Sales Leader</div>
         <div class="inv-meta-card__value">Adhoc Software</div>
       </div>
+      <div class="inv-meta-card">
+        <div class="inv-meta-card__label">Country</div>
+        <div class="inv-meta-card__value">{{invoice.country}}</div>
+      </div>
+      <div class="inv-meta-card">
+        <div class="inv-meta-card__label">Currency</div>
+        <div class="inv-meta-card__value">{{invoice.currency}}</div>
+      </div>
       <div class="inv-meta-card inv-meta-card--status">
         <div class="inv-meta-card__label">Status</div>
         <div class="inv-status-badge">
@@ -388,7 +396,7 @@
 .inv-header {
   position: relative;
   background: linear-gradient(135deg,#002560 0%,#1d4ed8 100%);
-  padding: 40px 48px 36px;
+  padding: 40px 20px 36px;
   overflow: hidden;
 }
 
@@ -475,8 +483,8 @@
 /* meta cards */
 .inv-meta-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 10px;
 }
 .inv-meta-card {
   background: rgba(255,255,255,.1);
@@ -494,7 +502,7 @@
   margin-bottom: 6px;
 }
 .inv-meta-card__value {
-  font-size: .9rem;
+  font-size: .8rem;
   font-weight: 500;
   color: var(--white);
   word-break: break-word;
