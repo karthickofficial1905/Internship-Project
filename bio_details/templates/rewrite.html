@@ -46,7 +46,7 @@
                 <div class="details">
                     <h3 style="display: flex; align-items: center; gap: 5px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg> City :</h3>
                     <select class="input1" name="city">
-                        <option>Select Your city </option>
+                        <option value="{{member.city}}">Select Your city </option>
                         <option {% if member.city == 'Madurai' %}selected{% endif %}>Madurai</option>
                         <option {% if member.city == 'Coimbatore' %}selected{% endif %}>Coimbatore</option>
                     </select>
@@ -74,7 +74,7 @@
                 <div class="details">
                     <h3 style="display: flex; align-items: center; gap: 5px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg> Gender :</h3>
                     <select class="input1" name='gender'>
-                        <option>Select Your Gender </option>
+                        <option value="{{member.gender}}">Select Your Gender </option>
                         <option value="male" {% if member.gender == 'male' %}selected{% endif %}>Male</option>
                         <option value="Female" {% if member.gender == 'Female' %}selected{% endif %}>Female</option>
                         <option value="other" {% if member.gender == 'other' %}selected{% endif %}>Other</option>
