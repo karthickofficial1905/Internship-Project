@@ -1,0 +1,511 @@
+{% extends "main.html" %}
+{% block content %}
+{% load static %}
+
+<div class="orders-wrapper">
+
+  <!-- Toast Notifications -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="toast toast-{{ message.tags }}" id="toast-{{ forloop.counter }}">
+        <div class="toast-bar"></div>
+        <div class="toast-inner">
+          <div class="toast-icon">
+            {% if message.tags == 'success' %}✓{% elif message.tags == 'error' %}✕{% else %}!{% endif %}
+          </div>
+          <span class="toast-message">{{ message }}</span>
+          <button class="toast-close" onclick="closeToast('toast-{{ forloop.counter }}')">&times;</button>
+        </div>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" height="30px" viewBox="0 -960 960 960" width="30px" fill="white">
+          <path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/>
+        </svg>
+      </div>
+      <div>
+        <p class="header-eyebrow">Dashboard</p>
+        <h1 class="header-title">Employee Attendance</h1>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="order-stat">
+        <span class="stat-lbl">Today :</span>
+        <span class="stat-num" id="js-today"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stat Cards -->
+  <div class="stat-row">
+    <div class="stat-box">
+      <div class="stat-val">{{ present_count|default:"—" }}</div>
+      <div class="stat-lbl-dark">Days Present</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val">{{ leaves_used|default:"—" }}</div>
+      <div class="stat-lbl-dark">Leaves Used</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val">{{ total_hours|default:"—" }}</div>
+      <div class="stat-lbl-dark">Total Hours</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('mark', this)">Mark Attendance</button>
+    <button class="tab-btn" onclick="switchTab('leave', this)">Apply Leave</button>
+    <button class="tab-btn" onclick="switchTab('records', this)">Records</button>
+  </div>
+
+  <!-- Section: Mark Attendance -->
+  <div class="tab-section active" id="tab-mark">
+    <div class="form-card">
+      <div class="form-card-header">Daily Attendance Entry</div>
+      <div class="form-card-body">
+        <form method="post" action="{% url 'bio_details:attendance' %}">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="attendance">
+          <div class="grid-2">
+            <div class="field">
+              <label>Date</label>
+              <input type="date" name="date" id="att-date" value="{{ today|date:'Y-m-d' }}" readonly required class="form-control">
+              <small class="field-note">* You can only mark attendance for today</small>
+              {% if today_has_leave %}
+                <small class="field-warn">&#9888; You have approved leave for today</small>
+              {% endif %}
+            </div>
+            <div class="field">
+              <label>Status</label>
+              <select name="status" required class="form-control">
+                <option value="present">Present</option>
+                <option value="absent">Absent</option>
+                <option value="half_day">Half Day</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-divider"></div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Check In Time</label>
+              <input type="time" name="check_in" required class="form-control">
+            </div>
+            <div class="field">
+              <label>Check Out Time</label>
+              <input type="time" name="check_out" required class="form-control">
+            </div>
+          </div>
+          <button type="submit" class="btn-primary mt-20" {% if today_has_leave %}disabled title="Cannot mark attendance - you have approved leave for today"{% endif %}>
+            &#10003;&nbsp; Mark Attendance
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Apply Leave -->
+  <div class="tab-section" id="tab-leave">
+    <div class="form-card">
+      <div class="form-card-header">Leave Application</div>
+      <div class="form-card-body">
+        <form method="post" action="{% url 'bio_details:attendance' %}">
+          {% csrf_token %}
+          <input type="hidden" name="form_type" value="leave">
+          <div class="grid-2">
+            <div class="field">
+              <label>Leave Type</label>
+              <select name="leave_type" required class="form-control">
+                <option value="personal">Personal Leave</option>
+                <option value="sick">Sick Leave</option>
+                <option value="casual">Casual Leave</option>
+                <option value="emergency">Emergency Leave</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Duration</label>
+              <select name="duration" required class="form-control">
+                <option value="full_day">Full Day</option>
+                <option value="half_day">Half Day</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-divider"></div>
+          <div class="grid-2">
+            <div class="field">
+              <label>From Date</label>
+              <input type="date" name="from_date" required class="form-control">
+            </div>
+            <div class="field">
+              <label>To Date</label>
+              <input type="date" name="to_date" required class="form-control">
+            </div>
+          </div>
+          <div class="field mt-16">
+            <label>Reason</label>
+            <textarea name="reason" class="form-control" placeholder="Brief reason for leave..." required></textarea>
+          </div>
+          <div class="btn-row mt-20">
+            <button type="submit" class="btn-primary">&#8594;&nbsp; Submit Application</button>
+            <a href="{% url 'bio_details:my_applications' %}" class="btn-outline">My Applications</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Records -->
+  <div class="tab-section" id="tab-records">
+    <div class="table-wrap">
+      <table class="orders-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Check In</th>
+            <th>Check Out</th>
+            <th>Hours</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in attendance_records %}
+          <tr>
+            <td class="date-cell">{{ record.date }}</td>
+            <td>
+              <span class="badge {% if record.status == 'present' %}badge-paid{% elif record.status == 'absent' %}badge-failed{% else %}badge-pending{% endif %}">
+                <span class="badge-dot"></span>{{ record.status|title }}
+              </span>
+            </td>
+            <td>{{ record.check_in|default:'—' }}</td>
+            <td>{{ record.check_out|default:'—' }}</td>
+            <td>{{ record.total_hours|default:'—' }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="empty-state">
+              <div class="empty-inner">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" class="empty-icon">
+                  <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <p class="empty-title">No attendance records found</p>
+                <p class="empty-sub">Records will appear once attendance is marked.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /.orders-wrapper -->
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var wrapper = document.querySelector('.orders-wrapper');
+  var menuBar2 = document.querySelector('.menu-bar2');
+  var svg1 = document.querySelector('.svg1');
+  var svg3 = document.querySelector('.svg3');
+  if(svg1) svg1.addEventListener('click', function(){ if(menuBar2) menuBar2.classList.remove('active'); wrapper.classList.remove('shifted'); });
+  if(svg3) svg3.addEventListener('click', function(){ if(menuBar2) menuBar2.classList.add('active'); wrapper.classList.add('shifted'); });
+  showToasts();
+});
+
+(function(){
+  var d = new Date();
+  var el = document.getElementById('js-today');
+  if(el) el.textContent = d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  var ad = document.getElementById('att-date');
+  if(ad){
+    var today = d.toISOString().split('T')[0];
+    ad.value = today;
+    ad.setAttribute('readonly', true);
+    ad.setAttribute('min', today);
+    ad.setAttribute('max', today);
+  }
+})();
+
+function switchTab(name, btn){
+  document.querySelectorAll('.tab-btn').forEach(function(t){ t.classList.remove('active'); });
+  btn.classList.add('active');
+  ['mark','leave','records'].forEach(function(id){
+    var el = document.getElementById('tab-'+id);
+    if(el) el.classList.toggle('active', id===name);
+  });
+}
+
+function showToasts(){
+  document.querySelectorAll('.toast').forEach(function(toast, i){
+    setTimeout(function(){
+      toast.classList.add('show');
+      setTimeout(function(){ hideToast(toast.id); }, 5000);
+    }, i * 200);
+  });
+}
+
+function closeToast(id){ hideToast(id); }
+
+function hideToast(id){
+  var t = document.getElementById(id);
+  if(t){ t.classList.add('hide'); setTimeout(function(){ t.remove(); }, 300); }
+}
+
+var formSubmitted = false;
+document.querySelectorAll('form').forEach(function(form){
+  form.addEventListener('submit', function(e){
+    if(formSubmitted){ e.preventDefault(); return false; }
+    formSubmitted = true;
+    setTimeout(function(){ formSubmitted = false; }, 3000);
+  });
+});
+</script>
+
+<style>
+:root{
+  --navy:#1e3a8a;
+  --blue:#1a47a0;
+  --blue-lt:#e8edf8;
+  --accent:#2563eb;
+  --green:#059669;
+  --amber:#d97706;
+  --red:#dc2626;
+  --slate:#64748b;
+  --border:#e2e8f0;
+  --bg:#f1f5fb;
+  --white:#ffffff;
+  --text:#0f172a;
+  --text-sm:#475569;
+  --radius:10px;
+  --shadow:0 4px 24px rgba(15,37,87,0.09);
+  --font-head:'Syne',sans-serif;
+  --font-body:'DM Sans',sans-serif;
+}
+
+.orders-wrapper{
+  font-family:var(--font-body);
+  color:var(--text);
+  margin:120px 40px 120px 360px;
+  transition:margin-left .3s ease;
+}
+.orders-wrapper.shifted{ margin-left:90px; }
+
+/* Header */
+.page-header{
+  display:flex; align-items:center; justify-content:space-between;
+  background:linear-gradient(135deg,#002560 0%,#1d4ed8 100%);
+  border-radius:16px; padding:28px 32px; margin-bottom:24px;
+  box-shadow:0 8px 32px rgba(15,37,87,0.22);
+}
+.header-left{ display:flex; align-items:center; gap:18px; }
+.header-icon-wrap{
+  width:48px; height:48px; background:rgba(255,255,255,0.15);
+  border-radius:12px; display:flex; align-items:center; justify-content:center;
+  backdrop-filter:blur(4px);
+}
+.header-eyebrow{
+  font-family:var(--font-body); font-size:12px; font-weight:500;
+  letter-spacing:.12em; text-transform:uppercase;
+  color:rgba(255,255,255,0.6); margin:0 0 4px;
+}
+.header-title{
+  font-family:var(--font-head); font-size:26px; font-weight:800;
+  color:#fff; margin:0; letter-spacing:-.5px;
+}
+.order-stat{
+  display:flex; gap:10px; align-items:center;
+  background:rgba(255,255,255,0.12);
+  border:1px solid rgba(255,255,255,0.2);
+  border-radius:12px; padding:10px 16px;
+}
+.stat-num{ font-family:var(--font-head); font-size:15px; font-weight:800; color:#fff; line-height:1; }
+.stat-lbl{ font-size:12px; color:rgba(255,255,255,0.6); letter-spacing:.05em; }
+
+/* Stat Row */
+.stat-row{
+  display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap;
+}
+.stat-box{
+  flex:1; min-width:130px;
+  background:var(--white); border:1px solid var(--border);
+  border-radius:12px; padding:18px 20px;
+  box-shadow:var(--shadow); transition:border-color .2s;
+}
+.stat-box:hover{ border-color:var(--accent); }
+.stat-val{ font-family:var(--font-head); font-size:26px; font-weight:800; color:var(--navy); }
+.stat-lbl-dark{ font-size:12px; color:var(--slate); margin-top:4px; font-weight:500; }
+
+/* Tabs */
+.tab-bar{
+  display:flex; gap:4px;
+     padding:5px; margin-bottom:20px; 
+}
+.tab-btn{
+  flex:1; padding:10px 0; text-align:center;
+  font-family:var(--font-head); font-size:13px; font-weight:700;
+  border-radius:8px; cursor:pointer;
+  transition:all .2s; color:black; border:none; background:transparent;
+}
+.tab-btn.active{ background:var(--navy); color:#fff; }
+.tab-btn:hover:not(.active){ background:var(--blue-lt); color:var(--navy); }
+
+.tab-section{ display:none; }
+.tab-section.active{ display:block; }
+
+/* Form Card */
+.form-card{
+  background:var(--white); border:1px solid var(--border);
+  border-radius:14px; overflow:hidden; box-shadow:var(--shadow); margin-bottom:20px;
+}
+.form-card-header{
+  background:linear-gradient(135deg,#002560 0%,#1d4ed8 100%);
+  color:#fff; font-family:var(--font-head);
+  font-size:14px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  padding:14px 24px;
+}
+.form-card-body{ padding:24px; }
+
+/* Form */
+.grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.field{ display:flex; flex-direction:column; gap:7px; }
+.field label{ font-size:12px; font-weight:600; color:black; letter-spacing:.04em; }
+.form-control{
+    width:auto !important;
+  background:var(--bg); border:1.5px solid var(--border);
+  border-radius:8px; padding:10px 13px;
+  font-size:14px; color:var(--text); font-family:var(--font-body);
+  outline:none; width:100%; transition:border-color .2s, box-shadow .2s;
+}
+.form-control:focus{
+  border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,0.1); background:var(--white);
+}
+textarea.form-control{ resize:vertical; min-height:80px; }
+.field-note{ font-size:11px; color:var(--slate); }
+.field-warn{ font-size:11px; color:var(--red); font-weight:500; }
+.form-divider{ height:1px; background:var(--border); margin:20px 0; }
+.mt-16{ margin-top:16px; }
+.mt-20{ margin-top:20px; }
+
+/* Buttons */
+.btn-primary{
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--navy); color:#fff; border:none; border-radius:8px;
+  padding:11px 24px; font-family:var(--font-head); font-size:13px; font-weight:700;
+  letter-spacing:.05em; text-transform:uppercase;
+  cursor:pointer; transition:all .2s; text-decoration:none;
+}
+.btn-primary:hover{ background:var(--accent); transform:translateY(-1px); box-shadow:0 4px 12px rgba(37,99,235,0.25); }
+.btn-primary:disabled{
+  background:var(--slate); cursor:not-allowed; transform:none;
+  box-shadow:none; opacity:.65;
+}
+.btn-outline{
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--white); color:var(--navy);
+  border:1.5px solid var(--border); border-radius:8px;
+  padding:10px 20px; font-family:var(--font-head); font-size:13px; font-weight:600;
+  cursor:pointer; transition:all .2s; text-decoration:none;
+}
+.btn-outline:hover{ border-color:var(--navy); background:var(--blue-lt); }
+.btn-row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+
+/* Table */
+.table-wrap{
+  background:var(--white); border:1px solid var(--border);
+  border-radius:14px; overflow:hidden; box-shadow:var(--shadow); margin-bottom:20px;
+}
+.orders-table{ width:100%; border-collapse:collapse; font-family:var(--font-body); }
+.orders-table thead th{
+  background:var(--navy); color:rgba(255,255,255,0.85);
+  font-family:var(--font-head); font-size:11.5px; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase;
+  padding:15px 18px; text-align:left; white-space:nowrap; border:none;
+}
+.orders-table tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; }
+.orders-table tbody tr:last-child{ border-bottom:none; }
+.orders-table tbody tr:hover{ background:#f8faff; }
+.orders-table td{ padding:14px 18px; font-size:14px; vertical-align:middle; border:none; }
+.date-cell{ font-size:13px; color:var(--text-sm); white-space:nowrap; }
+
+/* Badges */
+.badge{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:11.5px; font-weight:700; letter-spacing:.05em;
+  text-transform:uppercase; padding:4px 10px; border-radius:20px; white-space:nowrap;
+}
+.badge-dot{ width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.badge-paid   { background:#d1fae5; color:#065f46; }
+.badge-paid   .badge-dot{ background:#059669; box-shadow:0 0 0 3px rgba(5,150,105,0.2); }
+.badge-pending{ background:#fef9c3; color:#854d0e; }
+.badge-pending .badge-dot{ background:#ca8a04; box-shadow:0 0 0 3px rgba(202,138,4,0.2); }
+.badge-failed { background:#fee2e2; color:#991b1b; }
+.badge-failed .badge-dot{ background:#dc2626; box-shadow:0 0 0 3px rgba(220,38,38,0.2); }
+
+/* Empty state */
+.empty-state{ padding:0 !important; }
+.empty-inner{ display:flex; flex-direction:column; align-items:center; padding:56px 20px; gap:8px; }
+.empty-icon{ opacity:.45; }
+.empty-title{ font-family:var(--font-head); font-size:17px; font-weight:700; color:var(--text); margin:6px 0 0; }
+.empty-sub{ font-size:13px; color:var(--slate); margin:0; }
+
+/* Toasts */
+.toast{
+  position:fixed; top:24px; right:24px;
+  min-width:300px; max-width:400px;
+  background:var(--white); border-radius:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.13);
+  font-family:var(--font-body); font-size:14px; font-weight:500;
+  overflow:hidden; z-index:99999;
+  transform:translateX(450px); opacity:0;
+  transition:all .3s cubic-bezier(.68,-.55,.265,1.55);
+}
+.toast.show{ transform:translateX(0); opacity:1; }
+.toast.hide{ transform:translateX(450px); opacity:0; }
+.toast-bar{
+  position:absolute; bottom:0; left:0; height:3px;
+  background:linear-gradient(90deg,var(--accent),var(--green));
+  animation:barShrink 5s linear forwards;
+}
+.toast-inner{ display:flex; align-items:center; gap:10px; padding:14px 16px; }
+.toast-icon{
+  width:26px; height:26px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:13px; flex-shrink:0;
+}
+.toast-message{ flex:1; color:var(--text); line-height:1.4; }
+.toast-close{
+  background:none; border:none; color:var(--slate);
+  font-size:20px; cursor:pointer; padding:0;
+  width:24px; height:24px; display:flex; align-items:center; justify-content:center;
+  border-radius:4px; transition:all .2s; flex-shrink:0;
+}
+.toast-close:hover{ background:var(--bg); color:var(--text); }
+.toast-success{ border-left:4px solid var(--green); }
+.toast-success .toast-icon{ background:#d1fae5; color:#065f46; }
+.toast-error  { border-left:4px solid var(--red); }
+.toast-error   .toast-icon{ background:#fee2e2; color:#991b1b; }
+.toast-warning { border-left:4px solid var(--amber); }
+.toast-warning .toast-icon{ background:#fef9c3; color:#854d0e; }
+
+
+
+/* Responsive */
+@media(max-width:1200px){ .orders-wrapper{ margin-left:20px; margin-right:20px; margin-top:90px; } }
+@media(max-width:768px){
+  .orders-wrapper{ margin:100px 12px 100px; }
+  .page-header{ flex-direction:column; gap:16px; align-items:flex-start; padding:20px; }
+  .grid-2{ grid-template-columns:1fr; }
+  .stat-row .stat-box{ min-width:calc(50% - 8px); }
+  .btn-row{ flex-direction:column; align-items:flex-start; }
+  .toast{ right:10px; left:10px; min-width:auto; max-width:none; }
+}
+</style>
+
+{% endblock %}

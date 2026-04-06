@@ -1,0 +1,386 @@
+{% extends "main.html" %}
+{% block content %}
+{% load static %}
+
+<div class="orders-wrapper">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" height="30px" viewBox="0 -960 960 960" width="30px" fill="white">
+          <path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/>
+        </svg>
+      </div>
+      <div>
+        <p class="header-eyebrow">Dashboard</p>
+        <h1 class="header-title">Manage Leave Applications</h1>
+      </div>
+    </div>
+    <div class="header-right">
+      <a href="{% url 'bio_details:dashboard' %}" class="header-back-btn">
+        &#8592;&nbsp; Back to Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Controls Bar -->
+  <div class="controls-bar">
+    <div class="filter-wrap">
+      <span class="ctrl-label">Filter by Status :</span>
+      <button class="filter-btn active" onclick="filterApplications('all', this)">All</button>
+      <button class="filter-btn" onclick="filterApplications('pending', this)">Pending</button>
+      <button class="filter-btn" onclick="filterApplications('approved', this)">Approved</button>
+      <button class="filter-btn" onclick="filterApplications('rejected', this)">Rejected</button>
+    </div>
+    <div class="search-form">
+      <div class="search-input-wrap">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+          <path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input type="text" id="search-input" placeholder="Search employee, leave type…" class="search-input" oninput="searchTable(this.value)">
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table class="orders-table" id="leave-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Applied Date</th>
+          <th>Leave Type</th>
+          <th>Duration</th>
+          <th>From Date</th>
+          <th>To Date</th>
+          <th>Days</th>
+          <th>Status</th>
+          <th>Reason</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for app in applications %}
+        <tr class="app-row" data-status="{{ app.status }}" data-search="{{ app.user.get_full_name|lower }} {{ app.get_leave_type_display|lower }}">
+          <td>
+            <div class="client-cell">
+              <div class="client-avatar">
+                {{ app.user.get_full_name|default:app.user.username|slice:":1"|upper }}
+              </div>
+              <div>
+                <div class="client-name">{{ app.user.get_full_name|default:app.user.username }}</div>
+                <div class="client-email">{{ app.user.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="date-cell">{{ app.applied_at|date:"d M Y" }}<br><small>{{ app.applied_at|date:"H:i" }}</small></td>
+          <td>{{ app.get_leave_type_display }}</td>
+          <td>{{ app.get_duration_display }}</td>
+          <td class="date-cell">{{ app.from_date|date:"d M Y" }}</td>
+          <td class="date-cell">{{ app.to_date|date:"d M Y" }}</td>
+          <td><span class="days-chip">{{ app.total_days }}d</span></td>
+          <td>
+            <span class="badge {% if app.status == 'approved' %}badge-paid{% elif app.status == 'rejected' %}badge-failed{% else %}badge-pending{% endif %}">
+              <span class="badge-dot"></span>{{ app.get_status_display }}
+            </span>
+          </td>
+          <td>
+            <div class="reason-cell" title="{{ app.reason }}">
+              {{ app.reason|truncatechars:35 }}
+            </div>
+          </td>
+          <td>
+            {% if app.status == 'pending' %}
+              <div class="action-group">
+                <form method="post" style="display:inline;width:auto;padding:0">
+                  {% csrf_token %}
+                  <input type="hidden" name="application_id" value="{{ app.id }}">
+                  <input type="hidden" name="action" value="approve">
+                  <button type="submit" class="act-btn act-approve" onclick="return confirm('Approve this leave application?')">&#10003; Approve</button>
+                </form>
+                <form method="post" style="display:inline;width:auto;padding:0">
+                  {% csrf_token %}
+                  <input type="hidden" name="application_id" value="{{ app.id }}">
+                  <input type="hidden" name="action" value="reject">
+                  <button type="submit" class="act-btn act-reject" onclick="return confirm('Reject this leave application?')">&#10007; Reject</button>
+                </form>
+              </div>
+            {% else %}
+              <div class="approved-info">
+                {% if app.approved_by %}
+                  <span>By: {{ app.approved_by.username }}</span><br>
+                  <span>{{ app.approved_at|date:"d M Y" }}</span>
+                {% else %}
+                  <span class="no-action">—</span>
+                {% endif %}
+              </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" class="empty-state">
+            <div class="empty-inner">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" class="empty-icon">
+                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <p class="empty-title">No leave applications found</p>
+              <p class="empty-sub">No applications have been submitted yet.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- /.orders-wrapper -->
+
+<!-- Toast -->
+{% if messages %}
+<div id="toast-container">
+  {% for message in messages %}
+    <div class="toast {% if 'success' in message.tags %}toast-success{% elif 'error' in message.tags %}toast-error{% else %}toast-info{% endif %}">
+      <div class="toast-bar"></div>
+      <span>{{ message }}</span>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<script>
+    function filterApplications(status, btn){
+    document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.querySelectorAll('.app-row').forEach(function(row){
+        row.style.display = (status === 'all' || row.dataset.status === status) ? '' : 'none';
+    });
+    }
+
+    function searchTable(val){
+    val = val.toLowerCase();
+    document.querySelectorAll('.app-row').forEach(function(row){
+        row.style.display = row.dataset.search.includes(val) ? '' : 'none';
+    });
+    }
+
+    setTimeout(function(){
+    document.querySelectorAll('.toast').forEach(function(t){
+        t.style.opacity='0'; t.style.transform='translateY(-12px)';
+        setTimeout(function(){ t.remove(); },400);
+    });
+    },3500);
+
+    document.addEventListener('DOMContentLoaded',function(){
+    var wrapper = document.querySelector('.orders-wrapper');
+    ['svg1','svg3'].forEach(function(cls){
+        var el = document.querySelector('.'+cls);
+        if(el) el.addEventListener('click',function(){ wrapper.classList.toggle('shifted'); });
+    });
+    });
+</script>
+
+<style>
+        
+    :root{
+    --navy:#1e3a8a;
+    --blue:#1a47a0;
+    --blue-lt:#e8edf8;
+    --accent:#2563eb;
+    --green:#059669;
+    --amber:#d97706;
+    --red:#dc2626;
+    --slate:#64748b;
+    --border:#e2e8f0;
+    --bg:#f1f5fb;
+    --white:#ffffff;
+    --text:#0f172a;
+    --text-sm:#475569;
+    --radius:10px;
+    --shadow:0 4px 24px rgba(15,37,87,0.09);
+    --font-head:'Syne',sans-serif;
+    --font-body:'DM Sans',sans-serif;
+    }
+
+    .orders-wrapper{
+    font-family:var(--font-body);
+    color:var(--text);
+    margin:120px 40px 120px 360px;
+    transition:margin-left .3s ease;
+    }
+    .orders-wrapper.shifted{ margin-left:90px; }
+
+    /* Header */
+    .page-header{
+    display:flex; align-items:center; justify-content:space-between;
+    background:linear-gradient(135deg,#002560 0%,#1d4ed8 100%);
+    border-radius:16px; padding:28px 32px; margin-bottom:24px;
+    box-shadow:0 8px 32px rgba(15,37,87,0.22);
+    }
+    .header-left{ display:flex; align-items:center; gap:18px; }
+    .header-icon-wrap{
+    width:48px; height:48px; background:rgba(255,255,255,0.15);
+    border-radius:12px; display:flex; align-items:center; justify-content:center;
+    backdrop-filter:blur(4px);
+    }
+    .header-eyebrow{
+    font-family:var(--font-body); font-size:12px; font-weight:500;
+    letter-spacing:.12em; text-transform:uppercase;
+    color:rgba(255,255,255,0.6); margin:0 0 4px;
+    }
+    .header-title{
+    font-family:var(--font-head); font-size:26px; font-weight:800;
+    color:#fff; margin:0; letter-spacing:-.5px;
+    }
+    .header-back-btn{
+    display:inline-flex; align-items:center; gap:6px;
+    background:rgba(255,255,255,0.15); color:#fff;
+    border:1px solid rgba(255,255,255,0.25); border-radius:8px;
+    padding:10px 18px; font-family:var(--font-head);
+    font-size:13px; font-weight:600; text-decoration:none;
+    transition:all .2s;
+    }
+    .header-back-btn:hover{ background:rgba(255,255,255,0.25); color:#fff; }
+
+    /* Controls */
+    .controls-bar{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--white); border:1px solid var(--border);
+    border-radius:var(--radius); padding:12px 16px;
+    margin-bottom:16px; gap:16px; box-shadow:var(--shadow); flex-wrap:wrap;
+    }
+    .filter-wrap{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .ctrl-label{ font-size:13px; color:var(--slate); font-weight:500; white-space:nowrap; }
+    .filter-btn{
+    font-family:var(--font-head); font-size:12px; font-weight:600;
+    color:var(--slate); background:var(--bg);
+    border:1.5px solid var(--border); border-radius:7px;
+    padding:7px 14px; cursor:pointer; transition:all .2s;
+    }
+    .filter-btn:hover{ border-color:var(--accent); color:white; }
+    .filter-btn.active{ background:var(--navy); color:#fff; border-color:var(--navy); }
+
+    .search-input-wrap{ position:relative; display:flex; align-items:center; }
+    .search-icon{ position:absolute; left:12px; color:var(--slate); pointer-events:none; }
+    .search-input{
+    font-family:var(--font-body); font-size:14px; color:var(--text);
+    background:var(--bg); border:1.5px solid var(--border);
+    border-radius:8px; padding:9px 16px 9px 38px; width:280px;
+    outline:none; transition:border-color .2s, box-shadow .2s;
+    }
+    .search-input:focus{
+    border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,0.12);
+    background:var(--white);
+    }
+
+    /* Table */
+    .table-wrap{
+    background:var(--white); border:1px solid var(--border);
+    border-radius:14px; overflow:hidden; box-shadow:var(--shadow);
+    margin-bottom:20px; overflow-x:auto;
+    }
+    .orders-table{ width:100%; border-collapse:collapse; font-family:var(--font-body); min-width:900px; }
+    .orders-table thead th{
+    background:var(--navy); color:rgba(255,255,255,0.85);
+    font-family:var(--font-head); font-size:11.5px; font-weight:700;
+    letter-spacing:.08em; text-transform:uppercase;
+    padding:15px 16px; text-align:left; white-space:nowrap; border:none;
+    }
+    .orders-table tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; }
+    .orders-table tbody tr:last-child{ border-bottom:none; }
+    .orders-table tbody tr:hover{ background:#f8faff; }
+    .orders-table td{ padding:14px 16px; font-size:13.5px; vertical-align:middle; border:none; }
+
+    /* Client cell */
+    .client-cell{ display:flex; align-items:center; gap:10px; }
+    .client-avatar{
+    width:34px; height:34px;
+    background:linear-gradient(135deg,var(--blue),var(--accent));
+    color:#fff; font-family:var(--font-head); font-size:13px; font-weight:700;
+    border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    }
+    .client-name{ font-weight:600; color:var(--text); font-size:13.5px; }
+    .client-email{ font-size:12px; color:var(--slate); }
+
+    .date-cell{ font-size:13px; color:var(--text-sm); white-space:nowrap; }
+    .date-cell small{ color:var(--slate); }
+
+    .days-chip{
+    display:inline-block;
+    background:var(--blue-lt); color:var(--navy);
+    font-family:var(--font-head); font-size:12px; font-weight:700;
+    padding:3px 10px; border-radius:20px;
+    }
+
+    .reason-cell{ max-width:160px; font-size:13px; color:var(--text-sm); cursor:help; }
+
+    /* Badges */
+    .badge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:11.5px; font-weight:700; letter-spacing:.05em;
+    text-transform:uppercase; padding:4px 10px; border-radius:20px; white-space:nowrap;
+    }
+    .badge-dot{ width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+    .badge-paid   { background:#d1fae5; color:#065f46; }
+    .badge-paid   .badge-dot{ background:#059669; box-shadow:0 0 0 3px rgba(5,150,105,0.2); }
+    .badge-pending{ background:#fef9c3; color:#854d0e; }
+    .badge-pending .badge-dot{ background:#ca8a04; box-shadow:0 0 0 3px rgba(202,138,4,0.2); }
+    .badge-failed { background:#fee2e2; color:#991b1b; }
+    .badge-failed .badge-dot{ background:#dc2626; box-shadow:0 0 0 3px rgba(220,38,38,0.2); }
+
+    /* Action buttons */
+    .action-group{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .act-btn{
+    display:inline-flex; align-items:center; gap:4px;
+    font-family:var(--font-body); font-size:12px; font-weight:600;
+    padding:6px 12px; border-radius:7px; border:none;
+    cursor:pointer; text-decoration:none; transition:all .2s; white-space:nowrap;
+    }
+    .act-approve{ background:#d1fae5; color:#065f46; }
+    .act-approve:hover{ background:var(--green); color:#fff; transform:translateY(-1px); box-shadow:0 4px 12px rgba(5,150,105,0.25); }
+    .act-reject{ background:#fee2e2; color:#991b1b; }
+    .act-reject:hover{ background:var(--red); color:#fff; transform:translateY(-1px); box-shadow:0 4px 12px rgba(220,38,38,0.25); }
+
+    .approved-info{ font-size:12px; color:var(--slate); line-height:1.6; }
+    .no-action{ color:var(--slate); font-style:italic; font-size:13px; }
+
+    /* Empty state */
+    .empty-state{ padding:0 !important; }
+    .empty-inner{ display:flex; flex-direction:column; align-items:center; padding:60px 20px; gap:8px; }
+    .empty-icon{ opacity:.45; }
+    .empty-title{ font-family:var(--font-head); font-size:18px; font-weight:700; color:var(--text); margin:6px 0 0; }
+    .empty-sub{ font-size:13px; color:var(--slate); margin:0; }
+
+    /* Toast */
+    #toast-container{ position:fixed; top:24px; right:24px; z-index:99999; display:flex; flex-direction:column; gap:10px; }
+    .toast{
+    background:var(--white); border-radius:10px; padding:14px 18px;
+    min-width:260px; box-shadow:0 8px 24px rgba(0,0,0,0.13);
+    font-family:var(--font-body); font-size:14px; font-weight:500;
+    display:flex; align-items:center; gap:10px;
+    position:relative; overflow:hidden;
+    animation:toastIn .35s ease; transition:opacity .3s, transform .3s;
+    }
+    .toast-success{ border-left:4px solid var(--green); color:#065f46; }
+    .toast-error  { border-left:4px solid var(--red);   color:#991b1b; }
+    .toast-info   { border-left:4px solid var(--accent); color:var(--navy); }
+    .toast-bar{
+    position:absolute; bottom:0; left:0; height:3px;
+    background:linear-gradient(90deg,var(--accent),var(--green));
+    animation:barShrink 3.5s linear forwards;
+    }
+    @keyframes toastIn{ from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+
+    /* Responsive */
+    @media(max-width:1200px){ .orders-wrapper{ margin-left:20px; margin-right:20px; margin-top:90px; } }
+    @media(max-width:768px){
+    .orders-wrapper{ margin:100px 12px 100px; }
+    .page-header{ flex-direction:column; gap:16px; align-items:flex-start; padding:20px; }
+    .controls-bar{ flex-direction:column; align-items:flex-start; }
+    .search-input{ width:100%; }
+    }
+</style>
+
+{% endblock %}

@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Member, Product, Cart, CartItem, Order, OrderItem, Invoice, InvoiceItem
+from .models import Member, Product, Cart, CartItem, Order, OrderItem, Invoice, InvoiceItem, Attendance, LeaveApplication
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -11,6 +11,7 @@ from django.http import JsonResponse
 from django.db import models
 import json
 from .currency_utils import convert_currency, get_currency_info, COUNTRY_CURRENCY_MAP, get_live_exchange_rates
+from django.utils import timezone
 
 def members(request):
     if request.method == "POST":
@@ -2074,3 +2075,303 @@ def save_currency_selection(request):
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+
+def attendance(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    # Handle form submissions
+    if request.method == 'POST':
+        print(f"DEBUG: POST request received")
+        print(f"DEBUG: POST data: {request.POST}")
+        
+        form_type = request.POST.get('form_type')
+        print(f"DEBUG: Form type: {form_type}")
+        
+        if form_type == 'attendance':
+            # Handle attendance marking
+            date = request.POST.get('date')
+            status = request.POST.get('status')
+            check_in = request.POST.get('check_in') or None
+            check_out = request.POST.get('check_out') or None
+            
+            print(f"DEBUG: Attendance data - Date: {date}, Status: {status}, Check-in: {check_in}, Check-out: {check_out}")
+            
+            # Validate that only today's date can be marked
+            from datetime import date as date_obj, datetime
+            today = date_obj.today()
+            selected_date = datetime.strptime(date, '%Y-%m-%d').date()
+            
+            if selected_date != today:
+                messages.error(request, 'You can only mark attendance for today!')
+                return redirect('bio_details:attendance')
+            
+            # Check if this date has approved leave
+            approved_leave = LeaveApplication.objects.filter(
+                user=request.user,
+                status='approved',
+                from_date__lte=selected_date,
+                to_date__gte=selected_date
+            ).first()
+            
+            if approved_leave:
+                messages.error(request, f'You have approved leave for this date ({approved_leave.from_date} to {approved_leave.to_date}). Cannot mark attendance.')
+                return redirect('bio_details:attendance')
+            
+            try:
+                # Check if attendance already exists for this date
+                attendance_record, created = Attendance.objects.get_or_create(
+                    user=request.user,
+                    date=date,
+                    defaults={
+                        'status': status,
+                        'check_in': check_in,
+                        'check_out': check_out
+                    }
+                )
+                
+                if not created:
+                    # Update existing record
+                    attendance_record.status = status
+                    attendance_record.check_in = check_in
+                    attendance_record.check_out = check_out
+                    attendance_record.save()
+                    print(f"DEBUG: Updated existing attendance record")
+                    messages.success(request, 'Attendance updated successfully!')
+                else:
+                    print(f"DEBUG: Created new attendance record")
+                    messages.success(request, 'Attendance marked successfully!')
+                
+                return redirect('bio_details:attendance')  # Redirect to prevent resubmission
+                    
+            except Exception as e:
+                print(f"DEBUG: Error marking attendance: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                messages.error(request, f'Error marking attendance: {str(e)}')
+                return redirect('bio_details:attendance')  # Redirect even on error
+        
+        elif form_type == 'leave':
+            # Handle leave application
+            leave_type = request.POST.get('leave_type')
+            duration = request.POST.get('duration')
+            from_date = request.POST.get('from_date')
+            to_date = request.POST.get('to_date')
+            reason = request.POST.get('reason')
+            
+            print(f"DEBUG: Leave data - Type: {leave_type}, Duration: {duration}, From: {from_date}, To: {to_date}")
+            
+            try:
+                # Check for overlapping leave applications
+                from datetime import datetime
+                from_date_obj = datetime.strptime(from_date, '%Y-%m-%d').date()
+                to_date_obj = datetime.strptime(to_date, '%Y-%m-%d').date()
+                
+                overlapping_leaves = LeaveApplication.objects.filter(
+                    user=request.user,
+                    status__in=['pending', 'approved'],
+                    from_date__lte=to_date_obj,
+                    to_date__gte=from_date_obj
+                )
+                
+                if overlapping_leaves.exists():
+                    messages.error(request, 'You already have a leave application for overlapping dates!')
+                    return redirect('bio_details:attendance')
+                
+                leave_application = LeaveApplication.objects.create(
+                    user=request.user,
+                    leave_type=leave_type,
+                    duration=duration,
+                    from_date=from_date_obj,
+                    to_date=to_date_obj,
+                    reason=reason
+                )
+                print(f"DEBUG: Created leave application")
+                messages.success(request, 'Leave application submitted successfully!')
+                return redirect('bio_details:attendance')  # Redirect to prevent resubmission
+                
+            except Exception as e:
+                print(f"DEBUG: Error submitting leave application: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                messages.error(request, f'Error submitting leave application: {str(e)}')
+                return redirect('bio_details:attendance')  # Redirect even on error
+    
+    # Get attendance statistics for the current user
+    from datetime import datetime, timedelta, date as date_obj
+    from django.db.models import Count, Avg
+    
+    # Calculate statistics for current month
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+    today = date_obj.today()
+    
+    present_count = Attendance.objects.filter(
+        user=request.user,
+        date__month=current_month,
+        date__year=current_year,
+        status='present'
+    ).count()
+    
+    # Get leave applications count for current year
+    approved_leaves = LeaveApplication.objects.filter(
+        user=request.user,
+        from_date__year=current_year,
+        status='approved'
+    )
+    
+    # Calculate total leave days used
+    leaves_used = 0
+    for leave in approved_leaves:
+        leaves_used += leave.total_days
+    
+    # Calculate total hours worked this month
+    total_hours = 0
+    attendance_with_hours = Attendance.objects.filter(
+        user=request.user,
+        date__month=current_month,
+        date__year=current_year,
+        check_in__isnull=False,
+        check_out__isnull=False
+    )
+    
+    for record in attendance_with_hours:
+        if record.check_in and record.check_out:
+            # Calculate hours worked for each day
+            from datetime import datetime, timedelta
+            check_in_time = datetime.combine(record.date, record.check_in)
+            check_out_time = datetime.combine(record.date, record.check_out)
+            
+            # Handle case where check_out is next day
+            if check_out_time < check_in_time:
+                check_out_time += timedelta(days=1)
+            
+            hours_worked = (check_out_time - check_in_time).total_seconds() / 3600
+            total_hours += hours_worked
+    
+    # Format total hours
+    total_hours_formatted = f"{int(total_hours)}h {int((total_hours % 1) * 60)}m"
+    
+    # Get recent attendance records
+    attendance_records = Attendance.objects.filter(
+        user=request.user
+    ).order_by('-date')[:10]
+    
+    # Check if today has approved leave
+    today_has_leave = LeaveApplication.objects.filter(
+        user=request.user,
+        status='approved',
+        from_date__lte=today,
+        to_date__gte=today
+    ).exists()
+    
+    # Check if attendance already marked for today
+    today_attendance = Attendance.objects.filter(
+        user=request.user,
+        date=today
+    ).first()
+    
+    print(f"DEBUG: Found {attendance_records.count()} attendance records for user {request.user.username}")
+    
+    context = {
+        'present_count': present_count,
+        'leaves_used': leaves_used,
+        'total_hours': total_hours_formatted,
+        'attendance_records': attendance_records,
+        'today': today,
+        'today_has_leave': today_has_leave,
+        'today_attendance': today_attendance
+    }
+    
+    return render(request, 'attendance.html', context)
+
+
+def my_applications(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    # Get all leave applications for the current user
+    applications = LeaveApplication.objects.filter(
+        user=request.user
+    ).order_by('-applied_at')
+    
+    context = {
+        'applications': applications
+    }
+    
+    return render(request, 'my_applications.html', context)
+
+
+
+def manage_leave_applications(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    # Handle approval/rejection
+    if request.method == 'POST':
+        application_id = request.POST.get('application_id')
+        action = request.POST.get('action')
+        
+        try:
+            application = LeaveApplication.objects.get(id=application_id)
+            
+            if action == 'approve':
+                application.status = 'approved'
+                application.approved_by = request.user
+                application.approved_at = timezone.now()
+                
+                # Create attendance records for approved leave dates
+                from datetime import date, timedelta
+                current_date = application.from_date
+                
+                while current_date <= application.to_date:
+                    # Check if attendance record already exists
+                    attendance_record, created = Attendance.objects.get_or_create(
+                        user=application.user,
+                        date=current_date,
+                        defaults={
+                            'status': 'absent',  # Mark as absent for leave
+                            'check_in': None,
+                            'check_out': None,
+                            'total_hours': None
+                        }
+                    )
+                    
+                    if not created:
+                        # Update existing record to absent for leave
+                        attendance_record.status = 'absent'
+                        attendance_record.check_in = None
+                        attendance_record.check_out = None
+                        attendance_record.total_hours = None
+                        attendance_record.save()
+                    
+                    current_date += timedelta(days=1)
+                
+                messages.success(request, f'Leave application for {application.user.username} approved successfully! Attendance records updated.')
+                
+            elif action == 'reject':
+                application.status = 'rejected'
+                application.approved_by = request.user
+                application.approved_at = timezone.now()
+                messages.success(request, f'Leave application for {application.user.username} rejected successfully!')
+            
+            application.save()
+            
+        except LeaveApplication.DoesNotExist:
+            messages.error(request, 'Leave application not found!')
+    
+    # Get all leave applications
+    applications = LeaveApplication.objects.all().select_related('user', 'approved_by').order_by('-applied_at')
+    
+    context = {
+        'applications': applications
+    }
+    
+    return render(request, 'manage_leave_applications.html', context)
+

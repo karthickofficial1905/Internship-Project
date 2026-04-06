@@ -2,7 +2,8 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.utils.text import slugify
-from datetime import date
+from datetime import date, datetime, timedelta
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Country(models.Model):
@@ -469,3 +470,109 @@ class InvoiceItem(models.Model):
     
     class Meta:
         db_table = 'invoice_item'
+
+
+class Attendance(models.Model):
+    STATUS_CHOICES = [
+        ('present', 'Present'),
+        ('absent', 'Absent'),
+        ('half_day', 'Half Day'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='attendance_records')
+    date = models.DateField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    check_in = models.TimeField(null=True, blank=True)
+    check_out = models.TimeField(null=True, blank=True)
+    total_hours = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def save(self, *args, **kwargs):
+        # Convert string date to date object if needed
+        if isinstance(self.date, str):
+            from datetime import datetime
+            self.date = datetime.strptime(self.date, '%Y-%m-%d').date()
+        
+        # Calculate total hours if both check_in and check_out are provided
+        if self.check_in and self.check_out:
+            # Convert string times to time objects if needed
+            if isinstance(self.check_in, str):
+                from datetime import time
+                time_parts = self.check_in.split(':')
+                hour = int(time_parts[0])
+                minute = int(time_parts[1])
+                second = int(time_parts[2]) if len(time_parts) > 2 else 0
+                self.check_in = time(hour, minute, second)
+            
+            if isinstance(self.check_out, str):
+                from datetime import time
+                time_parts = self.check_out.split(':')
+                hour = int(time_parts[0])
+                minute = int(time_parts[1])
+                second = int(time_parts[2]) if len(time_parts) > 2 else 0
+                self.check_out = time(hour, minute, second)
+            
+            check_in_datetime = datetime.combine(self.date, self.check_in)
+            check_out_datetime = datetime.combine(self.date, self.check_out)
+            
+            # Handle case where check_out is next day
+            if self.check_out < self.check_in:
+                check_out_datetime += timedelta(days=1)
+            
+            time_diff = check_out_datetime - check_in_datetime
+            self.total_hours = round(time_diff.total_seconds() / 3600, 2)
+        
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.date} - {self.status}"
+    
+    class Meta:
+        db_table = 'attendance'
+        unique_together = ('user', 'date')
+        ordering = ['-date']
+
+
+class LeaveApplication(models.Model):
+    LEAVE_TYPE_CHOICES = [
+        ('personal', 'Personal Leave'),
+        ('sick', 'Sick Leave'),
+        ('casual', 'Casual Leave'),
+        ('emergency', 'Emergency Leave'),
+    ]
+    
+    DURATION_CHOICES = [
+        ('full_day', 'Full Day'),
+        ('half_day', 'Half Day'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='leave_applications')
+    leave_type = models.CharField(max_length=10, choices=LEAVE_TYPE_CHOICES)
+    duration = models.CharField(max_length=10, choices=DURATION_CHOICES)
+    from_date = models.DateField()
+    to_date = models.DateField()
+    reason = models.TextField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    applied_at = models.DateTimeField(auto_now_add=True)
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_leaves')
+    approved_at = models.DateTimeField(null=True, blank=True)
+    
+    @property
+    def total_days(self):
+        """Calculate total leave days"""
+        days = (self.to_date - self.from_date).days + 1
+        return days / 2 if self.duration == 'half_day' else days
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.leave_type} ({self.from_date} to {self.to_date})"
+    
+    class Meta:
+        db_table = 'leave_application'
+        ordering = ['-applied_at']
