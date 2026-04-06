@@ -183,7 +183,7 @@
             </td>
             <td>{{ record.check_in|default:'—' }}</td>
             <td>{{ record.check_out|default:'—' }}</td>
-            <td>{{ record.total_hours|default:'—' }}</td>
+            <td>{{ record.formatted_hours }}</td>
           </tr>
           {% empty %}
           <tr>

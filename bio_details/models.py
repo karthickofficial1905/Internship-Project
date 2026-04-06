@@ -528,6 +528,16 @@ class Attendance(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.date} - {self.status}"
     
+    @property
+    def formatted_hours(self):
+        """Return total hours in 'Xh Ym' format"""
+        if not self.total_hours:
+            return "—"
+        
+        hours = int(self.total_hours)
+        minutes = int((self.total_hours - hours) * 60)
+        return f"{hours}h {minutes}m"
+    
     class Meta:
         db_table = 'attendance'
         unique_together = ('user', 'date')
