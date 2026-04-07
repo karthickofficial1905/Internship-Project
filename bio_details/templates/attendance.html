@@ -2,510 +2,922 @@
 {% block content %}
 {% load static %}
 
-<div class="orders-wrapper">
 
-  <!-- Toast Notifications -->
-  {% if messages %}
-    {% for message in messages %}
-      <div class="toast toast-{{ message.tags }}" id="toast-{{ forloop.counter }}">
-        <div class="toast-bar"></div>
-        <div class="toast-inner">
-          <div class="toast-icon">
-            {% if message.tags == 'success' %}✓{% elif message.tags == 'error' %}✕{% else %}!{% endif %}
-          </div>
-          <span class="toast-message">{{ message }}</span>
-          <button class="toast-close" onclick="closeToast('toast-{{ forloop.counter }}')">&times;</button>
-        </div>
-      </div>
-    {% endfor %}
-  {% endif %}
+<div class="att-shell">
 
-  <!-- Page Header -->
-  <div class="page-header">
-    <div class="header-left">
+  <!-- ══════════ DATE HEADER ══════════ -->
+  <div class="date-header">
+    <div class="dh-left">
       <div class="header-icon-wrap">
-        <svg xmlns="http://www.w3.org/2000/svg" height="30px" viewBox="0 -960 960 960" width="30px" fill="white">
-          <path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/>
+        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="white">
+          <path d="M200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Z"/>
         </svg>
       </div>
       <div>
-        <p class="header-eyebrow">Dashboard</p>
-        <h1 class="header-title">Employee Attendance</h1>
+        <p class="dh-eyebrow">Dashboard</p>
+        <h1 class="dh-title">Employee Attendance</h1>
       </div>
     </div>
-    <div class="header-right">
-      <div class="order-stat">
-        <span class="stat-lbl">Today :</span>
-        <span class="stat-num" id="js-today"></span>
+
+    <div class="dh-center">
+      <div class="date-display">
+        <div class="date-monthyear" id="hdr-my">April 2026</div>
+        <div class="date-day" id="hdr-d">07</div>
+        <div class="date-weekday" id="hdr-wd">Tuesday</div>
+      </div>
+    </div>
+    
+
+    <div class="dh-right">
+      <div class="hstat-card">
+        <div class="hstat-num" id="h-present">{{ present_today|default:"0" }}</div>
+        <div class="hstat-lbl">Present</div>
+      </div>
+      <div class="hstat-card">
+        <div class="hstat-num" id="h-halfday">{{ halfday_today|default:"0" }}</div>
+        <div class="hstat-lbl">Half Day</div>
+      </div>
+      <div class="hstat-card">
+        <div class="hstat-num" id="h-leave">{{ on_leave_today|default:"0" }}</div>
+        <div class="hstat-lbl">On Leave</div>
       </div>
     </div>
   </div>
 
-  <!-- Stat Cards -->
-  <div class="stat-row">
-    <div class="stat-box">
-      <div class="stat-val">{{ present_count|default:"—" }}</div>
-      <div class="stat-lbl-dark">Days Present</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-val">{{ leaves_used|default:"—" }}</div>
-      <div class="stat-lbl-dark">Leaves Used</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-val">{{ total_hours|default:"—" }}</div>
-      <div class="stat-lbl-dark">Total Hours</div>
-    </div>
-  </div>
+  <!-- ══════════ BODY ══════════ -->
+  <div class="att-body">
 
-  <!-- Tabs -->
-  <div class="tab-bar">
-    <button class="tab-btn active" onclick="switchTab('mark', this)">Mark Attendance</button>
-    <button class="tab-btn" onclick="switchTab('leave', this)">Apply Leave</button>
-    <button class="tab-btn" onclick="switchTab('records', this)">Records</button>
-  </div>
+    <!-- LEFT: Employee List -->
+    <div class="left-panel">
+      <div class="lp-head">
+        <span>Employees</span>
+        <span class="emp-count" id="emp-count">{{ employees|length }}</span>
+      </div>
+      <div class="lp-search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" placeholder="Search employee..." id="emp-search" oninput="filterEmployees(this.value)">
+      </div>
+      <div class="emp-list" id="emp-list">
+        {% for emp in employees %}
+        <div class="emp-item" data-id="{{ emp.id }}" data-name="{{ emp.get_full_name|default:emp.username }}" onclick="selectEmployee({{ emp.id }}, '{{ emp.get_full_name|default:emp.username }}', '{{ emp.department|default:"Staff" }}')">
+          <div class="emp-avatar" style="background:{{ emp.avatar_color|default:'#1e3a8a' }}">
+            {{ emp.get_full_name|default:emp.username|slice:":1"|upper }}{{ emp.last_name|slice:":1"|upper }}
+          </div>
+          <div class="emp-info">
+            <div class="emp-name-txt">{{ emp.get_full_name|default:emp.username }}</div>
+            <div class="emp-dept-txt">{{ emp.department|default:"Staff" }}</div>
+          </div>
+          <div class="emp-status-dot
+            {% with status=emp.today_status %}
+              {% if status == 'present' or status == 'halfday' %}dot-present
+              {% elif status == 'absent' %}dot-absent
+              {% elif status == 'leave' %}dot-leave
+              {% else %}dot-none{% endif %}
+            {% endwith %}
+          "></div>
+        </div>
+        {% empty %}
+        <!-- No employees found -->
+        <div class="empty-state" style="text-align: center; padding: 2rem; color: #64748b;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 1rem;">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          <p style="font-weight: 500; margin-bottom: 0.5rem;">No employees found</p>
+          <p style="font-size: 0.875rem; margin: 0;">No employee records available to display.</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
 
-  <!-- Section: Mark Attendance -->
-  <div class="tab-section active" id="tab-mark">
-    <div class="form-card">
-      <div class="form-card-header">Daily Attendance Entry</div>
-      <div class="form-card-body">
-        <form method="post" action="{% url 'bio_details:attendance' %}">
-          {% csrf_token %}
-          <input type="hidden" name="form_type" value="attendance">
-          <div class="grid-2">
-            <div class="field">
-              <label>Date</label>
-              <input type="date" name="date" id="att-date" value="{{ today|date:'Y-m-d' }}" readonly required class="form-control">
-              <small class="field-note">* You can only mark attendance for today</small>
-              {% if today_has_leave %}
-                <small class="field-warn">&#9888; You have approved leave for today</small>
-              {% endif %}
+    <!-- RIGHT: Main Content -->
+    <div class="right-panel">
+
+      <!-- No selection placeholder -->
+      <div class="no-sel" id="no-sel">
+        <div class="no-sel-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <p class="no-sel-title">Select an Employee</p>
+        <p class="no-sel-sub">Click a name from the left panel to manage attendance &amp; leaves</p>
+      </div>
+
+      <!-- Employee view (hidden until selected) -->
+      <div class="emp-view" id="emp-view" style="display:none">
+
+        <!-- Employee Hero Bar -->
+        <div class="emp-hero">
+          <div class="hero-avatar" id="hero-avatar">AK</div>
+          <div class="hero-info">
+            <div class="hero-name" id="hero-name">Arun Kumar</div>
+            <div class="hero-meta" id="hero-meta">Engineering · Employee</div>
+          </div>
+          <div class="hero-stats">
+            <div class="hstat-sm">
+              <div class="hstat-sm-n" id="hs-present">0</div>
+              <div class="hstat-sm-l">Present</div>
             </div>
-            <div class="field">
-              <label>Status</label>
-              <select name="status" required class="form-control">
-                <option value="present">Present</option>
-                <option value="absent">Absent</option>
-                <option value="half_day">Half Day</option>
-              </select>
+            <div class="hstat-sm">
+              <div class="hstat-sm-n" id="hs-halfday">0</div>
+              <div class="hstat-sm-l">Half Day</div>
+            </div>
+            <div class="hstat-sm">
+              <div class="hstat-sm-n" id="hs-leave">0</div>
+              <div class="hstat-sm-l">Leaves</div>
             </div>
           </div>
-          <div class="form-divider"></div>
-          <div class="grid-2">
-            <div class="field">
-              <label>Check In Time</label>
-              <input type="time" name="check_in" required class="form-control">
-            </div>
-            <div class="field">
-              <label>Check Out Time</label>
-              <input type="time" name="check_out" required class="form-control">
-            </div>
-          </div>
-          <button type="submit" class="btn-primary mt-20" {% if today_has_leave %}disabled title="Cannot mark attendance - you have approved leave for today"{% endif %}>
-            &#10003;&nbsp; Mark Attendance
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="attendance" onclick="switchTab('attendance',this)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            Attendance
           </button>
-        </form>
-      </div>
-    </div>
-  </div>
+          <button class="tab-btn" data-tab="records" onclick="switchTab('records',this)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Records
+          </button>
+        </div>
 
-  <!-- Section: Apply Leave -->
-  <div class="tab-section" id="tab-leave">
-    <div class="form-card">
-      <div class="form-card-header">Leave Application</div>
-      <div class="form-card-body">
-        <form method="post" action="{% url 'bio_details:attendance' %}">
-          {% csrf_token %}
-          <input type="hidden" name="form_type" value="leave">
-          <div class="grid-2">
-            <div class="field">
-              <label>Leave Type</label>
-              <select name="leave_type" required class="form-control">
-                <option value="personal">Personal Leave</option>
-                <option value="sick">Sick Leave</option>
-                <option value="casual">Casual Leave</option>
-                <option value="emergency">Emergency Leave</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Duration</label>
-              <select name="duration" required class="form-control">
-                <option value="full_day">Full Day</option>
-                <option value="half_day">Half Day</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-divider"></div>
-          <div class="grid-2">
-            <div class="field">
-              <label>From Date</label>
-              <input type="date" name="from_date" required class="form-control">
-            </div>
-            <div class="field">
-              <label>To Date</label>
-              <input type="date" name="to_date" required class="form-control">
-            </div>
-          </div>
-          <div class="field mt-16">
-            <label>Reason</label>
-            <textarea name="reason" class="form-control" placeholder="Brief reason for leave..." required></textarea>
-          </div>
-          <div class="btn-row mt-20">
-            <button type="submit" class="btn-primary">&#8594;&nbsp; Submit Application</button>
-            <a href="{% url 'bio_details:my_applications' %}" class="btn-outline">My Applications</a>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
+        <!-- ── TAB: ATTENDANCE ── -->
+        <div class="tab-section active" id="tab-attendance">
 
-  <!-- Section: Records -->
-  <div class="tab-section" id="tab-records">
-    <div class="table-wrap">
-      <table class="orders-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Status</th>
-            <th>Check In</th>
-            <th>Check Out</th>
-            <th>Hours</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for record in attendance_records %}
-          <tr>
-            <td class="date-cell">{{ record.date }}</td>
-            <td>
-              <span class="badge {% if record.status == 'present' %}badge-paid{% elif record.status == 'absent' %}badge-failed{% else %}badge-pending{% endif %}">
-                <span class="badge-dot"></span>{{ record.status|title }}
-              </span>
-            </td>
-            <td>{{ record.check_in|default:'—' }}</td>
-            <td>{{ record.check_out|default:'—' }}</td>
-            <td>{{ record.formatted_hours }}</td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="5" class="empty-state">
-              <div class="empty-inner">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" class="empty-icon">
-                  <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-                <p class="empty-title">No attendance records found</p>
-                <p class="empty-sub">Records will appear once attendance is marked.</p>
+          <div class="status-pick">
+            <div class="sp-btn" id="sp-present" onclick="pickStatus('present')">
+              <div class="sp-icon sp-icon-present">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
               </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
+              <div class="sp-lbl">Present</div>
+            </div>
+            <div class="sp-btn" id="sp-absent" onclick="switchTabById('leave')">
+              <div class="sp-icon sp-icon-absent">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </div>
+              <div class="sp-lbl">Apply Leave</div>
+            </div>
+            <div class="sp-btn" id="sp-halfday" onclick="pickStatus('halfday')">
+              <div class="sp-icon sp-icon-halfday">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+              </div>
+              <div class="sp-lbl">Half Day</div>
+            </div>
+          </div>
 
-</div><!-- /.orders-wrapper -->
+          <div class="form-card" id="time-card" style="display:none">
+            <div class="fc-head">Time Details</div>
+            <div class="fc-body">
+              <form method="post" action="{% url 'bio_details:attendance' %}" id="att-form">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="attendance">
+                <input type="hidden" name="employee_id" id="att-emp-id" value="">
+                <input type="hidden" name="status" id="att-status" value="">
+                <input type="hidden" name="date" id="att-date-val" value="">
+                <div class="fg2">
+                  <div class="field">
+                    <label>Check In</label>
+                    <input type="time" name="check_in" id="chk-in" class="fctl" required>
+                  </div>
+                  <div class="field">
+                    <label>Check Out</label>
+                    <input type="time" name="check_out" id="chk-out" class="fctl" required>
+                  </div>
+                </div>
+                <div class="field mt14">
+                  <label>Notes</label>
+                  <textarea name="notes" class="fctl" id="att-notes" placeholder="Optional notes..."></textarea>
+                </div>
+                <div class="btn-row mt16">
+                  <button type="submit" class="btn-primary">&#10003;&nbsp; Save Attendance</button>
+                  <button type="button" class="btn-ghost" onclick="clearStatus()">Clear</button>
+                </div>
+              </form>
+            </div>
+          </div>
 
-<!-- Toast Container -->
+        </div><!-- /tab-attendance -->
+
+        <!-- ── TAB: LEAVE ── -->
+        <div class="tab-section" id="tab-leave">
+          <div class="form-card">
+            <div class="fc-head">Leave Application</div>
+            <div class="fc-body">
+              <form method="post" action="{% url 'bio_details:attendance' %}" id="leave-form">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="leave">
+                <input type="hidden" name="employee_id" id="leave-emp-id" value="">
+                <input type="hidden" name="leave_type" id="leave-type-val" value="">
+
+                <label class="section-lbl">Leave Type</label>
+                <div class="leave-type-grid" id="leave-type-grid">
+                  <div class="lt-btn" data-type="sick" onclick="pickLeaveType('sick',this)">
+                    <div class="lt-icon lt-sick">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    </div>
+                    <span>Sick</span>
+                  </div>
+                  <div class="lt-btn" data-type="personal" onclick="pickLeaveType('personal',this)">
+                    <div class="lt-icon lt-personal">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <span>Personal</span>
+                  </div>
+                  <div class="lt-btn" data-type="casual" onclick="pickLeaveType('casual',this)">
+                    <div class="lt-icon lt-casual">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    </div>
+                    <span>Casual</span>
+                  </div>
+                  <div class="lt-btn" data-type="emergency" onclick="pickLeaveType('emergency',this)">
+                    <div class="lt-icon lt-emergency">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <span>Emergency</span>
+                  </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="fg2">
+                  <div class="field">
+                    <label>From Date</label>
+                    <input type="date" name="from_date" id="leave-from" class="fctl" required>
+                  </div>
+                  <div class="field">
+                    <label>To Date</label>
+                    <input type="date" name="to_date" id="leave-to" class="fctl" required>
+                  </div>
+                </div>
+
+                <div class="fg2 mt14">
+                  <div class="field">
+                    <label>Duration</label>
+                    <select name="duration" class="fctl" id="leave-duration">
+                      <option value="full_day">Full Day</option>
+                      <option value="half_day">Half Day</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label>Days Count</label>
+                    <input type="text" class="fctl" id="leave-days" readonly placeholder="Select dates">
+                  </div>
+                </div>
+
+                <div class="field mt14">
+                  <label>Reason</label>
+                  <textarea name="reason" id="leave-reason" class="fctl" placeholder="Brief reason for leave..." required></textarea>
+                </div>
+
+                <div class="btn-row mt16">
+                  <button type="submit" class="btn-primary">&#8594;&nbsp; Submit Application</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div><!-- /tab-leave -->
+
+        <!-- ── TAB: RECORDS ── -->
+        <div class="tab-section" id="tab-records">
+          <div class="rec-filters" id="rec-filters">
+            <button class="rfil active" onclick="filterRec('all',this)">All</button>
+            <button class="rfil" onclick="filterRec('attendance',this)">Attendance</button>
+            <button class="rfil" onclick="filterRec('leave',this)">Leaves</button>
+          </div>
+          <div class="table-wrap">
+            <table class="rec-table" id="rec-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Status / Leave</th>
+                  <th>Check In</th>
+                  <th>Check Out</th>
+                  <th>Hours / Duration</th>
+                </tr>
+              </thead>
+              <tbody id="rec-body">
+                {% for record in attendance_records %}
+                <tr data-type="attendance">
+                  <td class="td-date">{{ record.date }}</td>
+                  <td><span class="badge b-type">ATT</span></td>
+                  <td>
+                    <span class="badge {% if record.status == 'present' %}b-present{% elif record.status == 'absent' %}b-absent{% else %}b-halfday{% endif %}">
+                      <span class="bdot"></span>{{ record.status|title }}
+                    </span>
+                  </td>
+                  <td>{{ record.check_in|default:"—" }}</td>
+                  <td>{{ record.check_out|default:"—" }}</td>
+                  <td>{{ record.formatted_hours|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+                {% for leave in leave_records %}
+                <tr data-type="leave">
+                  <td class="td-date">{{ leave.from_date }}{% if leave.from_date != leave.to_date %} to {{ leave.to_date }}{% endif %}</td>
+                  <td>
+                    <span class="badge {% if leave.leave_type == 'sick' %}b-sick{% elif leave.leave_type == 'personal' %}b-personal{% elif leave.leave_type == 'casual' %}b-casual{% else %}b-emergency{% endif %}">
+                      <span class="bdot"></span>{{ leave.leave_type|title }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge {% if leave.status == 'approved' %}b-present{% elif leave.status == 'rejected' %}b-absent{% else %}b-halfday{% endif %}">
+                      <span class="bdot"></span>{{ leave.status|title }}
+                    </span>
+                  </td>
+                  <td colspan="2" class="td-reason">{{ leave.reason|truncatechars:40 }}</td>
+                  <td>{{ leave.duration|default:"Full Day"|title }}</td>
+                </tr>
+                {% endfor %}
+                {% if not attendance_records and not leave_records %}
+                <tr class="empty-row">
+                  <td colspan="6">
+                    <div class="empty-state">
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      <p class="es-title">No records found</p>
+                      <p class="es-sub">Records appear once attendance is marked or leave is applied.</p>
+                    </div>
+                  </td>
+                </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div><!-- /tab-records -->
+
+      </div><!-- /emp-view -->
+    </div><!-- /right-panel -->
+  </div><!-- /att-body -->
+
+</div><!-- /att-shell -->
+
+<!-- ── TOASTS ── -->
 <div id="toast-container"></div>
+{% if messages %}
+  {% for message in messages %}
+  <div style="display:none" data-toast="{{ message.tags }}" data-msg="{{ message }}"></div>
+  {% endfor %}
+{% endif %}
 
+<!-- ══════════ SCRIPT ══════════ -->
 <script>
-document.addEventListener('DOMContentLoaded', function(){
-  var wrapper = document.querySelector('.orders-wrapper');
-  var menuBar2 = document.querySelector('.menu-bar2');
-  var svg1 = document.querySelector('.svg1');
-  var svg3 = document.querySelector('.svg3');
-  if(svg1) svg1.addEventListener('click', function(){ if(menuBar2) menuBar2.classList.remove('active'); wrapper.classList.remove('shifted'); });
-  if(svg3) svg3.addEventListener('click', function(){ if(menuBar2) menuBar2.classList.add('active'); wrapper.classList.add('shifted'); });
-  showToasts();
-});
+    
+  var curEmpId = null;
+  var curEmpName = '';
+  var curStatus = null;
+  var curLeaveType = null;
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
-(function(){
-  var d = new Date();
-  var el = document.getElementById('js-today');
-  if(el) el.textContent = d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
-  var ad = document.getElementById('att-date');
-  if(ad){
-    var today = d.toISOString().split('T')[0];
-    ad.value = today;
-    ad.setAttribute('readonly', true);
-    ad.setAttribute('min', today);
-    ad.setAttribute('max', today);
+  /* ── DATE HEADER ── */
+  function updateDateHeader() {
+    var today = new Date();
+    document.getElementById('hdr-my').textContent = MONTHS[today.getMonth()] + ' ' + today.getFullYear();
+    document.getElementById('hdr-d').textContent = String(today.getDate()).padStart(2,'0');
+    document.getElementById('hdr-wd').textContent = DAYS[today.getDay()];
   }
-})();
+  (function(){ updateDateHeader(); })();
 
-function switchTab(name, btn){
-  document.querySelectorAll('.tab-btn').forEach(function(t){ t.classList.remove('active'); });
-  btn.classList.add('active');
-  ['mark','leave','records'].forEach(function(id){
-    var el = document.getElementById('tab-'+id);
-    if(el) el.classList.toggle('active', id===name);
+  /* ── EMPLOYEE SELECTION ── */
+  function selectEmployee(id, name, dept) {
+    curEmpId = id; curEmpName = name;
+    curStatus = null; curLeaveType = null;
+
+    document.querySelectorAll('.emp-item').forEach(function(el){ el.classList.remove('active'); });
+    var el = document.querySelector('.emp-item[data-id="'+id+'"]');
+    if(el) el.classList.add('active');
+
+    document.getElementById('no-sel').style.display = 'none';
+    document.getElementById('emp-view').style.display = 'flex';
+
+    // Hero
+    var av = document.getElementById('hero-avatar');
+    var initials = name.split(' ').map(function(w){ return w[0]; }).join('').toUpperCase().slice(0,2);
+    av.textContent = initials;
+    var colors = ['#1e3a8a','#059669','#dc2626','#d97706','#7c3aed','#0284c7'];
+    av.style.background = colors[id % colors.length];
+
+    document.getElementById('hero-name').textContent = name;
+    document.getElementById('hero-meta').textContent = dept + ' · Employee';
+    document.getElementById('att-emp-id').value = id;
+    document.getElementById('leave-emp-id').value = id;
+
+    // Set today date
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('att-date-val').value = today;
+    document.getElementById('leave-from').value = today;
+    document.getElementById('leave-to').value = today;
+
+    clearStatus();
+    switchTabById('attendance');
+    loadEmployeeStats(id);
+  }
+
+  function loadEmployeeStats(id) {
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch('{% url "bio_details:attendance_stats" %}?emp=' + id, {
+      method: 'GET',
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'Content-Type': 'application/json',
+      },
+      credentials: 'same-origin'
+    })
+      .then(function(r){ 
+        console.log('Response status:', r.status);
+        if (!r.ok) {
+          throw new Error('HTTP ' + r.status);
+        }
+        return r.json(); 
+      })
+      .then(function(d){
+        console.log('Stats data:', d);
+        document.getElementById('hs-present').textContent = d.present || 0;
+        document.getElementById('hs-halfday').textContent = d.halfday || 0;
+        document.getElementById('hs-leave').textContent = d.leaves || 0;
+      })
+      .catch(function(error){ 
+        console.error('Error loading stats:', error);
+        // Set default values on error
+        document.getElementById('hs-present').textContent = '0';
+        document.getElementById('hs-halfday').textContent = '0';
+        document.getElementById('hs-leave').textContent = '0';
+      });
+  }
+
+  /* ── EMPLOYEE SEARCH ── */
+  function filterEmployees(q) {
+    q = q.toLowerCase();
+    document.querySelectorAll('.emp-item').forEach(function(el){
+      var name = (el.dataset.name || '').toLowerCase();
+      el.style.display = !q || name.includes(q) ? '' : 'none';
+    });
+  }
+
+  /* ── TABS ── */
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    ['attendance','leave','records'].forEach(function(id){
+      var el = document.getElementById('tab-'+id);
+      if(el) el.classList.toggle('active', id === name);
+    });
+  }
+  function switchTabById(name) {
+    document.querySelectorAll('.tab-btn').forEach(function(b){
+      b.classList.toggle('active', b.dataset.tab === name);
+    });
+    ['attendance','leave','records'].forEach(function(id){
+      var el = document.getElementById('tab-'+id);
+      if(el) el.classList.toggle('active', id === name);
+    });
+  }
+
+  /* ── ATTENDANCE STATUS PICK ── */
+  function pickStatus(s) {
+    curStatus = s;
+    ['present','absent','halfday'].forEach(function(k){
+      var el = document.getElementById('sp-'+k);
+      el.className = 'sp-btn' + (s===k ? ' sp-sel-'+k : '');
+    });
+    document.getElementById('att-status').value = s;
+    var tc = document.getElementById('time-card');
+    if(s === 'absent') {
+      tc.style.display = 'none';
+    } else {
+      tc.style.display = 'block';
+      document.getElementById('chk-in').value = s==='halfday' ? '09:00' : '09:00';
+      document.getElementById('chk-out').value = s==='halfday' ? '13:00' : '18:00';
+    }
+  }
+  function clearStatus() {
+    curStatus = null;
+    ['present','absent','halfday'].forEach(function(k){
+      document.getElementById('sp-'+k).className = 'sp-btn';
+    });
+    document.getElementById('time-card').style.display = 'none';
+    document.getElementById('att-status').value = '';
+    var ci = document.getElementById('chk-in');
+    var co = document.getElementById('chk-out');
+    if(ci) ci.value = '';
+    if(co) co.value = '';
+    var an = document.getElementById('att-notes');
+    if(an) an.value = '';
+  }
+
+  /* ── LEAVE TYPE PICK ── */
+  function pickLeaveType(type, el) {
+    curLeaveType = type;
+    document.getElementById('leave-type-val').value = type;
+    document.querySelectorAll('.lt-btn').forEach(function(b){ b.classList.remove('lt-sel'); });
+    el.classList.add('lt-sel');
+    updateLeaveDays();
+  }
+
+  /* ── LEAVE DAYS CALC ── */
+  function updateLeaveDays() {
+    var f = document.getElementById('leave-from').value;
+    var t = document.getElementById('leave-to').value;
+    if(f && t) {
+      var d = Math.max(0, Math.round((new Date(t) - new Date(f)) / 86400000)) + 1;
+      document.getElementById('leave-days').value = d + ' day' + (d>1?'s':'');
+    }
+  }
+  document.getElementById('leave-from').addEventListener('change', updateLeaveDays);
+  document.getElementById('leave-to').addEventListener('change', updateLeaveDays);
+
+  /* ── RECORDS FILTER ── */
+  function filterRec(type, btn) {
+    document.querySelectorAll('.rfil').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.querySelectorAll('#rec-body tr').forEach(function(row){
+      if(row.classList.contains('empty-row')) return;
+      if(type === 'all') { row.style.display = ''; return; }
+      row.style.display = (row.dataset.type === type) ? '' : 'none';
+    });
+  }
+
+  /* ── TOAST ── */
+  function showToast(msg, type) {
+    var c = document.getElementById('toast-container');
+    var t = document.createElement('div');
+    t.className = 'toast toast-'+type;
+    t.innerHTML = '<div class="toast-bar"></div>'
+      + '<div class="toast-inner">'
+      + '<div class="toast-icon">' + (type==='success'?'✓':type==='error'?'✕':'!') + '</div>'
+      + '<span class="toast-msg">'+msg+'</span>'
+      + '<button onclick="this.parentElement.parentElement.remove()">&times;</button>'
+      + '</div>';
+    c.appendChild(t);
+    setTimeout(function(){ t.classList.add('show'); }, 10);
+    setTimeout(function(){ t.classList.add('hide'); setTimeout(function(){ t.remove(); }, 300); }, 4500);
+  }
+
+  /* ── FORM SUBMIT GUARD ── */
+  var formBusy = false;
+  document.querySelectorAll('form').forEach(function(form){
+    form.addEventListener('submit', function(e){
+      if(formBusy){ e.preventDefault(); return; }
+      if(!curEmpId){ e.preventDefault(); showToast('Please select an employee first','error'); return; }
+      var ft = form.querySelector('[name="form_type"]');
+      if(ft && ft.value === 'attendance' && !curStatus){
+        e.preventDefault(); showToast('Please select attendance status','error'); return;
+      }
+      
+      // Check if employee is on leave today
+      var selectedEmp = document.querySelector('.emp-item[data-id="'+curEmpId+'"]');
+      if(selectedEmp && ft && ft.value === 'attendance'){
+        var statusDot = selectedEmp.querySelector('.emp-status-dot');
+        if(statusDot && statusDot.classList.contains('dot-leave')){
+          e.preventDefault(); 
+          showToast('Cannot mark attendance - Employee is on approved leave today','error'); 
+          return;
+        }
+      }
+      
+      if(ft && ft.value === 'leave' && !curLeaveType){
+        e.preventDefault(); showToast('Please select a leave type','error'); return;
+      }
+      formBusy = true;
+      setTimeout(function(){ formBusy = false; }, 3000);
+    });
   });
-}
 
-function showToasts(){
-  document.querySelectorAll('.toast').forEach(function(toast, i){
-    setTimeout(function(){
-      toast.classList.add('show');
-      setTimeout(function(){ hideToast(toast.id); }, 5000);
-    }, i * 200);
+  /* ── INIT TOASTS FROM DJANGO MESSAGES ── */
+  document.querySelectorAll('[data-toast]').forEach(function(el){
+    showToast(el.dataset.msg, el.dataset.toast);
+    el.remove();
   });
-}
 
-function closeToast(id){ hideToast(id); }
-
-function hideToast(id){
-  var t = document.getElementById(id);
-  if(t){ t.classList.add('hide'); setTimeout(function(){ t.remove(); }, 300); }
-}
-
-var formSubmitted = false;
-document.querySelectorAll('form').forEach(function(form){
-  form.addEventListener('submit', function(e){
-    if(formSubmitted){ e.preventDefault(); return false; }
-    formSubmitted = true;
-    setTimeout(function(){ formSubmitted = false; }, 3000);
+  /* ── SIDEBAR SHIFT (from existing layout) ── */
+  document.addEventListener('DOMContentLoaded', function(){
+    var shell = document.querySelector('.att-shell');
+    var mb2 = document.querySelector('.menu-bar2');
+    var svg1 = document.querySelector('.svg1');
+    var svg3 = document.querySelector('.svg3');
+    if(svg1) svg1.addEventListener('click', function(){ if(mb2) mb2.classList.remove('active'); if(shell) shell.classList.remove('shifted'); });
+    if(svg3) svg3.addEventListener('click', function(){ if(mb2) mb2.classList.add('active'); if(shell) shell.classList.add('shifted'); });
   });
-});
 </script>
 
+<!-- ══════════ STYLES ══════════ -->
 <style>
-:root{
-  --navy:#1e3a8a;
-  --blue:#1a47a0;
-  --blue-lt:#e8edf8;
-  --accent:#2563eb;
-  --green:#059669;
-  --amber:#d97706;
-  --red:#dc2626;
-  --slate:#64748b;
-  --border:#e2e8f0;
-  --bg:#f1f5fb;
-  --white:#ffffff;
-  --text:#0f172a;
-  --text-sm:#475569;
-  --radius:10px;
-  --shadow:0 4px 24px rgba(15,37,87,0.09);
-  --font-head:'Syne',sans-serif;
-  --font-body:'DM Sans',sans-serif;
-}
+  :root{
+    --navy:#1e3a8a;--blue:#1d4ed8;--accent:#2563eb;
+    --green:#059669;--amber:#d97706;--red:#dc2626;
+    --purple:#7c3aed;--sky:#0284c7;--orange:#ea580c;
+    --slate:#64748b;--border:#e2e8f0;--bg:#f1f5fb;
+    --white:#fff;--text:#0f172a;--text-sm:#475569;
+    --sh:0 4px 24px rgba(15,37,87,0.09);
+    --fn:'DM Sans',system-ui,sans-serif;
+    --fh:'Syne',system-ui,sans-serif;
+  }
 
-.orders-wrapper{
-  font-family:var(--font-body);
-  color:var(--text);
-  margin:120px 40px 120px 360px;
-  transition:margin-left .3s ease;
-}
-.orders-wrapper.shifted{ margin-left:90px; }
+  /* ── SHELL ── */
+  .att-shell{
+    font-family:var(--fn);color:var(--text);
+    margin:120px 40px 120px 360px;transition:margin-left .3s;
+  }
+  .att-shell.shifted{margin-left:90px}
 
-/* Header */
-.page-header{
-  display:flex; align-items:center; justify-content:space-between;
-  background:linear-gradient(135deg,#002560 0%,#1d4ed8 100%);
-  border-radius:16px; padding:28px 32px; margin-bottom:24px;
-  box-shadow:0 8px 32px rgba(15,37,87,0.22);
-}
-.header-left{ display:flex; align-items:center; gap:18px; }
-.header-icon-wrap{
-  width:48px; height:48px; background:rgba(255,255,255,0.15);
-  border-radius:12px; display:flex; align-items:center; justify-content:center;
-  backdrop-filter:blur(4px);
-}
-.header-eyebrow{
-  font-family:var(--font-body); font-size:12px; font-weight:500;
-  letter-spacing:.12em; text-transform:uppercase;
-  color:rgba(255,255,255,0.6); margin:0 0 4px;
-}
-.header-title{
-  font-family:var(--font-head); font-size:26px; font-weight:800;
-  color:#fff; margin:0; letter-spacing:-.5px;
-}
-.order-stat{
-  display:flex; gap:10px; align-items:center;
-  background:rgba(255,255,255,0.12);
-  border:1px solid rgba(255,255,255,0.2);
-  border-radius:12px; padding:10px 16px;
-}
-.stat-num{ font-family:var(--font-head); font-size:15px; font-weight:800; color:#fff; line-height:1; }
-.stat-lbl{ font-size:12px; color:rgba(255,255,255,0.6); letter-spacing:.05em; }
+  /* ── DATE HEADER ── */
+  .date-header{
+    display:flex;align-items:center;justify-content:space-between;gap:20px;
+    background:linear-gradient(135deg,#002560 0%,#1d4ed8 100%);
+    border-radius:16px;padding:20px 28px;margin-bottom:20px;
+    box-shadow:0 8px 32px rgba(15,37,87,.22);
+  }
+  .dh-left{display:flex;align-items:center;gap:14px}
+  .header-icon-wrap{
+    width:44px;height:44px;background:rgba(255,255,255,.15);
+    border-radius:12px;display:flex;align-items:center;justify-content:center;
+  }
+  .dh-eyebrow{font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;
+    color:rgba(255,255,255,.6);margin:0 0 3px}
+  .dh-title{font-family:var(--fh);font-size:22px;font-weight:800;color:#fff;margin:0;letter-spacing:-.5px}
 
-/* Stat Row */
-.stat-row{
-  display:flex; gap:16px; margin-bottom:20px; flex-wrap:wrap;
-}
-.stat-box{
-  flex:1; min-width:130px;
-  background:var(--white); border:1px solid var(--border);
-  border-radius:12px; padding:18px 20px;
-  box-shadow:var(--shadow); transition:border-color .2s;
-}
-.stat-box:hover{ border-color:var(--accent); }
-.stat-val{ font-family:var(--font-head); font-size:26px; font-weight:800; color:var(--navy); }
-.stat-lbl-dark{ font-size:12px; color:var(--slate); margin-top:4px; font-weight:500; }
+  .dh-center{display:flex;align-items:center;gap:10px}
+  .month-nav{
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+    border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:20px;cursor:pointer;transition:background .2s;line-height:1;
+  }
+  button:hover{
+    color:black !important;
+    background:none !important;
+  }
+  .month-nav:hover{background:rgba(255,255,255,.25)}
+  .date-display{text-align:center}
+  .date-monthyear{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    color:rgba(255,255,255,.6);margin-bottom:2px}
+  .date-day{font-family:var(--fh);font-size:36px;font-weight:800;color:#fff;line-height:1}
+  .date-weekday{font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+    color:rgba(255,255,255,.55);margin-top:2px}
 
-/* Tabs */
-.tab-bar{
-  display:flex; gap:4px;
-     padding:5px; margin-bottom:20px; 
-}
-.tab-btn{
-  flex:1; padding:10px 0; text-align:center;
-  font-family:var(--font-head); font-size:13px; font-weight:700;
-  border-radius:8px; cursor:pointer;
-  transition:all .2s; color:black; border:none; background:transparent;
-}
-.tab-btn.active{ background:var(--navy); color:#fff; }
-.tab-btn:hover:not(.active){ background:var(--blue-lt); color:var(--navy); }
+  .dh-right{display:flex;gap:10px}
+  .hstat-card{
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
+    border-radius:10px;padding:10px 16px;text-align:center;min-width:64px;
+  }
+  .hstat-num{font-family:var(--fh);font-size:22px;font-weight:800;color:#fff;line-height:1}
+  .hstat-lbl{font-size:10px;color:rgba(255,255,255,.6);letter-spacing:.05em;margin-top:3px}
 
-.tab-section{ display:none; }
-.tab-section.active{ display:block; }
+  /* ── BODY SPLIT ── */
+  .att-body{display:flex;gap:0;background:var(--white);border:1px solid var(--border);
+    border-radius:16px;overflow:hidden;box-shadow:var(--sh);min-height:600px}
 
-/* Form Card */
-.form-card{
-  background:var(--white); border:1px solid var(--border);
-  border-radius:14px; overflow:hidden; box-shadow:var(--shadow); margin-bottom:20px;
-}
-.form-card-header{
-  background:linear-gradient(135deg,#002560 0%,#1d4ed8 100%);
-  color:#fff; font-family:var(--font-head);
-  font-size:14px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
-  padding:14px 24px;
-}
-.form-card-body{ padding:24px; }
+  /* ── LEFT PANEL ── */
+  .left-panel{
+    width:230px;flex-shrink:0;border-right:1px solid var(--border);
+    display:flex;flex-direction:column;
+  }
+  .lp-head{
+    padding:14px 16px;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+    font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--slate);
+  }
+  .emp-count{
+    background:var(--navy);color:#fff;border-radius:20px;
+    padding:2px 8px;font-size:11px;font-weight:700;
+  }
+  .lp-search{
+    display:flex;align-items:center;gap:8px;padding:10px 12px;
+    border-bottom:1px solid var(--border);color:var(--slate);
+  }
+  .lp-search input{
+    flex:1;border:none;outline:none;font-size:13px;font-family:var(--fn);
+    color:var(--text);background:transparent;
+  }
+  .emp-list{flex:1;overflow-y:auto}
+  .emp-item{
+    display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;
+    transition:background .15s;border-left:3px solid transparent;
+  }
+  .emp-item:hover{background:#f8faff}
+  .emp-item.active{background:#eff6ff;border-left-color:var(--accent)}
+  .emp-avatar{
+    width:34px;height:34px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-family:var(--fh);font-size:11px;font-weight:800;
+    color:#fff;flex-shrink:0;
+  }
+  .emp-info{flex:1;min-width:0}
+  .emp-name-txt{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .emp-dept-txt{font-size:11px;color:var(--slate)}
+  .emp-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .dot-present{background:var(--green)}
+  .dot-absent{background:var(--red)}
+  .dot-leave{background:var(--amber)}
+  .dot-none{background:#cbd5e1}
 
-/* Form */
-.grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-.field{ display:flex; flex-direction:column; gap:7px; }
-.field label{ font-size:12px; font-weight:600; color:black; letter-spacing:.04em; }
-.form-control{
-    width:auto !important;
-  background:var(--bg); border:1.5px solid var(--border);
-  border-radius:8px; padding:10px 13px;
-  font-size:14px; color:var(--text); font-family:var(--font-body);
-  outline:none; width:100%; transition:border-color .2s, box-shadow .2s;
-}
-.form-control:focus{
-  border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,0.1); background:var(--white);
-}
-textarea.form-control{ resize:vertical; min-height:80px; }
-.field-note{ font-size:11px; color:var(--slate); }
-.field-warn{ font-size:11px; color:var(--red); font-weight:500; }
-.form-divider{ height:1px; background:var(--border); margin:20px 0; }
-.mt-16{ margin-top:16px; }
-.mt-20{ margin-top:20px; }
+  /* ── RIGHT PANEL ── */
+  .right-panel{flex:1;display:flex;flex-direction:column;min-width:0}
+  .no-sel{
+    flex:1;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:10px;color:var(--slate);padding:40px;
+  }
+  .no-sel-icon{opacity:.5}
+  .no-sel-title{font-family:var(--fh);font-size:16px;font-weight:700;color:var(--text)}
+  .no-sel-sub{font-size:13px;text-align:center;max-width:260px;line-height:1.5}
 
-/* Buttons */
-.btn-primary{
-  display:inline-flex; align-items:center; gap:6px;
-  background:var(--navy); color:#fff; border:none; border-radius:8px;
-  padding:11px 24px; font-family:var(--font-head); font-size:13px; font-weight:700;
-  letter-spacing:.05em; text-transform:uppercase;
-  cursor:pointer; transition:all .2s; text-decoration:none;
-}
-.btn-primary:hover{ background:var(--accent); transform:translateY(-1px); box-shadow:0 4px 12px rgba(37,99,235,0.25); }
-.btn-primary:disabled{
-  background:var(--slate); cursor:not-allowed; transform:none;
-  box-shadow:none; opacity:.65;
-}
-.btn-outline{
-  display:inline-flex; align-items:center; gap:6px;
-  background:var(--white); color:var(--navy);
-  border:1.5px solid var(--border); border-radius:8px;
-  padding:10px 20px; font-family:var(--font-head); font-size:13px; font-weight:600;
-  cursor:pointer; transition:all .2s; text-decoration:none;
-}
-.btn-outline:hover{ border-color:var(--navy); background:var(--blue-lt); }
-.btn-row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .emp-view{flex-direction:column;flex:1}
 
-/* Table */
-.table-wrap{
-  background:var(--white); border:1px solid var(--border);
-  border-radius:14px; overflow:hidden; box-shadow:var(--shadow); margin-bottom:20px;
-}
-.orders-table{ width:100%; border-collapse:collapse; font-family:var(--font-body); }
-.orders-table thead th{
-  background:var(--navy); color:rgba(255,255,255,0.85);
-  font-family:var(--font-head); font-size:11.5px; font-weight:700;
-  letter-spacing:.08em; text-transform:uppercase;
-  padding:15px 18px; text-align:left; white-space:nowrap; border:none;
-}
-.orders-table tbody tr{ border-bottom:1px solid var(--border); transition:background .15s; }
-.orders-table tbody tr:last-child{ border-bottom:none; }
-.orders-table tbody tr:hover{ background:#f8faff; }
-.orders-table td{ padding:14px 18px; font-size:14px; vertical-align:middle; border:none; }
-.date-cell{ font-size:13px; color:var(--text-sm); white-space:nowrap; }
+  /* ── HERO BAR ── */
+  .emp-hero{
+    display:flex;align-items:center;gap:14px;padding:14px 20px;
+    border-bottom:1px solid var(--border);flex-shrink:0;
+    background:linear-gradient(to right,#f8faff,var(--white));
+  }
+  .hero-avatar{
+    width:46px;height:46px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-family:var(--fh);font-size:16px;font-weight:800;color:#fff;
+  }
+  .hero-name{font-family:var(--fh);font-size:16px;font-weight:800;color:var(--text)}
+  .hero-meta{font-size:12px;color:var(--slate);margin-top:2px}
+  .hero-stats{display:flex;gap:20px;margin-left:auto}
+  .hstat-sm{text-align:center}
+  .hstat-sm-n{font-family:var(--fh);font-size:20px;font-weight:800;color:var(--navy)}
+  .hstat-sm-l{font-size:10px;color:var(--slate);letter-spacing:.05em;margin-top:1px}
 
-/* Badges */
-.badge{
-  display:inline-flex; align-items:center; gap:6px;
-  font-size:11.5px; font-weight:700; letter-spacing:.05em;
-  text-transform:uppercase; padding:4px 10px; border-radius:20px; white-space:nowrap;
-}
-.badge-dot{ width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-.badge-paid   { background:#d1fae5; color:#065f46; }
-.badge-paid   .badge-dot{ background:#059669; box-shadow:0 0 0 3px rgba(5,150,105,0.2); }
-.badge-pending{ background:#fef9c3; color:#854d0e; }
-.badge-pending .badge-dot{ background:#ca8a04; box-shadow:0 0 0 3px rgba(202,138,4,0.2); }
-.badge-failed { background:#fee2e2; color:#991b1b; }
-.badge-failed .badge-dot{ background:#dc2626; box-shadow:0 0 0 3px rgba(220,38,38,0.2); }
+  /* ── TAB BAR ── */
+  .tab-bar{
+    display:flex;padding:15px 20px;border-bottom:1px solid var(--border);
+    background:var(--white);flex-shrink:0;gap:20px;
+  }
+  .tab-btn{
+    display:flex;align-items:center;gap:6px;padding:11px 16px;
+    font-family:var(--fh);font-size:11.5px;font-weight:700;letter-spacing:.06em;
+    text-transform:uppercase;cursor:pointer;border:none;background:transparent;
+    color:var(--slate);border-bottom:2.5px solid transparent;transition:all .2s;
+  }
+  .tab-btn.active{color:var(--navy);border-bottom-color:var(--navy)}
+  .tab-btn:hover:not(.active){color:var(--text);background:#f8faff}
+  .tab-btn svg{opacity:.7}
 
-/* Empty state */
-.empty-state{ padding:0 !important; }
-.empty-inner{ display:flex; flex-direction:column; align-items:center; padding:56px 20px; gap:8px; }
-.empty-icon{ opacity:.45; }
-.empty-title{ font-family:var(--font-head); font-size:17px; font-weight:700; color:var(--text); margin:6px 0 0; }
-.empty-sub{ font-size:13px; color:var(--slate); margin:0; }
+  /* ── TAB SECTIONS ── */
+  .tab-section{display:none;padding:20px}
+  .tab-section.active{display:block}
 
-/* Toasts */
-.toast{
-  position:fixed; top:24px; right:24px;
-  min-width:300px; max-width:400px;
-  background:var(--white); border-radius:10px;
-  box-shadow:0 8px 24px rgba(0,0,0,0.13);
-  font-family:var(--font-body); font-size:14px; font-weight:500;
-  overflow:hidden; z-index:99999;
-  transform:translateX(450px); opacity:0;
-  transition:all .3s cubic-bezier(.68,-.55,.265,1.55);
-}
-.toast.show{ transform:translateX(0); opacity:1; }
-.toast.hide{ transform:translateX(450px); opacity:0; }
-.toast-bar{
-  position:absolute; bottom:0; left:0; height:3px;
-  background:linear-gradient(90deg,var(--accent),var(--green));
-  animation:barShrink 5s linear forwards;
-}
-.toast-inner{ display:flex; align-items:center; gap:10px; padding:14px 16px; }
-.toast-icon{
-  width:26px; height:26px; border-radius:50%;
-  display:flex; align-items:center; justify-content:center;
-  font-weight:700; font-size:13px; flex-shrink:0;
-}
-.toast-message{ flex:1; color:var(--text); line-height:1.4; }
-.toast-close{
-  background:none; border:none; color:var(--slate);
-  font-size:20px; cursor:pointer; padding:0;
-  width:24px; height:24px; display:flex; align-items:center; justify-content:center;
-  border-radius:4px; transition:all .2s; flex-shrink:0;
-}
-.toast-close:hover{ background:var(--bg); color:var(--text); }
-.toast-success{ border-left:4px solid var(--green); }
-.toast-success .toast-icon{ background:#d1fae5; color:#065f46; }
-.toast-error  { border-left:4px solid var(--red); }
-.toast-error   .toast-icon{ background:#fee2e2; color:#991b1b; }
-.toast-warning { border-left:4px solid var(--amber); }
-.toast-warning .toast-icon{ background:#fef9c3; color:#854d0e; }
+  /* ── STATUS PICK ── */
+  .status-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+  .sp-btn{
+    border:2px solid var(--border);border-radius:14px;padding:18px 12px;
+    cursor:pointer;text-align:center;background:var(--white);transition:all .2s;
+  }
+  .sp-btn:hover{border-color:var(--accent);background:#eff6ff;}
+  .sp-icon{
+    width:44px;height:44px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;margin:0 auto 10px;transition:all .2s;
+  }
+  .sp-icon-present{background:#d1fae5;color:#059669}
+  .sp-icon-absent{background:#fee2e2;color:#dc2626}
+  .sp-icon-halfday{background:#fef9c3;color:#d97706}
+  .sp-lbl{font-family:var(--fh);font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--text-sm)}
+  .sp-sel-present{border-color:var(--green);background:#f0fdf4}
+  .sp-sel-present .sp-lbl{color:var(--green)}
+  .sp-sel-absent{border-color:var(--red);background:#fff5f5}
+  .sp-sel-absent .sp-lbl{color:var(--red)}
+  .sp-sel-halfday{border-color:var(--amber);background:#fffbeb}
+  .sp-sel-halfday .sp-lbl{color:var(--amber)}
 
+  /* ── FORM CARD ── */
+  .form-card{
+    background:var(--white);border:1px solid var(--border);
+    border-radius:14px;overflow:hidden;box-shadow:var(--sh);
+  }
+  .fc-head{
+    background:linear-gradient(135deg,#002560 0%,#1d4ed8 100%);
+    color:#fff;font-family:var(--fh);font-size:11.5px;font-weight:700;
+    letter-spacing:.1em;text-transform:uppercase;padding:12px 20px;
+  }
+  .fc-body{padding:20px}
+  .fg2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label,.section-lbl{
+    font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text);
+  }
+  .section-lbl{display:block;margin-bottom:10px}
+  .fctl{
+    background:var(--bg);border:1.5px solid var(--border);border-radius:8px;
+    padding:9px 12px;font-size:13px;color:var(--text);font-family:var(--fn);
+    outline:none;width:auto;transition:border-color .2s,box-shadow .2s;
+  }
+  .fctl:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.1);background:#fff}
+  textarea.fctl{resize:vertical;min-height:72px}
+  .divider{height:1px;background:var(--border);margin:18px 0}
+  .mt14{margin-top:14px}.mt16{margin-top:16px}
 
+  /* ── LEAVE TYPE GRID ── */
+  .leave-type-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:4px}
+  .lt-btn{
+    display:flex;flex-direction:column;align-items:center;gap:7px;
+    padding:13px 8px;border:2px solid var(--border);border-radius:12px;
+    cursor:pointer;background:var(--white);transition:all .2s;
+    font-size:11.5px;font-weight:600;color:var(--text-sm);text-align:center;
+  }
+  .lt-btn:hover{border-color:var(--accent);background:#eff6ff}
+  .lt-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+  .lt-sick{background:#fee2e2;color:#dc2626}
+  .lt-personal{background:#ede9fe;color:#7c3aed}
+  .lt-casual{background:#e0f2fe;color:#0284c7}
+  .lt-emergency{background:#fff7ed;color:#ea580c}
+  .lt-sel.lt-btn[data-type="sick"]{border-color:#dc2626;background:#fff5f5;color:#dc2626}
+  .lt-sel.lt-btn[data-type="personal"]{border-color:#7c3aed;background:#f5f3ff;color:#7c3aed}
+  .lt-sel.lt-btn[data-type="casual"]{border-color:#0284c7;background:#f0f9ff;color:#0284c7}
+  .lt-sel.lt-btn[data-type="emergency"]{border-color:#ea580c;background:#fff7ed;color:#ea580c}
 
-/* Responsive */
-@media(max-width:1200px){ .orders-wrapper{ margin-left:20px; margin-right:20px; margin-top:90px; } }
-@media(max-width:768px){
-  .orders-wrapper{ margin:100px 12px 100px; }
-  .page-header{ flex-direction:column; gap:16px; align-items:flex-start; padding:20px; }
-  .grid-2{ grid-template-columns:1fr; }
-  .stat-row .stat-box{ min-width:calc(50% - 8px); }
-  .btn-row{ flex-direction:column; align-items:flex-start; }
-  .toast{ right:10px; left:10px; min-width:auto; max-width:none; }
-}
+  /* ── BUTTONS ── */
+  .btn-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .btn-primary{
+    display:inline-flex;align-items:center;gap:6px;background:var(--navy);color:#fff;
+    border:none;border-radius:8px;padding:10px 22px;font-family:var(--fh);font-size:12px;
+    font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;
+    transition:all .2s;text-decoration:none;
+  }
+  .btn-primary:hover{background:var(--accent)!important;transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,.25)}
+  .btn-ghost{
+    display:inline-flex;align-items:center;gap:6px;background:var(--white);color:var(--navy);
+    border:1.5px solid var(--border);border-radius:8px;padding:9px 18px;
+    font-family:var(--fh);font-size:12px;font-weight:600;cursor:pointer;
+    transition:all .2s;text-decoration:none;
+  }
+  .btn-ghost:hover{border-color:var(--navy);background:var(--bg)!important; color:black !important;}
+
+  /* ── RECORDS ── */
+  .rec-filters{display:flex;gap:8px;margin-bottom:14px}
+  .rfil{
+    padding:5px 16px;border-radius:20px;border:1.5px solid var(--border);
+    font-family:var(--fh);font-size:11px;font-weight:700;letter-spacing:.05em;
+    cursor:pointer;background:var(--white);color:black;transition:all .2s;
+  }
+  .rfil.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .table-wrap{background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--sh)}
+  .rec-table{width:100%;border-collapse:collapse;font-family:var(--fn)}
+  .rec-table thead th{
+    background:var(--navy);color:rgba(255,255,255,.85);
+    font-family:var(--fh);font-size:10.5px;font-weight:700;letter-spacing:.09em;
+    text-transform:uppercase;padding:12px 16px;text-align:left;white-space:nowrap;
+  }
+  .rec-table tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+  .rec-table tbody tr:last-child{border-bottom:none}
+  .rec-table tbody tr:hover{background:#f8faff}
+  .rec-table td{padding:11px 16px;font-size:13px;vertical-align:middle}
+  .td-date{font-size:12px;color:var(--text-sm);white-space:nowrap}
+  .td-reason{font-size:12px;color:var(--text-sm);font-style:italic}
+
+  /* ── BADGES ── */
+  .badge{
+    display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;
+    letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:20px;white-space:nowrap;
+  }
+  .bdot{width:5px;height:5px;border-radius:50%;flex-shrink:0;background:currentColor;opacity:.8}
+  .b-type{background:#e2e8f0;color:#475569}
+  .b-present{background:#d1fae5;color:#065f46}
+  .b-absent{background:#fee2e2;color:#991b1b}
+  .b-halfday{background:#fef9c3;color:#854d0e}
+  .b-sick{background:#fee2e2;color:#991b1b}
+  .b-personal{background:#ede9fe;color:#4c1d95}
+  .b-casual{background:#e0f2fe;color:#0c4a6e}
+  .b-emergency{background:#fff7ed;color:#9a3412}
+
+  /* ── EMPTY STATE ── */
+  .empty-state{display:flex;flex-direction:column;align-items:center;padding:48px 20px;gap:8px}
+  .es-title{font-family:var(--fh);font-size:15px;font-weight:700;color:var(--text);margin:6px 0 0}
+  .es-sub{font-size:13px;color:var(--slate);margin:0;text-align:center}
+
+  /* ── TOASTS ── */
+  #toast-container{position:fixed;top:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:10px}
+  .toast{
+    min-width:300px;max-width:400px;background:var(--white);border-radius:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.13);overflow:hidden;
+    transform:translateX(450px);opacity:0;transition:all .3s cubic-bezier(.68,-.55,.265,1.55);
+  }
+  .toast.show{transform:translateX(0);opacity:1}
+  .toast.hide{transform:translateX(450px);opacity:0}
+  .toast-bar{height:3px;background:linear-gradient(90deg,var(--accent),var(--green));animation:barShrink 4.5s linear forwards}
+  .toast-inner{display:flex;align-items:center;gap:10px;padding:13px 15px}
+  .toast-icon{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+  .toast-msg{flex:1;font-size:13px;font-weight:500;color:var(--text)}
+  .toast-inner button{background:none;border:none;color:var(--slate);font-size:18px;cursor:pointer;padding:0;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:4px;transition:background .2s}
+  .toast-inner button:hover{background:var(--bg)}
+  .toast-success{border-left:4px solid var(--green)}.toast-success .toast-icon{background:#d1fae5;color:#065f46}
+  .toast-error{border-left:4px solid var(--red)}.toast-error .toast-icon{background:#fee2e2;color:#991b1b}
+  .toast-warning{border-left:4px solid var(--amber)}.toast-warning .toast-icon{background:#fef9c3;color:#854d0e}
+  @keyframes barShrink{from{width:100%}to{width:0}}
+
+  /* ── RESPONSIVE ── */
+  @media(max-width:1200px){.att-shell{margin-left:20px;margin-right:20px;margin-top:90px}}
+  @media(max-width:900px){
+    .att-shell{margin:100px 8px 100px}
+    .dh-right{gap:5px;}
+    .date-header{flex-direction:column;gap:14px;padding:18px;}
+    .dh-center{align-self:center}
+    .att-body{flex-direction:column}
+    .left-panel{width:100%;border-right:none;border-bottom:1px solid var(--border);max-height:200px}
+    .leave-type-grid{grid-template-columns:repeat(2,1fr)}
+    .fg2{grid-template-columns:1fr}
+    .status-pick{grid-template-columns:repeat(3,1fr)}
+  }
 </style>
 
 {% endblock %}

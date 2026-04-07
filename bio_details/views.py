@@ -2092,12 +2092,30 @@ def attendance(request):
         
         if form_type == 'attendance':
             # Handle attendance marking
+            employee_id = request.POST.get('employee_id')
             date = request.POST.get('date')
             status = request.POST.get('status')
             check_in = request.POST.get('check_in') or None
             check_out = request.POST.get('check_out') or None
+            notes = request.POST.get('notes', '')
             
-            print(f"DEBUG: Attendance data - Date: {date}, Status: {status}, Check-in: {check_in}, Check-out: {check_out}")
+            print(f"DEBUG: Attendance data - Employee: {employee_id}, Date: {date}, Status: {status}, Check-in: {check_in}, Check-out: {check_out}")
+            
+            # Get the employee user - for regular users, only allow marking their own attendance
+            if request.user.is_superuser:
+                # Admin can mark attendance for any employee
+                if employee_id:
+                    try:
+                        employee_user = User.objects.get(id=employee_id)
+                    except User.DoesNotExist:
+                        messages.error(request, 'Employee not found!')
+                        return redirect('bio_details:attendance')
+                else:
+                    messages.error(request, 'Please select an employee!')
+                    return redirect('bio_details:attendance')
+            else:
+                # Regular users can only mark their own attendance
+                employee_user = request.user
             
             # Validate that only today's date can be marked
             from datetime import date as date_obj, datetime
@@ -2110,20 +2128,20 @@ def attendance(request):
             
             # Check if this date has approved leave
             approved_leave = LeaveApplication.objects.filter(
-                user=request.user,
+                user=employee_user,
                 status='approved',
                 from_date__lte=selected_date,
                 to_date__gte=selected_date
             ).first()
             
             if approved_leave:
-                messages.error(request, f'You have approved leave for this date ({approved_leave.from_date} to {approved_leave.to_date}). Cannot mark attendance.')
+                messages.error(request, f'{employee_user.get_full_name() or employee_user.username} has approved leave on {selected_date.strftime("%d %B %Y")} ({approved_leave.leave_type.title()} Leave from {approved_leave.from_date.strftime("%d %B")} to {approved_leave.to_date.strftime("%d %B %Y")}). Cannot mark attendance on leave day.')
                 return redirect('bio_details:attendance')
             
             try:
                 # Check if attendance already exists for this date
                 attendance_record, created = Attendance.objects.get_or_create(
-                    user=request.user,
+                    user=employee_user,
                     date=date,
                     defaults={
                         'status': status,
@@ -2139,10 +2157,10 @@ def attendance(request):
                     attendance_record.check_out = check_out
                     attendance_record.save()
                     print(f"DEBUG: Updated existing attendance record")
-                    messages.success(request, 'Attendance updated successfully!')
+                    messages.success(request, f'Attendance updated successfully for {employee_user.get_full_name() or employee_user.username}!')
                 else:
                     print(f"DEBUG: Created new attendance record")
-                    messages.success(request, 'Attendance marked successfully!')
+                    messages.success(request, f'Attendance marked successfully for {employee_user.get_full_name() or employee_user.username}!')
                 
                 return redirect('bio_details:attendance')  # Redirect to prevent resubmission
                     
@@ -2155,13 +2173,24 @@ def attendance(request):
         
         elif form_type == 'leave':
             # Handle leave application
+            employee_id = request.POST.get('employee_id')
             leave_type = request.POST.get('leave_type')
             duration = request.POST.get('duration')
             from_date = request.POST.get('from_date')
             to_date = request.POST.get('to_date')
             reason = request.POST.get('reason')
             
-            print(f"DEBUG: Leave data - Type: {leave_type}, Duration: {duration}, From: {from_date}, To: {to_date}")
+            print(f"DEBUG: Leave data - Employee: {employee_id}, Type: {leave_type}, Duration: {duration}, From: {from_date}, To: {to_date}")
+            
+            # Get the employee user (for superusers) or use current user
+            if request.user.is_superuser and employee_id:
+                try:
+                    employee_user = User.objects.get(id=employee_id)
+                except User.DoesNotExist:
+                    messages.error(request, 'Employee not found!')
+                    return redirect('bio_details:attendance')
+            else:
+                employee_user = request.user
             
             try:
                 # Check for overlapping leave applications
@@ -2170,18 +2199,18 @@ def attendance(request):
                 to_date_obj = datetime.strptime(to_date, '%Y-%m-%d').date()
                 
                 overlapping_leaves = LeaveApplication.objects.filter(
-                    user=request.user,
+                    user=employee_user,
                     status__in=['pending', 'approved'],
                     from_date__lte=to_date_obj,
                     to_date__gte=from_date_obj
                 )
                 
                 if overlapping_leaves.exists():
-                    messages.error(request, 'You already have a leave application for overlapping dates!')
+                    messages.error(request, f'{employee_user.get_full_name() or employee_user.username} already has a leave application for overlapping dates!')
                     return redirect('bio_details:attendance')
                 
                 leave_application = LeaveApplication.objects.create(
-                    user=request.user,
+                    user=employee_user,
                     leave_type=leave_type,
                     duration=duration,
                     from_date=from_date_obj,
@@ -2189,7 +2218,7 @@ def attendance(request):
                     reason=reason
                 )
                 print(f"DEBUG: Created leave application")
-                messages.success(request, 'Leave application submitted successfully!')
+                messages.success(request, f'Leave application submitted successfully for {employee_user.get_full_name() or employee_user.username}!')
                 return redirect('bio_details:attendance')  # Redirect to prevent resubmission
                 
             except Exception as e:
@@ -2199,110 +2228,172 @@ def attendance(request):
                 messages.error(request, f'Error submitting leave application: {str(e)}')
                 return redirect('bio_details:attendance')  # Redirect even on error
     
-    # Get attendance statistics for the current user
+    # Get current user as the only employee (unless admin wants to see all)
+    from django.contrib.auth.models import User
     from datetime import datetime, timedelta, date as date_obj
     from django.db.models import Count, Avg
     
-    # Calculate statistics for current month
-    current_month = datetime.now().month
-    current_year = datetime.now().year
+    # For regular users, show only themselves. For admins, show all employees
+    if request.user.is_superuser:
+        # Admin can see all employees
+        employees = User.objects.filter(
+            member__isnull=False,
+            member__account_status=True
+        ).select_related('member').order_by('first_name', 'last_name', 'username')
+    else:
+        # Regular users see only themselves
+        if hasattr(request.user, 'member'):
+            employees = User.objects.filter(id=request.user.id).select_related('member')
+        else:
+            employees = User.objects.none()  # Empty QuerySet if user doesn't have member profile
+    
+    # Add today's attendance status and leave information to each employee
     today = date_obj.today()
+    current_month = today.month
+    current_year = today.year
     
-    present_count = Attendance.objects.filter(
-        user=request.user,
-        date__month=current_month,
-        date__year=current_year,
-        status='present'
-    ).count()
+    for employee in employees:
+        # Check today's attendance
+        today_attendance = Attendance.objects.filter(
+            user=employee,
+            date=today
+        ).first()
+        
+        # Check if employee has approved leave today
+        today_leave = LeaveApplication.objects.filter(
+            user=employee,
+            status='approved',
+            from_date__lte=today,
+            to_date__gte=today
+        ).first()
+        
+        if today_leave:
+            employee.today_status = 'leave'
+            employee.leave_info = {
+                'type': today_leave.leave_type,
+                'from_date': today_leave.from_date,
+                'to_date': today_leave.to_date,
+                'reason': today_leave.reason
+            }
+        elif today_attendance:
+            employee.today_status = today_attendance.status
+            employee.leave_info = None
+        else:
+            employee.today_status = 'none'
+            employee.leave_info = None
+        
+        # Calculate individual user statistics for current month
+        employee.present_count = Attendance.objects.filter(
+            user=employee,
+            date__month=current_month,
+            date__year=current_year,
+            status='present'
+        ).count()
+        
+        employee.halfday_count = Attendance.objects.filter(
+            user=employee,
+            date__month=current_month,
+            date__year=current_year,
+            status='halfday'
+        ).count()
+        
+        employee.absent_count = Attendance.objects.filter(
+            user=employee,
+            date__month=current_month,
+            date__year=current_year,
+            status='absent'
+        ).count()
+        
+        # Count approved leaves for current year
+        approved_leaves = LeaveApplication.objects.filter(
+            user=employee,
+            from_date__year=current_year,
+            status='approved'
+        )
+        employee.leaves_used = sum(leave.total_days for leave in approved_leaves)
+        
+        # Add department from member designation
+        employee.department = employee.member.designation if hasattr(employee, 'member') else 'Staff'
+        
+        # Add avatar color (you can customize this logic)
+        colors = ['#1e3a8a', '#059669', '#dc2626', '#d97706', '#7c3aed', '#0284c7']
+        employee.avatar_color = colors[employee.id % len(colors)]
     
-    # Get leave applications count for current year
-    approved_leaves = LeaveApplication.objects.filter(
-        user=request.user,
-        from_date__year=current_year,
-        status='approved'
-    )
+    # Calculate today's statistics based on user permissions
+    if request.user.is_superuser:
+        # Admin sees all users' statistics
+        present_today = Attendance.objects.filter(
+            date=today,
+            status='present'
+        ).count()
+        
+        halfday_count = Attendance.objects.filter(
+            date=today,
+            status='halfday'
+        ).count()
+        
+        absent_today = Attendance.objects.filter(
+            date=today,
+            status='absent'
+        ).count()
+        
+        on_leave_today = LeaveApplication.objects.filter(
+            status='approved',
+            from_date__lte=today,
+            to_date__gte=today
+        ).count()
+    else:
+        # Regular users see only their own statistics
+        present_today = Attendance.objects.filter(
+            user=request.user,
+            date=today,
+            status='present'
+        ).count()
+        
+        halfday_count = Attendance.objects.filter(
+            user=request.user,
+            date=today,
+            status='halfday'
+        ).count()
+        
+        absent_today = Attendance.objects.filter(
+            user=request.user,
+            date=today,
+            status='absent'
+        ).count()
+        
+        on_leave_today = LeaveApplication.objects.filter(
+            user=request.user,
+            status='approved',
+            from_date__lte=today,
+            to_date__gte=today
+        ).count()
     
-    # Calculate total leave days used
-    leaves_used = 0
-    for leave in approved_leaves:
-        leaves_used += leave.total_days
+    # Get recent attendance records for the records tab (limit to recent records)
+    if request.user.is_superuser:
+        # Admin can see all records
+        attendance_records = Attendance.objects.select_related('user').order_by('-date', '-created_at')[:50]
+        leave_records = LeaveApplication.objects.select_related('user').order_by('-applied_at')[:50]
+    else:
+        # Regular users see only their own records
+        attendance_records = Attendance.objects.filter(user=request.user).select_related('user').order_by('-date', '-created_at')[:50]
+        leave_records = LeaveApplication.objects.filter(user=request.user).select_related('user').order_by('-applied_at')[:50]
     
-    # Calculate total hours worked this month
-    total_hours = 0
-    attendance_with_hours = Attendance.objects.filter(
-        user=request.user,
-        date__month=current_month,
-        date__year=current_year,
-        check_in__isnull=False,
-        check_out__isnull=False
-    )
-    
-    for record in attendance_with_hours:
-        if record.check_in and record.check_out:
-            # Calculate hours worked for each day
-            from datetime import datetime, timedelta
-            check_in_time = datetime.combine(record.date, record.check_in)
-            check_out_time = datetime.combine(record.date, record.check_out)
-            
-            # Handle case where check_out is next day
-            if check_out_time < check_in_time:
-                check_out_time += timedelta(days=1)
-            
-            hours_worked = (check_out_time - check_in_time).total_seconds() / 3600
-            total_hours += hours_worked
-    
-    # Format total hours
-    total_hours_formatted = f"{int(total_hours)}h {int((total_hours % 1) * 60)}m"
-    
-    # Get recent attendance records
-    attendance_records = Attendance.objects.filter(
-        user=request.user
-    ).order_by('-date')[:10]
-    
-    # Check if today has approved leave
-    today_has_leave = LeaveApplication.objects.filter(
-        user=request.user,
-        status='approved',
-        from_date__lte=today,
-        to_date__gte=today
-    ).exists()
-    
-    # Check if attendance already marked for today
-    today_attendance = Attendance.objects.filter(
-        user=request.user,
-        date=today
-    ).first()
-    
-    print(f"DEBUG: Found {attendance_records.count()} attendance records for user {request.user.username}")
+    print(f"DEBUG: Found {len(employees)} employees")
+    print(f"DEBUG: Today's stats - Present: {present_today}, Absent: {absent_today}, On Leave: {on_leave_today}")
     
     context = {
-        'present_count': present_count,
-        'leaves_used': leaves_used,
-        'total_hours': total_hours_formatted,
+        'employees': employees,
+        'present_today': present_today,
+        'halfday_today': halfday_count,
+        'on_leave_today': on_leave_today,
         'attendance_records': attendance_records,
+        'leave_records': leave_records,
         'today': today,
-        'today_has_leave': today_has_leave,
-        'today_attendance': today_attendance
+        'is_admin': request.user.is_superuser
     }
     
     return render(request, 'attendance.html', context)
-
-
-def my_applications(request):
-    if not request.user.is_authenticated:
-        return redirect('bio_details:login')
-    
-    # Get all leave applications for the current user
-    applications = LeaveApplication.objects.filter(
-        user=request.user
-    ).order_by('-applied_at')
-    
-    context = {
-        'applications': applications
-    }
-    
-    return render(request, 'my_applications.html', context)
-
 
 
 def manage_leave_applications(request):
@@ -2313,65 +2404,268 @@ def manage_leave_applications(request):
         messages.error(request, "Access denied. Admin privileges required.")
         return redirect('bio_details:dashboard')
     
-    # Handle approval/rejection
+    # Handle leave action (approve/reject)
     if request.method == 'POST':
-        application_id = request.POST.get('application_id')
+        leave_id = request.POST.get('leave_id')
         action = request.POST.get('action')
         
         try:
-            application = LeaveApplication.objects.get(id=application_id)
+            leave_app = LeaveApplication.objects.get(id=leave_id)
             
             if action == 'approve':
-                application.status = 'approved'
-                application.approved_by = request.user
-                application.approved_at = timezone.now()
-                
-                # Create attendance records for approved leave dates
-                from datetime import date, timedelta
-                current_date = application.from_date
-                
-                while current_date <= application.to_date:
-                    # Check if attendance record already exists
-                    attendance_record, created = Attendance.objects.get_or_create(
-                        user=application.user,
-                        date=current_date,
-                        defaults={
-                            'status': 'absent',  # Mark as absent for leave
-                            'check_in': None,
-                            'check_out': None,
-                            'total_hours': None
-                        }
-                    )
-                    
-                    if not created:
-                        # Update existing record to absent for leave
-                        attendance_record.status = 'absent'
-                        attendance_record.check_in = None
-                        attendance_record.check_out = None
-                        attendance_record.total_hours = None
-                        attendance_record.save()
-                    
-                    current_date += timedelta(days=1)
-                
-                messages.success(request, f'Leave application for {application.user.username} approved successfully! Attendance records updated.')
+                leave_app.status = 'approved'
+                leave_app.approved_by = request.user
+                leave_app.approved_at = timezone.now()
+                messages.success(request, f'Leave approved for {leave_app.user.get_full_name() or leave_app.user.username}')
                 
             elif action == 'reject':
-                application.status = 'rejected'
-                application.approved_by = request.user
-                application.approved_at = timezone.now()
-                messages.success(request, f'Leave application for {application.user.username} rejected successfully!')
+                leave_app.status = 'rejected'
+                leave_app.approved_by = request.user
+                leave_app.approved_at = timezone.now()
+                messages.success(request, f'Leave rejected for {leave_app.user.get_full_name() or leave_app.user.username}')
             
-            application.save()
+            leave_app.save()
             
         except LeaveApplication.DoesNotExist:
             messages.error(request, 'Leave application not found!')
     
-    # Get all leave applications
-    applications = LeaveApplication.objects.all().select_related('user', 'approved_by').order_by('-applied_at')
+    # Get today's date for statistics
+    from datetime import date as date_obj
+    today = date_obj.today()
+    
+    # Get all employees with today's attendance status
+    employees = User.objects.filter(
+        member__isnull=False,
+        member__account_status=True
+    ).select_related('member').order_by('first_name', 'last_name', 'username')
+    
+    # Add today's attendance status to each employee
+    for employee in employees:
+        # Check today's attendance
+        today_attendance = Attendance.objects.filter(
+            user=employee,
+            date=today
+        ).first()
+        
+        # Check if employee has approved leave today
+        today_leave = LeaveApplication.objects.filter(
+            user=employee,
+            status='approved',
+            from_date__lte=today,
+            to_date__gte=today
+        ).first()
+        
+        if today_leave:
+            employee.today_status = 'leave'
+            employee.leave_type = today_leave.leave_type
+            employee.leave_duration = today_leave.duration
+            employee.today_check_in = None
+            employee.today_check_out = None
+            employee.today_hours = None
+        elif today_attendance:
+            employee.today_status = today_attendance.status
+            employee.today_check_in = today_attendance.check_in.strftime('%H:%M') if today_attendance.check_in else None
+            employee.today_check_out = today_attendance.check_out.strftime('%H:%M') if today_attendance.check_out else None
+            employee.today_hours = today_attendance.total_hours
+            employee.leave_type = None
+            employee.leave_duration = None
+        else:
+            employee.today_status = None
+            employee.today_check_in = None
+            employee.today_check_out = None
+            employee.today_hours = None
+            employee.leave_type = None
+            employee.leave_duration = None
+        
+        # Add department and avatar color
+        employee.department = employee.member.designation if hasattr(employee, 'member') else 'Staff'
+        
+        # Generate initials for avatar
+        if employee.first_name and employee.last_name:
+            employee.initials = f"{employee.first_name[0].upper()}{employee.last_name[0].upper()}"
+        elif employee.first_name:
+            employee.initials = f"{employee.first_name[0].upper()}{employee.first_name[1].upper() if len(employee.first_name) > 1 else 'X'}"
+        elif employee.username:
+            name_parts = employee.username.split()
+            if len(name_parts) >= 2:
+                employee.initials = f"{name_parts[0][0].upper()}{name_parts[1][0].upper()}"
+            else:
+                employee.initials = f"{employee.username[0].upper()}{employee.username[1].upper() if len(employee.username) > 1 else 'X'}"
+        else:
+            employee.initials = "XX"
+        
+        colors = ['#1e3a8a', '#059669', '#dc2626', '#d97706', '#7c3aed', '#0284c7']
+        employee.avatar_color = colors[employee.id % len(colors)]
+    
+    # Calculate today's statistics
+    present_today = Attendance.objects.filter(date=today, status='present').count()
+    halfday_today = Attendance.objects.filter(date=today, status='halfday').count()
+    absent_today = Attendance.objects.filter(date=today, status='absent').count()
+    on_leave_today = LeaveApplication.objects.filter(
+        status='approved',
+        from_date__lte=today,
+        to_date__gte=today
+    ).count()
+    
+    # Count employees without attendance record
+    total_employees = employees.count()
+    marked_attendance = present_today + halfday_today + absent_today + on_leave_today
+    not_marked_today = total_employees - marked_attendance
+    
+    # Get leave requests
+    leave_requests = LeaveApplication.objects.select_related('user', 'approved_by').order_by('-applied_at')
+    pending_count = leave_requests.filter(status='pending').count()
+    
+    # Add initials and avatar colors to leave request users
+    for leave in leave_requests:
+        user = leave.user
+        # Generate initials for avatar
+        if user.first_name and user.last_name:
+            user.initials = f"{user.first_name[0].upper()}{user.last_name[0].upper()}"
+        elif user.first_name:
+            user.initials = f"{user.first_name[0].upper()}{user.first_name[1].upper() if len(user.first_name) > 1 else 'X'}"
+        elif user.username:
+            name_parts = user.username.split()
+            if len(name_parts) >= 2:
+                user.initials = f"{name_parts[0][0].upper()}{name_parts[1][0].upper()}"
+            else:
+                user.initials = f"{user.username[0].upper()}{user.username[1].upper() if len(user.username) > 1 else 'X'}"
+        else:
+            user.initials = "XX"
+        
+        # Add avatar color
+        colors = ['#1e3a8a', '#059669', '#dc2626', '#d97706', '#7c3aed', '#0284c7']
+        user.avatar_color = colors[user.id % len(colors)]
     
     context = {
-        'applications': applications
+        'employees': employees,
+        'present_today': present_today,
+        'halfday_today': halfday_today,
+        'absent_today': absent_today,
+        'on_leave_today': on_leave_today,
+        'not_marked_today': not_marked_today,
+        'leave_requests': leave_requests,
+        'pending_count': pending_count,
+        'today': today,
     }
     
     return render(request, 'manage_leave_applications.html', context)
+
+
+def leave_action(request):
+    """Handle leave approval/rejection actions"""
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    if request.method == 'POST':
+        leave_id = request.POST.get('leave_id')
+        action = request.POST.get('action')
+        
+        try:
+            leave_app = LeaveApplication.objects.get(id=leave_id)
+            
+            if action == 'approve':
+                leave_app.status = 'approved'
+                leave_app.approved_by = request.user
+                leave_app.approved_at = timezone.now()
+                messages.success(request, f'Leave approved for {leave_app.user.get_full_name() or leave_app.user.username}')
+                
+            elif action == 'reject':
+                leave_app.status = 'rejected'
+                leave_app.approved_by = request.user
+                leave_app.approved_at = timezone.now()
+                messages.success(request, f'Leave rejected for {leave_app.user.get_full_name() or leave_app.user.username}')
+            
+            leave_app.save()
+            
+        except LeaveApplication.DoesNotExist:
+            messages.error(request, 'Leave application not found!')
+    
+    return redirect('bio_details:manage_leave_applications')
+
+
+def attendance_stats(request):
+    """AJAX endpoint to get attendance statistics for an employee"""
+    print(f"DEBUG: attendance_stats called by user: {request.user}")
+    print(f"DEBUG: user authenticated: {request.user.is_authenticated}")
+    print(f"DEBUG: GET params: {request.GET}")
+    print(f"DEBUG: Request method: {request.method}")
+    
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    if not request.user.is_authenticated:
+        print("DEBUG: User not authenticated")
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    emp_id = request.GET.get('emp')
+    if not emp_id:
+        return JsonResponse({'error': 'Employee ID required'}, status=400)
+    
+    try:
+        from django.contrib.auth.models import User
+        from datetime import datetime
+        
+        # Get the employee user
+        employee = User.objects.get(id=emp_id)
+        
+        # Check if user has permission to view this employee's stats
+        if not request.user.is_superuser and employee != request.user:
+            return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        # Calculate statistics for current month
+        current_month = datetime.now().month
+        current_year = datetime.now().year
+        
+        # Count present days
+        present_count = Attendance.objects.filter(
+            user=employee,
+            date__month=current_month,
+            date__year=current_year,
+            status='present'
+        ).count()
+        
+        # Count half-day attendance
+        halfday_count = Attendance.objects.filter(
+            user=employee,
+            date__month=current_month,
+            date__year=current_year,
+            status='halfday'
+        ).count()
+        
+        # Count absent days
+        absent_count = Attendance.objects.filter(
+            user=employee,
+            date__month=current_month,
+            date__year=current_year,
+            status='absent'
+        ).count()
+        
+        # Count approved leaves for current year
+        approved_leaves = LeaveApplication.objects.filter(
+            user=employee,
+            from_date__year=current_year,
+            status='approved'
+        )
+        
+        # Calculate total leave days used
+        leaves_used = sum(leave.total_days for leave in approved_leaves)
+        
+        return JsonResponse({
+            'present': present_count,
+            'halfday': halfday_count,
+            'absent': absent_count,
+            'leaves': leaves_used
+        })
+        
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'Employee not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 

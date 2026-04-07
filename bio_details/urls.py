@@ -47,6 +47,7 @@ urlpatterns = [
     path('save-country-selection/', views.save_country_selection, name='save_country_selection'),
     path('save-currency-selection/', views.save_currency_selection, name='save_currency_selection'),
     path('attendance/', views.attendance, name='attendance'),
-    path('my-applications/', views.my_applications, name='my_applications'),
+    path('attendance-stats/', views.attendance_stats, name='attendance_stats'),
     path('manage-leave-applications/', views.manage_leave_applications, name='manage_leave_applications'),
+    path('leave-action/', views.leave_action, name='leave_action'),
 ]
