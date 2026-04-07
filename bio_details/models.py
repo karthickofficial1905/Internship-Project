@@ -491,27 +491,26 @@ class Attendance(models.Model):
     def save(self, *args, **kwargs):
         # Convert string date to date object if needed
         if isinstance(self.date, str):
-            from datetime import datetime
             self.date = datetime.strptime(self.date, '%Y-%m-%d').date()
         
         # Calculate total hours if both check_in and check_out are provided
         if self.check_in and self.check_out:
             # Convert string times to time objects if needed
             if isinstance(self.check_in, str):
-                from datetime import time
+                from datetime import time as time_cls
                 time_parts = self.check_in.split(':')
                 hour = int(time_parts[0])
                 minute = int(time_parts[1])
                 second = int(time_parts[2]) if len(time_parts) > 2 else 0
-                self.check_in = time(hour, minute, second)
+                self.check_in = time_cls(hour, minute, second)
             
             if isinstance(self.check_out, str):
-                from datetime import time
+                from datetime import time as time_cls
                 time_parts = self.check_out.split(':')
                 hour = int(time_parts[0])
                 minute = int(time_parts[1])
                 second = int(time_parts[2]) if len(time_parts) > 2 else 0
-                self.check_out = time(hour, minute, second)
+                self.check_out = time_cls(hour, minute, second)
             
             check_in_datetime = datetime.combine(self.date, self.check_in)
             check_out_datetime = datetime.combine(self.date, self.check_out)
