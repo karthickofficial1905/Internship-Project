@@ -52,6 +52,7 @@ def members(request):
                 user=user,
                 phone=phone,
                 designation=request.POST.get('designation'),
+                role=request.POST.get('role', 'employee'),  # Default to employee if not provided
                 address1=request.POST.get('address1'),
                 city=request.POST.get('city'),
                 state=request.POST.get('state'),
@@ -220,6 +221,7 @@ def rewrite_member(request, emp_id):
         member.user.save()
         member.phone = request.POST.get('phone')
         member.designation = request.POST.get('designation')
+        member.role = request.POST.get('role', member.role)  # Keep existing role if not provided
         member.address1 = request.POST.get('address1')
         member.city = request.POST.get('city')
         member.state = request.POST.get('state')
@@ -2082,6 +2084,11 @@ def attendance(request):
     if not request.user.is_authenticated:
         return redirect('bio_details:login')
     
+    # Import required modules at the top
+    from django.contrib.auth.models import User
+    from datetime import datetime, timedelta, date as date_obj
+    from django.db.models import Count, Avg
+    
     # Handle form submissions
     if request.method == 'POST':
         print(f"DEBUG: POST request received")
@@ -2102,8 +2109,8 @@ def attendance(request):
             print(f"DEBUG: Attendance data - Employee: {employee_id}, Date: {date}, Status: {status}, Check-in: {check_in}, Check-out: {check_out}")
             
             # Get the employee user - for regular users, only allow marking their own attendance
-            if request.user.is_superuser:
-                # Admin can mark attendance for any employee
+            if request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.is_hr_or_admin()):
+                # Admin and HR can mark attendance for any employee
                 if employee_id:
                     try:
                         employee_user = User.objects.get(id=employee_id)
@@ -2182,8 +2189,8 @@ def attendance(request):
             
             print(f"DEBUG: Leave data - Employee: {employee_id}, Type: {leave_type}, Duration: {duration}, From: {from_date}, To: {to_date}")
             
-            # Get the employee user (for superusers) or use current user
-            if request.user.is_superuser and employee_id:
+            # Get the employee user (for superusers and HR) or use current user
+            if (request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.is_hr_or_admin())) and employee_id:
                 try:
                     employee_user = User.objects.get(id=employee_id)
                 except User.DoesNotExist:
@@ -2229,16 +2236,20 @@ def attendance(request):
                 return redirect('bio_details:attendance')  # Redirect even on error
     
     # Get current user as the only employee (unless admin wants to see all)
-    from django.contrib.auth.models import User
-    from datetime import datetime, timedelta, date as date_obj
-    from django.db.models import Count, Avg
-    
-    # For regular users, show only themselves. For admins, show all employees
+    # For regular users, show only themselves. For admins and HR, show all employees (excluding superusers)
     if request.user.is_superuser:
-        # Admin can see all employees
+        # Admin can see all employees but not other superusers
         employees = User.objects.filter(
             member__isnull=False,
-            member__account_status=True
+            member__account_status=True,
+            is_superuser=False  # Exclude superusers
+        ).select_related('member').order_by('first_name', 'last_name', 'username')
+    elif hasattr(request.user, 'member') and request.user.member.is_hr_or_admin():
+        # HR can see all employees but not superusers
+        employees = User.objects.filter(
+            member__isnull=False,
+            member__account_status=True,
+            is_superuser=False  # Exclude superusers
         ).select_related('member').order_by('first_name', 'last_name', 'username')
     else:
         # Regular users see only themselves
@@ -2320,8 +2331,8 @@ def attendance(request):
         employee.avatar_color = colors[employee.id % len(colors)]
     
     # Calculate today's statistics based on user permissions
-    if request.user.is_superuser:
-        # Admin sees all users' statistics
+    if request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.is_hr_or_admin()):
+        # Admin and HR see all users' statistics
         present_today = Attendance.objects.filter(
             date=today,
             status='present'
@@ -2370,10 +2381,22 @@ def attendance(request):
         ).count()
     
     # Get recent attendance records for the records tab (limit to recent records)
-    if request.user.is_superuser:
-        # Admin can see all records
-        attendance_records = Attendance.objects.select_related('user').order_by('-date', '-created_at')[:50]
-        leave_records = LeaveApplication.objects.select_related('user').order_by('-applied_at')[:50]
+    # Check if a specific employee is selected via GET parameter
+    selected_employee_id = request.GET.get('employee_id')
+    
+    if request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.is_hr_or_admin()):
+        # Admin and HR can see all records or filter by selected employee
+        if selected_employee_id:
+            try:
+                selected_employee = User.objects.get(id=selected_employee_id)
+                attendance_records = Attendance.objects.filter(user=selected_employee).select_related('user').order_by('-date', '-created_at')[:50]
+                leave_records = LeaveApplication.objects.filter(user=selected_employee).select_related('user').order_by('-applied_at')[:50]
+            except User.DoesNotExist:
+                attendance_records = Attendance.objects.select_related('user').order_by('-date', '-created_at')[:50]
+                leave_records = LeaveApplication.objects.select_related('user').order_by('-applied_at')[:50]
+        else:
+            attendance_records = Attendance.objects.select_related('user').order_by('-date', '-created_at')[:50]
+            leave_records = LeaveApplication.objects.select_related('user').order_by('-applied_at')[:50]
     else:
         # Regular users see only their own records
         attendance_records = Attendance.objects.filter(user=request.user).select_related('user').order_by('-date', '-created_at')[:50]
@@ -2390,7 +2413,8 @@ def attendance(request):
         'attendance_records': attendance_records,
         'leave_records': leave_records,
         'today': today,
-        'is_admin': request.user.is_superuser
+        'is_admin': request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.is_hr_or_admin()),
+        'selected_employee_id': selected_employee_id
     }
     
     return render(request, 'attendance.html', context)
@@ -2400,8 +2424,15 @@ def manage_leave_applications(request):
     if not request.user.is_authenticated:
         return redirect('bio_details:login')
     
-    if not request.user.is_superuser:
-        messages.error(request, "Access denied. Admin privileges required.")
+    # Check if user is HR or Admin
+    is_hr_or_admin = False
+    if request.user.is_superuser:
+        is_hr_or_admin = True
+    elif hasattr(request.user, 'member'):
+        is_hr_or_admin = request.user.member.is_hr_or_admin()
+    
+    if not is_hr_or_admin:
+        messages.error(request, "Access denied. HR or Admin privileges required.")
         return redirect('bio_details:dashboard')
     
     # Handle leave action (approve/reject)
@@ -2585,8 +2616,15 @@ def leave_action(request):
     if not request.user.is_authenticated:
         return redirect('bio_details:login')
     
-    if not request.user.is_superuser:
-        messages.error(request, "Access denied. Admin privileges required.")
+    # Check if user is HR or Admin
+    is_hr_or_admin = False
+    if request.user.is_superuser:
+        is_hr_or_admin = True
+    elif hasattr(request.user, 'member'):
+        is_hr_or_admin = request.user.member.is_hr_or_admin()
+    
+    if not is_hr_or_admin:
+        messages.error(request, "Access denied. HR or Admin privileges required.")
         return redirect('bio_details:dashboard')
     
     if request.method == 'POST':
@@ -2642,7 +2680,7 @@ def attendance_stats(request):
         employee = User.objects.get(id=emp_id)
         
         # Check if user has permission to view this employee's stats
-        if not request.user.is_superuser and employee != request.user:
+        if not request.user.is_superuser and not (hasattr(request.user, 'member') and request.user.member.is_hr_or_admin()) and employee != request.user:
             return JsonResponse({'error': 'Permission denied'}, status=403)
         
         # Calculate statistics for current month

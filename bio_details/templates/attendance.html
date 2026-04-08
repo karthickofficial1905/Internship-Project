@@ -296,44 +296,56 @@
                 </tr>
               </thead>
               <tbody id="rec-body">
-                {% for record in attendance_records %}
-                <tr data-type="attendance">
-                  <td class="td-date">{{ record.date }}</td>
-                  <td><span class="badge b-type">ATT</span></td>
-                  <td>
-                    <span class="badge {% if record.status == 'present' %}b-present{% elif record.status == 'absent' %}b-absent{% elif record.status == 'half_day' %}b-halfday{% else %}b-halfday{% endif %}">
-                      <span class="bdot"></span>{{ record.status|title }}
-                    </span>
-                  </td>
-                  <td>{{ record.check_in|default:"—" }}</td>
-                  <td>{{ record.check_out|default:"—" }}</td>
-                  <td>{{ record.formatted_hours|default:"—" }}</td>
-                </tr>
-                {% endfor %}
-                {% for leave in leave_records %}
-                <tr data-type="leave">
-                  <td class="td-date">{{ leave.from_date }}{% if leave.from_date != leave.to_date %} to {{ leave.to_date }}{% endif %}</td>
-                  <td>
-                    <span class="badge {% if leave.leave_type == 'sick' %}b-sick{% elif leave.leave_type == 'personal' %}b-personal{% elif leave.leave_type == 'casual' %}b-casual{% else %}b-emergency{% endif %}">
-                      <span class="bdot"></span>{{ leave.leave_type|title }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="badge {% if leave.status == 'approved' %}b-present{% elif leave.status == 'rejected' %}b-absent{% else %}b-halfday{% endif %}">
-                      <span class="bdot"></span>{{ leave.status|title }}
-                    </span>
-                  </td>
-                  <td colspan="2" class="td-reason">{{ leave.reason|truncatechars:40 }}</td>
-                  <td>{{ leave.duration|default:"Full Day"|title }}</td>
-                </tr>
-                {% endfor %}
-                {% if not attendance_records and not leave_records %}
+                {% if selected_employee_id %}
+                  {% for record in attendance_records %}
+                  <tr data-type="attendance">
+                    <td class="td-date">{{ record.date }}</td>
+                    <td><span class="badge b-type">ATT</span></td>
+                    <td>
+                      <span class="badge {% if record.status == 'present' %}b-present{% elif record.status == 'absent' %}b-absent{% elif record.status == 'half_day' %}b-halfday{% else %}b-halfday{% endif %}">
+                        <span class="bdot"></span>{{ record.status|title }}
+                      </span>
+                    </td>
+                    <td>{{ record.check_in|default:"—" }}</td>
+                    <td>{{ record.check_out|default:"—" }}</td>
+                    <td>{{ record.formatted_hours|default:"—" }}</td>
+                  </tr>
+                  {% endfor %}
+                  {% for leave in leave_records %}
+                  <tr data-type="leave">
+                    <td class="td-date">{{ leave.from_date }}{% if leave.from_date != leave.to_date %} to {{ leave.to_date }}{% endif %}</td>
+                    <td>
+                      <span class="badge {% if leave.leave_type == 'sick' %}b-sick{% elif leave.leave_type == 'personal' %}b-personal{% elif leave.leave_type == 'casual' %}b-casual{% else %}b-emergency{% endif %}">
+                        <span class="bdot"></span>{{ leave.leave_type|title }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge {% if leave.status == 'approved' %}b-present{% elif leave.status == 'rejected' %}b-absent{% else %}b-halfday{% endif %}">
+                        <span class="bdot"></span>{{ leave.status|title }}
+                      </span>
+                    </td>
+                    <td colspan="2" class="td-reason">{{ leave.reason|truncatechars:40 }}</td>
+                    <td>{{ leave.duration|default:"Full Day"|title }}</td>
+                  </tr>
+                  {% endfor %}
+                  {% if not attendance_records and not leave_records %}
+                  <tr class="empty-row">
+                    <td colspan="6">
+                      <div class="empty-state">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <p class="es-title">No records found</p>
+                        <p class="es-sub">This employee has no attendance or leave records yet.</p>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endif %}
+                {% else %}
                 <tr class="empty-row">
                   <td colspan="6">
                     <div class="empty-state">
-                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                      <p class="es-title">No records found</p>
-                      <p class="es-sub">Records appear once attendance is marked or leave is applied.</p>
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      <p class="es-title">Select an employee</p>
+                      <p class="es-sub">Click on an employee from the left panel to view their records.</p>
                     </div>
                   </td>
                 </tr>
@@ -381,6 +393,11 @@
     curEmpId = id; curEmpName = name;
     curStatus = null; curLeaveType = null;
 
+    // Update URL with employee_id parameter to filter records
+    const url = new URL(window.location);
+    url.searchParams.set('employee_id', id);
+    window.history.pushState({}, '', url);
+
     document.querySelectorAll('.emp-item').forEach(function(el){ el.classList.remove('active'); });
     var el = document.querySelector('.emp-item[data-id="'+id+'"]');
     if(el) el.classList.add('active');
@@ -409,6 +426,9 @@
     clearStatus();
     switchTabById('attendance');
     loadEmployeeStats(id);
+    
+    // Load records for selected employee via AJAX
+    loadEmployeeRecords(id);
   }
 
   function loadEmployeeStats(id) {
@@ -442,6 +462,39 @@
         document.getElementById('hs-present').textContent = '0';
         document.getElementById('hs-halfday').textContent = '0';
         document.getElementById('hs-leave').textContent = '0';
+      });
+  }
+
+  function loadEmployeeRecords(id) {
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch('{% url "bio_details:attendance" %}?employee_id=' + id, {
+      method: 'GET',
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'Content-Type': 'application/json',
+      },
+      credentials: 'same-origin'
+    })
+      .then(function(r){ 
+        if (!r.ok) {
+          throw new Error('HTTP ' + r.status);
+        }
+        return r.text(); 
+      })
+      .then(function(html){
+        // Parse the HTML response to extract records table
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newRecordsTable = doc.querySelector('#rec-body');
+        
+        if (newRecordsTable) {
+          document.getElementById('rec-body').innerHTML = newRecordsTable.innerHTML;
+        }
+      })
+      .catch(function(error){ 
+        console.error('Error loading records:', error);
       });
   }
 
@@ -914,7 +967,7 @@
     .date-header{flex-direction:column;gap:14px;padding:18px;}
     .dh-center{align-self:center}
     .att-body{flex-direction:column}
-    .left-panel{width:100%;border-right:none;border-bottom:1px solid var(--border);max-height:200px}
+    .left-panel{width:100%;border-right:none;border-bottom:1px solid var(--border);max-height:250px}
     .leave-type-grid{grid-template-columns:repeat(2,1fr)}
     .fg2{grid-template-columns:1fr}
     .status-pick{grid-template-columns:repeat(3,1fr)}

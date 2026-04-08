@@ -62,6 +62,12 @@ class Currency(models.Model):
 
 
 class Member(models.Model):
+    ROLE_CHOICES = [
+        ('employee', 'Employee'),
+        ('hr', 'HR'),
+        ('admin', 'Admin'),
+    ]
+    
     emp_id = models.CharField(max_length=10, unique=True, null=True, blank=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     phone = models.CharField(max_length=15)
@@ -72,6 +78,7 @@ class Member(models.Model):
     date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=50)
     designation = models.CharField(max_length=100)
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='employee')
     profile_pic = models.ImageField(upload_to='profile/', null=True, blank=True)
     account_type = models.CharField(max_length=50, null=True, blank=True)
     bank_name = models.CharField(max_length=100, null=True, blank=True)
@@ -96,6 +103,14 @@ class Member(models.Model):
         super().save(*args, **kwargs)
 
 
+    def is_hr_or_admin(self):
+        """Check if user is HR or Admin"""
+        return self.role in ['hr', 'admin'] or self.user.is_superuser
+    
+    def is_hr(self):
+        """Check if user is HR"""
+        return self.role == 'hr'
+    
     def __str__(self):
         return self.user.username
 
