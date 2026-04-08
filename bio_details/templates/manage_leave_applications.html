@@ -451,7 +451,7 @@
     --fh:'Syne',system-ui,sans-serif;
   }
 
-  .adm-shell{font-family:var(--fn);color:var(--text);margin:120px 40px 60px 360px;transition:margin-left .3s}
+  .adm-shell{font-family:var(--fn);color:var(--text);margin:120px 40px 120px 360px;transition:margin-left .3s}
   .adm-shell.shifted{margin-left:90px}
 
   /* HEADER */
@@ -612,12 +612,14 @@
   /* RESPONSIVE */
   @media(max-width:1200px){.adm-shell{margin-left:20px;margin-right:20px;margin-top:90px}}
   @media(max-width:900px){
-    .adm-shell{margin:100px 12px 60px}
+    .adm-tabs{    flex-wrap: wrap;
+    flex-direction: row; gap:5px; padding:15px;}
+    .adm-shell{margin:100px 12px 100px}
     .adm-header{flex-direction:column;align-items:flex-start;gap:14px;padding:18px}
     .adh-date{align-self:center}
     .att-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
     .filter-bar{flex-direction:column;align-items:flex-start}
-    .filter-search{width:100%}
+    .filter-search{width:auto;}
   }
 
   .att-empty {
@@ -781,7 +783,7 @@
   /* Mobile Responsive */
   @media only screen and (max-width: 1024px) {
       .overview-grid {
-          grid-template-columns: 1fr;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
           gap: 15px;
           margin-top: 15px;
       }

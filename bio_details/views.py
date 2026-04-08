@@ -2433,10 +2433,11 @@ def manage_leave_applications(request):
     from datetime import date as date_obj
     today = date_obj.today()
     
-    # Get all employees with today's attendance status
+    # Get all employees with today's attendance status (exclude superusers)
     employees = User.objects.filter(
         member__isnull=False,
-        member__account_status=True
+        member__account_status=True,
+        is_superuser=False
     ).select_related('member').order_by('first_name', 'last_name', 'username')
     
     # Add today's attendance status to each employee
