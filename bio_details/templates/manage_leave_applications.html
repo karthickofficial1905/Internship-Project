@@ -53,6 +53,10 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
         Today's Attendance
       </button>
+      <button class="adm-tab" data-tab="overview" onclick="switchAdmTab('overview',this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11l-3-3m0 0a5.5 5.5 0 1 0-7.78 7.78 5.5 5.5 0 0 0 7.78-7.78Z"/></svg>
+        Attendance Overview
+      </button>
       <button class="adm-tab" data-tab="leaves" onclick="switchAdmTab('leaves',this)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Leave Requests
@@ -67,7 +71,7 @@
         <div class="filter-pills">
           <button class="fpil active" onclick="filterAtt('all',this)">All</button>
           <button class="fpil fpil-green" onclick="filterAtt('present',this)">Present</button>
-          <button class="fpil fpil-amber" onclick="filterAtt('halfday',this)">Half Day</button>
+          <button class="fpil fpil-amber" onclick="filterAtt('half_day',this)">Half Day</button>
           <button class="fpil fpil-blue" onclick="filterAtt('leave',this)">On Leave</button>
           <button class="fpil fpil-red" onclick="filterAtt('absent',this)">Absent</button>
           <button class="fpil fpil-slate" onclick="filterAtt('none',this)">Not Marked</button>
@@ -92,19 +96,19 @@
               </div>
               <div class="ac-badge
                 {% if emp.today_status == 'present' %}acb-present
-                {% elif emp.today_status == 'halfday' %}acb-halfday
+                {% elif emp.today_status == 'half_day' %}acb-halfday
                 {% elif emp.today_status == 'leave' %}acb-leave
                 {% elif emp.today_status == 'absent' %}acb-absent
                 {% else %}acb-none{% endif %}">
                 {% if emp.today_status == 'present' %}Present
-                {% elif emp.today_status == 'halfday' %}Half Day
+                {% elif emp.today_status == 'half_day' %}Half Day
                 {% elif emp.today_status == 'leave' %}On Leave
                 {% elif emp.today_status == 'absent' %}Absent
                 {% else %}—{% endif %}
               </div>
             </div>
             <div class="ac-times">
-              {% if emp.today_status == 'present' or emp.today_status == 'halfday' %}
+              {% if emp.today_status == 'present' or emp.today_status == 'half_day' %}
                 <div class="ac-time-item">
                   <span class="act-lbl">In</span>
                   <span class="act-val">{{ emp.today_check_in|default:"—" }}</span>
@@ -140,6 +144,61 @@
           </div>
           <h3>No Employees Found</h3>
           <p>No employee records available for today's attendance.</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ══════ SECTION: ATTENDANCE OVERVIEW ══════ -->
+    <div class="adm-section" id="adm-overview">
+      <div class="filter-bar">
+        <div class="filter-search">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" placeholder="Search employee..." oninput="searchOverview(this.value)">
+        </div>
+      </div>
+
+      <div class="overview-grid" id="overview-grid">
+        {% for emp in employees %}
+          <div class="overview-card" data-name="{{ emp.get_full_name|default:emp.username|lower }}" onclick="showUserAttendance('{{ emp.id }}', '{{ emp.get_full_name|default:emp.username }}')">
+            <div class="oc-header">
+              <div class="oc-avatar" style="background:{{ emp.avatar_color|default:'#1e3a8a' }}">
+                {{ emp.initials|default:"XX" }}
+              </div>
+              <div class="oc-info">
+                <div class="oc-name">{{ emp.get_full_name|default:emp.username }}</div>
+                <div class="oc-dept">{{ emp.department|default:"Staff" }}</div>
+              </div>
+              <div class="oc-arrow">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+              </div>
+            </div>
+            <div class="oc-stats">
+              <div class="oc-stat">
+                <span class="ocs-label">Present</span>
+                <span class="ocs-value ocs-green">{{ emp.present_days|default:"0" }}</span>
+              </div>
+              <div class="oc-stat">
+                <span class="ocs-label">Half Day</span>
+                <span class="ocs-value ocs-amber">{{ emp.halfday_days|default:"0" }}</span>
+              </div>
+              <div class="oc-stat">
+                <span class="ocs-label">Leave</span>
+                <span class="ocs-value ocs-blue">{{ emp.leave_days|default:"0" }}</span>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+        <div class="overview-empty">
+          <div class="overview-empty-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="m22 21-3-3m0 0a5.5 5.5 0 1 0-7.78-7.78 5.5 5.5 0 0 0 7.78 7.78Z"/>
+            </svg>
+          </div>
+          <h3>No Employees Found</h3>
+          <p>No employee records available.</p>
         </div>
         {% endfor %}
       </div>

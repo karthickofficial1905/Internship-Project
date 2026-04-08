@@ -1368,3 +1368,180 @@ justify-content: center;
             min-width:auto;
         }
 }
+
+/* ══════ ATTENDANCE OVERVIEW STYLES ══════ */
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.overview-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 1px solid #e5e7eb;
+}
+
+.overview-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-color: #1e3a8a;
+}
+
+.oc-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.oc-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.oc-info {
+    flex: 1;
+}
+
+.oc-name {
+    font-weight: 600;
+    font-size: 16px;
+    color: #1f2937;
+    margin-bottom: 2px;
+}
+
+.oc-dept {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.oc-arrow {
+    color: #9ca3af;
+    transition: all 0.3s ease;
+}
+
+.overview-card:hover .oc-arrow {
+    color: #1e3a8a;
+    transform: translateX(2px);
+}
+
+.oc-stats {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.oc-stat {
+    text-align: center;
+    flex: 1;
+}
+
+.ocs-label {
+    display: block;
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.ocs-value {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.ocs-green {
+    color: #059669;
+}
+
+.ocs-red {
+    color: #dc2626;
+}
+
+.ocs-blue {
+    color: #2563eb;
+}
+
+.overview-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+}
+
+.overview-empty-icon {
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.overview-empty h3 {
+    font-size: 18px;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.overview-empty p {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+/* Mobile Responsive */
+@media only screen and (max-width: 1024px) {
+    .overview-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .overview-card {
+        padding: 16px;
+    }
+    
+    .oc-header {
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    
+    .oc-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 14px;
+    }
+    
+    .oc-name {
+        font-size: 14px;
+    }
+    
+    .oc-dept {
+        font-size: 12px;
+    }
+    
+    .oc-stats {
+        gap: 8px;
+    }
+    
+    .ocs-value {
+        font-size: 16px;
+    }
+    
+    .overview-empty {
+        padding: 40px 20px;
+    }
+}
+.ocs-amber {
+    color: #d97706;
+}

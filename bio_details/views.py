@@ -2294,7 +2294,7 @@ def attendance(request):
             user=employee,
             date__month=current_month,
             date__year=current_year,
-            status='halfday'
+            status='half_day'
         ).count()
         
         employee.absent_count = Attendance.objects.filter(
@@ -2329,7 +2329,7 @@ def attendance(request):
         
         halfday_count = Attendance.objects.filter(
             date=today,
-            status='halfday'
+            status='half_day'
         ).count()
         
         absent_today = Attendance.objects.filter(
@@ -2353,7 +2353,7 @@ def attendance(request):
         halfday_count = Attendance.objects.filter(
             user=request.user,
             date=today,
-            status='halfday'
+            status='half_day'
         ).count()
         
         absent_today = Attendance.objects.filter(
@@ -2477,6 +2477,33 @@ def manage_leave_applications(request):
             employee.leave_type = None
             employee.leave_duration = None
         
+        # Calculate attendance statistics for current month/year
+        current_month = today.month
+        current_year = today.year
+        
+        employee.present_days = Attendance.objects.filter(
+            user=employee,
+            date__month=current_month,
+            date__year=current_year,
+            status='present'
+        ).count()
+        
+        employee.halfday_days = Attendance.objects.filter(
+            user=employee,
+            date__month=current_month,
+            date__year=current_year,
+            status='half_day'
+        ).count()
+        
+        
+        # Count approved leaves for current year
+        approved_leaves = LeaveApplication.objects.filter(
+            user=employee,
+            from_date__year=current_year,
+            status='approved'
+        )
+        employee.leave_days = sum(leave.total_days for leave in approved_leaves)
+        
         # Add department and avatar color
         employee.department = employee.member.designation if hasattr(employee, 'member') else 'Staff'
         
@@ -2499,7 +2526,7 @@ def manage_leave_applications(request):
     
     # Calculate today's statistics
     present_today = Attendance.objects.filter(date=today, status='present').count()
-    halfday_today = Attendance.objects.filter(date=today, status='halfday').count()
+    halfday_today = Attendance.objects.filter(date=today, status='half_day').count()
     absent_today = Attendance.objects.filter(date=today, status='absent').count()
     on_leave_today = LeaveApplication.objects.filter(
         status='approved',
@@ -2634,7 +2661,7 @@ def attendance_stats(request):
             user=employee,
             date__month=current_month,
             date__year=current_year,
-            status='halfday'
+            status='half_day'
         ).count()
         
         # Count absent days

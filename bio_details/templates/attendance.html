@@ -69,7 +69,7 @@
           </div>
           <div class="emp-status-dot
             {% with status=emp.today_status %}
-              {% if status == 'present' or status == 'halfday' %}dot-present
+              {% if status == 'present' or status == 'half_day' %}dot-present
               {% elif status == 'absent' %}dot-absent
               {% elif status == 'leave' %}dot-leave
               {% else %}dot-none{% endif %}
@@ -156,7 +156,7 @@
               </div>
               <div class="sp-lbl">Apply Leave</div>
             </div>
-            <div class="sp-btn" id="sp-halfday" onclick="pickStatus('halfday')">
+            <div class="sp-btn" id="sp-half_day" onclick="pickStatus('half_day')">
               <div class="sp-icon sp-icon-halfday">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
               </div>
@@ -301,7 +301,7 @@
                   <td class="td-date">{{ record.date }}</td>
                   <td><span class="badge b-type">ATT</span></td>
                   <td>
-                    <span class="badge {% if record.status == 'present' %}b-present{% elif record.status == 'absent' %}b-absent{% else %}b-halfday{% endif %}">
+                    <span class="badge {% if record.status == 'present' %}b-present{% elif record.status == 'absent' %}b-absent{% elif record.status == 'half_day' %}b-halfday{% else %}b-halfday{% endif %}">
                       <span class="bdot"></span>{{ record.status|title }}
                     </span>
                   </td>
@@ -476,9 +476,9 @@
   /* ── ATTENDANCE STATUS PICK ── */
   function pickStatus(s) {
     curStatus = s;
-    ['present','absent','halfday'].forEach(function(k){
+    ['present','absent','half_day'].forEach(function(k){
       var el = document.getElementById('sp-'+k);
-      el.className = 'sp-btn' + (s===k ? ' sp-sel-'+k : '');
+      if(el) el.className = 'sp-btn' + (s===k ? ' sp-sel-'+k.replace('_','-') : '');
     });
     document.getElementById('att-status').value = s;
     var tc = document.getElementById('time-card');
@@ -486,14 +486,15 @@
       tc.style.display = 'none';
     } else {
       tc.style.display = 'block';
-      document.getElementById('chk-in').value = s==='halfday' ? '09:00' : '09:00';
-      document.getElementById('chk-out').value = s==='halfday' ? '13:00' : '18:00';
+      document.getElementById('chk-in').value = s==='half_day' ? '09:00' : '09:00';
+      document.getElementById('chk-out').value = s==='half_day' ? '13:00' : '18:00';
     }
   }
   function clearStatus() {
     curStatus = null;
-    ['present','absent','halfday'].forEach(function(k){
-      document.getElementById('sp-'+k).className = 'sp-btn';
+    ['present','absent','half_day'].forEach(function(k){
+      var el = document.getElementById('sp-'+k);
+      if(el) el.className = 'sp-btn';
     });
     document.getElementById('time-card').style.display = 'none';
     document.getElementById('att-status').value = '';
@@ -698,12 +699,12 @@
   .emp-item.active{background:#eff6ff;border-left-color:var(--accent)}
   .emp-avatar{
     width:34px;height:34px;border-radius:50%;display:flex;align-items:center;
-    justify-content:center;font-family:var(--fh);font-size:11px;font-weight:800;
+    justify-content:center;font-family:var(--fh);font-size:12px;font-weight:800;
     color:#fff;flex-shrink:0;
   }
   .emp-info{flex:1;min-width:0}
-  .emp-name-txt{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .emp-dept-txt{font-size:11px;color:var(--slate)}
+  .emp-name-txt{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .emp-dept-txt{font-size:12px;color:var(--slate)}
   .emp-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
   .dot-present{background:var(--green)}
   .dot-absent{background:var(--red)}
@@ -777,8 +778,8 @@
   .sp-sel-present .sp-lbl{color:var(--green)}
   .sp-sel-absent{border-color:var(--red);background:#fff5f5}
   .sp-sel-absent .sp-lbl{color:var(--red)}
-  .sp-sel-halfday{border-color:var(--amber);background:#fffbeb}
-  .sp-sel-halfday .sp-lbl{color:var(--amber)}
+  .sp-sel-half-day{border-color:var(--amber);background:#fffbeb}
+  .sp-sel-half-day .sp-lbl{color:var(--amber)}
 
   /* ── FORM CARD ── */
   .form-card{
