@@ -90,9 +90,9 @@ def dashboard(request):
     if not request.user.is_authenticated:
         return redirect('bio_details:login')
     
-    total_employees = Member.objects.count()
-    active_employees = Member.objects.filter(account_status=True).count()
-    inactive_employees = Member.objects.filter(account_status=False).count()
+    total_employees = Member.objects.filter(user__is_superuser=False).count()
+    active_employees = Member.objects.filter(account_status=True, user__is_superuser=False).count()
+    inactive_employees = Member.objects.filter(account_status=False, user__is_superuser=False).count()
     
     total_products = Product.objects.count()
     available_products = Product.objects.filter(current_stock__gt=0).count()
