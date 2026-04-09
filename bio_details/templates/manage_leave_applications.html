@@ -432,6 +432,17 @@
     if(sv1) sv1.addEventListener('click', function(){ if(mb2) mb2.classList.remove('active'); if(shell) shell.classList.remove('shifted'); });
     if(sv3) sv3.addEventListener('click', function(){ if(mb2) mb2.classList.add('active'); if(shell) shell.classList.add('shifted'); });
   });
+
+    function searchOverview(searchTerm) {
+    const cards = document.querySelectorAll('.overview-card');
+    const term = searchTerm.toLowerCase();
+    
+    cards.forEach(card => {
+      const name = card.dataset.name;
+      card.style.display = name.includes(term) ? 'block' : 'none';
+    });
+  }
+
 </script>
 
 <!-- ══════ CSS ══════ -->

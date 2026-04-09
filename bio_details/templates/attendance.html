@@ -51,12 +51,16 @@
     <div class="left-panel">
       <div class="lp-head">
         <span>Employees</span>
-        <span class="emp-count" id="emp-count">{{ employees|length }}</span>
+        {%if user.is_superuser %}
+          <span class="emp-count" id="emp-count">{{ employees|length }}</span>
+        {% endif %}
       </div>
-      <div class="lp-search">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="text" placeholder="Search employee..." id="emp-search" oninput="filterEmployees(this.value)">
-      </div>
+      {%if user.is_superuser %}
+        <div class="lp-search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" placeholder="Search employee..." id="emp-search" oninput="filterEmployees(this.value)">
+        </div>
+      {% endif %}
       <div class="emp-list" id="emp-list">
         {% for emp in employees %}
         <div class="emp-item" data-id="{{ emp.id }}" data-name="{{ emp.get_full_name|default:emp.username }}" onclick="selectEmployee({{ emp.id }}, '{{ emp.get_full_name|default:emp.username }}', '{{ emp.department|default:"Staff" }}')">
@@ -144,6 +148,21 @@
         <div class="tab-section active" id="tab-attendance">
 
           <div class="status-pick">
+            <!-- Attendance Already Exists Warning -->
+            <div class="attendance-warning" id="attendance-warning" style="display:none;">
+              <div class="warning-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <div class="warning-text">
+                <div class="warning-title">Attendance Already Marked</div>
+                <div class="warning-subtitle" id="warning-subtitle">Only HR can update existing attendance records.</div>
+              </div>
+            </div>
+            
             <div class="sp-btn" id="sp-present" onclick="pickStatus('present')">
               <div class="sp-icon sp-icon-present">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
@@ -194,7 +213,6 @@
               </form>
             </div>
           </div>
-
         </div><!-- /tab-attendance -->
 
         <!-- ── TAB: LEAVE ── -->
@@ -423,6 +441,28 @@
     document.getElementById('leave-from').value = today;
     document.getElementById('leave-to').value = today;
 
+    // Check if attendance already exists and show warning
+    var selectedEmp = document.querySelector('.emp-item[data-id="'+id+'"]');
+    var warningEl = document.getElementById('attendance-warning');
+    var warningSubtitle = document.getElementById('warning-subtitle');
+    var isHR = {{ is_admin|yesno:'true,false' }};
+    
+    if(selectedEmp && !isHR){
+      var statusDot = selectedEmp.querySelector('.emp-status-dot');
+      if(statusDot && (statusDot.classList.contains('dot-present') || statusDot.classList.contains('dot-absent'))){
+        warningEl.style.display = 'flex'; 
+        if(isHR){
+          warningSubtitle.textContent = 'You can update this attendance record as HR.';
+        } else {
+          warningSubtitle.textContent = 'Only HR can update existing attendance records.';
+        }      
+      } else {
+        warningEl.style.display = 'none';
+      }
+    } else {
+      warningEl.style.display = 'none';
+    }
+
     clearStatus();
     switchTabById('attendance');
     loadEmployeeStats(id);
@@ -539,7 +579,9 @@
       tc.style.display = 'none';
     } else {
       tc.style.display = 'block';
-      document.getElementById('chk-in').value = s==='half_day' ? '09:00' : '09:00';
+      var now = new Date();
+      var currentTime = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+      document.getElementById('chk-in').value = currentTime;
       document.getElementById('chk-out').value = s==='half_day' ? '13:00' : '18:00';
     }
   }
@@ -626,6 +668,19 @@
           e.preventDefault(); 
           showToast('Cannot mark attendance - Employee is on approved leave today','error'); 
           return;
+        }
+        
+        // Check if attendance already exists for today (for non-HR users)
+        var isHR = {{ is_admin|yesno:'true,false' }};
+        if(!isHR && statusDot && (statusDot.classList.contains('dot-present') || statusDot.classList.contains('dot-absent'))){
+          e.preventDefault();
+          showToast('Attendance already marked for today. Only HR can update existing attendance.','error');
+          return;
+        }
+        
+        // Show warning message for HR when updating existing attendance
+        if(isHR && statusDot && (statusDot.classList.contains('dot-present') || statusDot.classList.contains('dot-absent'))){
+         return;
         }
       }
       
@@ -814,6 +869,27 @@
 
   /* ── STATUS PICK ── */
   .status-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+  
+  /* ── ATTENDANCE WARNING ── */
+  .attendance-warning{
+    grid-column:1/-1;display:flex;align-items:center;gap:12px;
+    background:#fffbeb;border:1.5px solid #fbbf24;border-radius:12px;
+    padding:14px 16px;margin-bottom:8px;
+  }
+  .warning-icon{
+    width:36px;height:36px;border-radius:50%;background:#fef3c7;
+    display:flex;align-items:center;justify-content:center;
+    color:#d97706;flex-shrink:0;
+  }
+  .warning-text{flex:1}
+  .warning-title{
+    font-family:var(--fh);font-size:13px;font-weight:700;
+    color:#92400e;margin-bottom:2px;
+  }
+  .warning-subtitle{
+    font-size:11px;color:#a16207;line-height:1.4;
+  }
+  
   .sp-btn{
     border:2px solid var(--border);border-radius:14px;padding:18px 12px;
     cursor:pointer;text-align:center;background:var(--white);transition:all .2s;

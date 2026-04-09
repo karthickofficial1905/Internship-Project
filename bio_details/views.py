@@ -2145,27 +2145,55 @@ def attendance(request):
                 messages.error(request, f'{employee_user.get_full_name() or employee_user.username} has approved leave on {selected_date.strftime("%d %B %Y")} ({approved_leave.leave_type.title()} Leave from {approved_leave.from_date.strftime("%d %B")} to {approved_leave.to_date.strftime("%d %B %Y")}). Cannot mark attendance on leave day.')
                 return redirect('bio_details:attendance')
             
+            # Check if this date has pending leave application
+            pending_leave = LeaveApplication.objects.filter(
+                user=employee_user,
+                status='pending',
+                from_date__lte=selected_date,
+                to_date__gte=selected_date
+            ).first()
+            
+            if pending_leave:
+                messages.error(request, f'{employee_user.get_full_name() or employee_user.username} has a pending leave application for {selected_date.strftime("%d %B %Y")} ({pending_leave.leave_type.title()} Leave from {pending_leave.from_date.strftime("%d %B")} to {pending_leave.to_date.strftime("%d %B %Y")}). Cannot mark attendance while leave application is pending.')
+                return redirect('bio_details:attendance')
+            
             try:
                 # Check if attendance already exists for this date
-                attendance_record, created = Attendance.objects.get_or_create(
+                existing_attendance = Attendance.objects.filter(
                     user=employee_user,
-                    date=date,
-                    defaults={
-                        'status': status,
-                        'check_in': check_in,
-                        'check_out': check_out
-                    }
-                )
+                    date=date
+                ).first()
                 
-                if not created:
-                    # Update existing record
-                    attendance_record.status = status
-                    attendance_record.check_in = check_in
-                    attendance_record.check_out = check_out
-                    attendance_record.save()
-                    print(f"DEBUG: Updated existing attendance record")
+                if existing_attendance:
+                    # Check if user has permission to update existing attendance
+                    can_update = False
+                    
+                    # Only HR, Admin, or Superuser can update existing attendance
+                    if request.user.is_superuser:
+                        can_update = True
+                    elif hasattr(request.user, 'member') and request.user.member.is_hr_or_admin():
+                        can_update = True
+                    
+                    if not can_update:
+                        messages.error(request, f'Attendance for {employee_user.get_full_name() or employee_user.username} on {selected_date.strftime("%d %B %Y")} already exists. Only HR can update existing attendance records.')
+                        return redirect('bio_details:attendance')
+                    
+                    # Update existing record (HR/Admin only)
+                    existing_attendance.status = status
+                    existing_attendance.check_in = check_in
+                    existing_attendance.check_out = check_out
+                    existing_attendance.save()
+                    print(f"DEBUG: Updated existing attendance record by HR/Admin")
                     messages.success(request, f'Attendance updated successfully for {employee_user.get_full_name() or employee_user.username}!')
                 else:
+                    # Create new attendance record
+                    attendance_record = Attendance.objects.create(
+                        user=employee_user,
+                        date=date,
+                        status=status,
+                        check_in=check_in,
+                        check_out=check_out
+                    )
                     print(f"DEBUG: Created new attendance record")
                     messages.success(request, f'Attendance marked successfully for {employee_user.get_full_name() or employee_user.username}!')
                 
@@ -2216,6 +2244,18 @@ def attendance(request):
                     messages.error(request, f'{employee_user.get_full_name() or employee_user.username} already has a leave application for overlapping dates!')
                     return redirect('bio_details:attendance')
                 
+                # Check if there are existing attendance records for the leave dates and delete them
+                existing_attendance = Attendance.objects.filter(
+                    user=employee_user,
+                    date__gte=from_date_obj,
+                    date__lte=to_date_obj
+                )
+                
+                deleted_count = existing_attendance.count()
+                if deleted_count > 0:
+                    existing_attendance.delete()
+                    print(f"DEBUG: Deleted {deleted_count} attendance records for leave dates")
+                
                 leave_application = LeaveApplication.objects.create(
                     user=employee_user,
                     leave_type=leave_type,
@@ -2225,7 +2265,12 @@ def attendance(request):
                     reason=reason
                 )
                 print(f"DEBUG: Created leave application")
-                messages.success(request, f'Leave application submitted successfully for {employee_user.get_full_name() or employee_user.username}!')
+                
+                success_message = f'Leave application submitted successfully for {employee_user.get_full_name() or employee_user.username}!'
+                if deleted_count > 0:
+                    success_message += f' Existing attendance records ({deleted_count} days) have been removed.'
+                
+                messages.success(request, success_message)
                 return redirect('bio_details:attendance')  # Redirect to prevent resubmission
                 
             except Exception as e:
