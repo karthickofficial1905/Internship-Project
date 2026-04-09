@@ -63,6 +63,7 @@ class Currency(models.Model):
 
 class Member(models.Model):
     ROLE_CHOICES = [
+        ('user', 'User'),
         ('employee', 'Employee'),
         ('hr', 'HR'),
         ('admin', 'Admin'),
@@ -78,7 +79,7 @@ class Member(models.Model):
     date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=50)
     designation = models.CharField(max_length=100)
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='employee')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')
     profile_pic = models.ImageField(upload_to='profile/', null=True, blank=True)
     account_type = models.CharField(max_length=50, null=True, blank=True)
     bank_name = models.CharField(max_length=100, null=True, blank=True)

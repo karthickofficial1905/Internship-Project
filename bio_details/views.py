@@ -90,6 +90,11 @@ def dashboard(request):
     if not request.user.is_authenticated:
         return redirect('bio_details:login')
     
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:product_view')
+    
+    
     total_employees = Member.objects.filter(user__is_superuser=False).count()
     active_employees = Member.objects.filter(account_status=True, user__is_superuser=False).count()
     inactive_employees = Member.objects.filter(account_status=False, user__is_superuser=False).count()
@@ -150,7 +155,10 @@ def login_page(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, "Login successful")
-                return redirect('bio_details:dashboard')
+                if user.is_superuser:
+                    return redirect('bio_details:dashboard')
+                else:
+                    return redirect('bio_details:product_view')
             else:
                 messages.error(request, "Incorrect password")
                 return render(request, "login.html", {"email": email})
@@ -2084,6 +2092,10 @@ def attendance(request):
     if not request.user.is_authenticated:
         return redirect('bio_details:login')
     
+    if hasattr(request.user, 'member') and request.user.member.role == 'user':
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:product_view')
+        
     # Import required modules at the top
     from django.contrib.auth.models import User
     from datetime import datetime, timedelta, date as date_obj
@@ -2281,27 +2293,27 @@ def attendance(request):
                 return redirect('bio_details:attendance')  # Redirect even on error
     
     # Get current user as the only employee (unless admin wants to see all)
-    # For regular users, show only themselves. For admins and HR, show all employees (excluding superusers)
+    # For regular users, show only themselves. For admins and HR, show all employees with 'employee' role only
     if request.user.is_superuser:
-        # Admin can see all employees but not other superusers
+        # Admin can see all employees with 'employee' role only
         employees = User.objects.filter(
             member__isnull=False,
             member__account_status=True,
-            is_superuser=False  # Exclude superusers
+            member__role='employee'  # Only show employees
         ).select_related('member').order_by('first_name', 'last_name', 'username')
     elif hasattr(request.user, 'member') and request.user.member.is_hr_or_admin():
-        # HR can see all employees but not superusers
+        # HR can see all employees with 'employee' role only
         employees = User.objects.filter(
             member__isnull=False,
             member__account_status=True,
-            is_superuser=False  # Exclude superusers
+            member__role='employee'  # Only show employees
         ).select_related('member').order_by('first_name', 'last_name', 'username')
     else:
-        # Regular users see only themselves
-        if hasattr(request.user, 'member'):
+        # Regular users see only themselves if they have employee role
+        if hasattr(request.user, 'member') and request.user.member.role == 'employee':
             employees = User.objects.filter(id=request.user.id).select_related('member')
         else:
-            employees = User.objects.none()  # Empty QuerySet if user doesn't have member profile
+            employees = User.objects.none()  # Empty QuerySet if user doesn't have employee role
     
     # Add today's attendance status and leave information to each employee
     today = date_obj.today()
@@ -2513,7 +2525,7 @@ def manage_leave_applications(request):
     employees = User.objects.filter(
         member__isnull=False,
         member__account_status=True,
-        is_superuser=False
+        member__role='employee'
     ).select_related('member').order_by('first_name', 'last_name', 'username')
     
     # Add today's attendance status to each employee
