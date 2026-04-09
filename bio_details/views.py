@@ -95,9 +95,9 @@ def dashboard(request):
         return redirect('bio_details:product_view')
     
     
-    total_employees = Member.objects.filter(user__is_superuser=False).count()
-    active_employees = Member.objects.filter(account_status=True, user__is_superuser=False).count()
-    inactive_employees = Member.objects.filter(account_status=False, user__is_superuser=False).count()
+    total_employees = Member.objects.filter(user__is_superuser=False,role="employee").count()
+    active_employees = Member.objects.filter(account_status=True,role="employee",user__is_superuser=False).count()
+    inactive_employees = Member.objects.filter(account_status=False,role="employee",user__is_superuser=False).count()
     
     total_products = Product.objects.count()
     available_products = Product.objects.filter(current_stock__gt=0).count()
@@ -158,7 +158,7 @@ def login_page(request):
                 if user.is_superuser:
                     return redirect('bio_details:dashboard')
                 else:
-                    return redirect('bio_details:product_view')
+                    return redirect('bio_details:my_profile')
             else:
                 messages.error(request, "Incorrect password")
                 return render(request, "login.html", {"email": email})
@@ -188,7 +188,7 @@ def table(request):
     except ValueError:
         per_page = 5
     
-    members = Member.objects.all().order_by('id')  # Ensure consistent ordering
+    members = Member.objects.filter(user__is_superuser=False,role='employee').order_by('id')  # Ensure consistent ordering
 
     if search:
         members = members.filter(user__username__icontains=search)
@@ -198,6 +198,33 @@ def table(request):
     page_obj = paginator.get_page(page_number)
 
     return render(request, "tables.html", {"page_obj": page_obj, "members": page_obj})
+
+
+def usertable(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    search = request.GET.get('search')
+    per_page = request.GET.get('per_page', 5) 
+    try:
+        per_page = int(per_page)
+    except ValueError:
+        per_page = 5
+    
+    members = Member.objects.filter(user__is_superuser=False, role='user').order_by('id')  # Ensure consistent ordering
+
+    if search:
+        members = members.filter(user__username__icontains=search)
+
+    paginator = Paginator(members, per_page) 
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, "user.html", {"page_obj": page_obj, "members": page_obj})
 
 
 def delete_member(request, id):
