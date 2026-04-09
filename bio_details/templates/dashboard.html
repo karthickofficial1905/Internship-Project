@@ -2,298 +2,420 @@
 {% block content %}
 {% load static %}
 
+<div class="dash-shell">
 
-<div class="dashboard">
-    <div id="toast-container">
-        {% if messages %}
-            {% for message in messages %}
-                {% if 'cart-toast' in message.tags %}
-                    <div class="toast {{ message.tags }}">
-                        {{ message }}
-                        <div class="toast-timer"></div>
-                    </div>
-                {% endif %}
-            {% endfor %}
+  <!-- Toast -->
+  <div id="toast-container">
+    {% if messages %}
+      {% for message in messages %}
+        {% if 'cart-toast' in message.tags %}
+        <div class="toast toast-{{ message.tags }}">
+          <div class="toast-icon">
+            {% if 'success' in message.tags %}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+            {% elif 'error' in message.tags %}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            {% else %}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            {% endif %}
+          </div>
+          <span class="toast-msg">{{ message }}</span>
+          <div class="toast-bar"></div>
+        </div>
         {% endif %}
-    </div>
-    <div>
-        <div class="dash-main">
-                <div class="dash-icon">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                        <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="white" stroke-width="2"/>
-                        <path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" stroke="white" stroke-width="2"/>
-                    </svg>
-                </div>
-                <div class="dash-content">
-                    <h1>Total Employee</h1>
-                </div>
-                <div class="dash-content">
-                    <h1 class="count">Count: {{ total_employees }}</h1>
-                </div>
-        </div>
-        <div class="dash-2">
-                <div class="dash-main-2">
-                    <div class="dash-icon-small">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="#28a745" stroke-width="2"/>
-                            <path d="m9 12 2 2 4-4" stroke="#28a745" stroke-width="2"/>
-                        </svg>
-                    </div>
-                    <div class="dash-content-small">
-                        <h1>Active</h1>
-                        <h1 class="count-small">{{ active_employees }}</h1>
-                    </div>
-                </div>
-                <div class="dash-main-2">
-                    <div class="dash-icon-small">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="#dc3545" stroke-width="2"/>
-                            <path d="m15 9-6 6" stroke="#dc3545" stroke-width="2"/>
-                            <path d="m9 9 6 6" stroke="#dc3545" stroke-width="2"/>
-                        </svg>
-                    </div>
-                    <div class="dash-content-small">
-                        <h1>Deactive</h1>
-                        <h1 class="count-small">{{ inactive_employees }}</h1>
-                    </div>
-                </div>
-        </div>
-    </div>
+      {% endfor %}
+    {% endif %}
+  </div>
 
-    <div>
-        <div class="dash-main">
-                <div class="dash-icon">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                        <path d="M3 7V17C3 18.1046 3.89543 19 5 19H19C20.1046 19 21 18.1046 21 17V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7Z" stroke="white" stroke-width="2"/>
-                        <path d="M8 12H16" stroke="white" stroke-width="2"/>
-                        <path d="M12 8V16" stroke="white" stroke-width="2"/>
-                    </svg>
-                </div>
-                <div class="dash-content">
-                    <h1>Total Products</h1>
-                </div>
-                <div class="dash-content">
-                    <h1 class="count">Count: {{ total_products }}</h1>
-                </div>
-        </div>
-        <div class="dash-2">
-                <div class="dash-main-2">
-                    <div class="dash-icon-small">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="#28a745" stroke-width="2"/>
-                            <path d="m9 12 2 2 4-4" stroke="#28a745" stroke-width="2"/>
-                        </svg>
-                    </div>
-                    <div class="dash-content-small">
-                        <h1>Available</h1>
-                        <h1 class="count-small">{{ available_products }}</h1>
-                    </div>
-                </div>
-                <div class="dash-main-2">
-                    <div class="dash-icon-small">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="#dc3545" stroke-width="2"/>
-                            <path d="m15 9-6 6" stroke="#dc3545" stroke-width="2"/>
-                            <path d="m9 9 6 6" stroke="#dc3545" stroke-width="2"/>
-                        </svg>
-                    </div>
-                    <div class="dash-content-small">
-                        <h1>Out of Stock</h1>
-                        <h1 class="count-small">{{ out_of_stock_products }}</h1>
-                    </div>
-                </div>
-        </div>
+  <!-- Page Header -->
+  <div class="dash-header">
+    <div class="dash-header-left">
+      <div class="dash-header-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      </div>
+      <div>
+        <p class="dash-eyebrow">Overview</p>
+        <h1 class="dash-title">Dashboard</h1>
+      </div>
     </div>
-    
-    <div>
-        <div class="dash-main">
-                <div class="dash-icon">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                        <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="white" stroke-width="2"/>
-                        <path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" stroke="white" stroke-width="2"/>
-                    </svg>
-                </div>
-                <div class="dash-content">
-                    <h1>Total Orders</h1>
-                </div>
-                <div class="dash-content">
-                    <h1 class="count">Count: {{ total_orders }}</h1>
-                </div>
+    <div class="dash-header-date" id="dash-date"></div>
+  </div>
+
+  <!-- Stat Cards Grid -->
+  <div class="stat-grid">
+
+    <!-- ── EMPLOYEES ── -->
+    <div class="stat-card" style="--accent:#2563eb;--accent-lt:#eff6ff;--accent-mid:#bfdbfe">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+          </svg>
         </div>
-        <div class="dash-2">
-                <div class="dash-main-2">
-                    <div class="dash-icon-small">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="#28a745" stroke-width="2"/>
-                            <path d="m9 12 2 2 4-4" stroke="#28a745" stroke-width="2"/>
-                        </svg>
-                    </div>
-                    <div class="dash-content-small">
-                        <h1>Completed</h1>
-                        <h1 class="count-small">{{ completed_orders }}</h1>
-                    </div>
-                </div>
-                <div class="dash-main-2">
-                    <div class="dash-icon-small">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="12" r="10" stroke="#dc3545" stroke-width="2"/>
-                            <path d="m15 9-6 6" stroke="#dc3545" stroke-width="2"/>
-                            <path d="m9 9 6 6" stroke="#dc3545" stroke-width="2"/>
-                        </svg>
-                    </div>
-                    <div class="dash-content-small">
-                        <h1>Pending</h1>
-                        <h1 class="count-small">{{ pending_orders }}</h1>
-                    </div>
-                </div>
+        <div class="sc-meta">
+          <div class="sc-label">Total Employees</div>
+          <div class="sc-value" data-target="{{ total_employees|default:0 }}">0</div>
         </div>
+        <div class="sc-trend sc-trend-up">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+          Active
+        </div>
+      </div>
+      <div class="sc-divider"></div>
+      <div class="sc-bottom">
+        <div class="sc-sub sc-sub-green">
+          <div class="sc-sub-dot"></div>
+          <span class="sc-sub-lbl">Active</span>
+          <span class="sc-sub-val">{{ active_employees|default:0 }}</span>
+        </div>
+        <div class="sc-sep"></div>
+        <div class="sc-sub sc-sub-red">
+          <div class="sc-sub-dot" style="background:#dc2626"></div>
+          <span class="sc-sub-lbl">Inactive</span>
+          <span class="sc-sub-val">{{ inactive_employees|default:0 }}</span>
+        </div>
+        <div class="sc-bar-wrap">
+          {% if total_employees %}
+          <div class="sc-bar" style="--pct:{% widthratio active_employees total_employees 100 %}%;--clr:#2563eb"></div>
+          {% else %}
+          <div class="sc-bar" style="--pct:0%;--clr:#2563eb"></div>
+          {% endif %}
+        </div>
+      </div>
     </div>
 
-</div>
+    <!-- ── PRODUCTS ── -->
+    <div class="stat-card" style="--accent:#059669;--accent-lt:#ecfdf5;--accent-mid:#a7f3d0">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:linear-gradient(135deg,#047857,#10b981)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+        </div>
+        <div class="sc-meta">
+          <div class="sc-label">Total Products</div>
+          <div class="sc-value" data-target="{{ total_products|default:0 }}">0</div>
+        </div>
+        <div class="sc-trend sc-trend-green">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+          In Stock
+        </div>
+      </div>
+      <div class="sc-divider"></div>
+      <div class="sc-bottom">
+        <div class="sc-sub sc-sub-green">
+          <div class="sc-sub-dot"></div>
+          <span class="sc-sub-lbl">Available</span>
+          <span class="sc-sub-val">{{ available_products|default:0 }}</span>
+        </div>
+        <div class="sc-sep"></div>
+        <div class="sc-sub sc-sub-red">
+          <div class="sc-sub-dot" style="background:#dc2626"></div>
+          <span class="sc-sub-lbl">Out of Stock</span>
+          <span class="sc-sub-val">{{ out_of_stock_products|default:0 }}</span>
+        </div>
+        <div class="sc-bar-wrap">
+          {% if total_products %}
+          <div class="sc-bar" style="--pct:{% widthratio available_products total_products 100 %}%;--clr:#059669"></div>
+          {% else %}
+          <div class="sc-bar" style="--pct:0%;--clr:#059669"></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
 
+    <!-- ── ORDERS ── -->
+    <div class="stat-card" style="--accent:#d97706;--accent-lt:#fffbeb;--accent-mid:#fde68a">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:linear-gradient(135deg,#b45309,#f59e0b)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <path d="M16 10a4 4 0 01-8 0"/>
+          </svg>
+        </div>
+        <div class="sc-meta">
+          <div class="sc-label">Total Orders</div>
+          <div class="sc-value" data-target="{{ total_orders|default:0 }}">0</div>
+        </div>
+        <div class="sc-trend sc-trend-amber">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+          Orders
+        </div>
+      </div>
+      <div class="sc-divider"></div>
+      <div class="sc-bottom">
+        <div class="sc-sub sc-sub-green">
+          <div class="sc-sub-dot"></div>
+          <span class="sc-sub-lbl">Completed</span>
+          <span class="sc-sub-val">{{ completed_orders|default:0 }}</span>
+        </div>
+        <div class="sc-sep"></div>
+        <div class="sc-sub sc-sub-amber">
+          <div class="sc-sub-dot" style="background:#d97706"></div>
+          <span class="sc-sub-lbl">Pending</span>
+          <span class="sc-sub-val">{{ pending_orders|default:0 }}</span>
+        </div>
+        <div class="sc-bar-wrap">
+          {% if total_orders %}
+          <div class="sc-bar" style="--pct:{% widthratio completed_orders total_orders 100 %}%;--clr:#d97706"></div>
+          {% else %}
+          <div class="sc-bar" style="--pct:0%;--clr:#d97706"></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
 
+  </div><!-- /stat-grid -->
 
+  <!-- Quick Info Row -->
+  <div class="quick-row">
+    <div class="quick-card">
+      <div class="qc-icon" style="background:#eff6ff;color:#2563eb">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </div>
+      <div class="qc-info">
+        <div class="qc-lbl">Employee Rate</div>
+        <div class="qc-val">
+          {% if total_employees %}{% widthratio active_employees total_employees 100 %}%{% else %}—{% endif %}
+        </div>
+      </div>
+      <div class="qc-spark qc-spark-blue"></div>
+    </div>
+    <div class="quick-card">
+      <div class="qc-icon" style="background:#ecfdf5;color:#059669">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      </div>
+      <div class="qc-info">
+        <div class="qc-lbl">Stock Rate</div>
+        <div class="qc-val">
+          {% if total_products %}{% widthratio available_products total_products 100 %}%{% else %}—{% endif %}
+        </div>
+      </div>
+      <div class="qc-spark qc-spark-green"></div>
+    </div>
+    <div class="quick-card">
+      <div class="qc-icon" style="background:#fffbeb;color:#d97706">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+      </div>
+      <div class="qc-info">
+        <div class="qc-lbl">Order Completion</div>
+        <div class="qc-val">
+          {% if total_orders %}{% widthratio completed_orders total_orders 100 %}%{% else %}—{% endif %}
+        </div>
+      </div>
+      <div class="qc-spark qc-spark-amber"></div>
+    </div>
+    <div class="quick-card">
+      <div class="qc-icon" style="background:#fef2f2;color:#dc2626">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div class="qc-info">
+        <div class="qc-lbl">Pending Orders</div>
+        <div class="qc-val" style="color:#dc2626">{{ pending_orders|default:0 }}</div>
+      </div>
+      <div class="qc-spark qc-spark-red"></div>
+    </div>
+  </div>
 
+</div><!-- /dash-shell -->
 
+<script>
+/* DATE */
+(function(){
+  var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var d=new Date();
+  var el=document.getElementById('dash-date');
+  if(el) el.innerHTML='<span class="dh-wd">'+DAYS[d.getDay()]+'</span><span class="dh-sep">·</span><span class="dh-dt">'+d.getDate()+' '+MONTHS[d.getMonth()]+' '+d.getFullYear()+'</span>';
+})();
 
+/* COUNT-UP ANIMATION */
+document.querySelectorAll('.sc-value[data-target]').forEach(function(el){
+  var target = parseInt(el.dataset.target) || 0;
+  var duration = 1200;
+  var start = performance.now();
+  function step(now){
+    var progress = Math.min((now - start) / duration, 1);
+    var eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(eased * target).toLocaleString();
+    if(progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+});
+
+/* SIDEBAR */
+document.addEventListener('DOMContentLoaded', function(){
+  var shell = document.querySelector('.dash-shell');
+  var mb2   = document.querySelector('.menu-bar2');
+  var sv1   = document.querySelector('.svg1');
+  var sv3   = document.querySelector('.svg3');
+  if(sv1) sv1.addEventListener('click', function(){ if(mb2) mb2.classList.remove('active'); if(shell) shell.classList.remove('shifted'); });
+  if(sv3) sv3.addEventListener('click', function(){ if(mb2) mb2.classList.add('active'); if(shell) shell.classList.add('shifted'); });
+});
+
+/* TOASTS */
+setTimeout(function(){
+  document.querySelectorAll('.toast').forEach(function(t){
+    t.style.opacity='0'; t.style.transform='translateX(110%)';
+    setTimeout(function(){ t.remove(); }, 400);
+  });
+}, 3500);
+</script>
 
 <style>
-.dashboard {
-    display: flex;
-    gap: 10px;
-   
+:root{
+  --navy:#1e3a8a;--accent:#2563eb;--green:#059669;--amber:#d97706;--red:#dc2626;
+  --slate:#64748b;--border:#e2e8f0;--bg:#f1f5fb;--white:#fff;--text:#0f172a;
+  --sh:0 4px 24px rgba(15,37,87,0.09);
+  --fn:'DM Sans',system-ui,sans-serif;--fh:'Syne',system-ui,sans-serif;
 }
 
-.dashboard > div {
-    flex: 1;
-    min-width: 0;
+.dash-shell{
+  font-family:var(--fn);color:var(--text);
+  margin:120px 40px 60px 360px;transition:margin-left .3s;
+}
+.dash-shell.shifted{margin-left:90px}
+
+/* ── PAGE HEADER ── */
+.dash-header{
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(135deg,#002560 0%,#1d4ed8 100%);
+  border-radius:16px;padding:22px 30px;margin-bottom:24px;
+  box-shadow:0 8px 32px rgba(15,37,87,.22);
+}
+.dash-header-left{display:flex;align-items:center;gap:14px}
+.dash-header-icon{
+  width:44px;height:44px;background:rgba(255,255,255,.15);
+  border-radius:12px;display:flex;align-items:center;justify-content:center;
+}
+.dash-eyebrow{font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;
+  color:rgba(255,255,255,.6);margin:0 0 3px}
+.dash-title{font-family:var(--fh);font-size:24px;font-weight:800;color:#fff;margin:0;letter-spacing:-.5px}
+.dash-header-date{display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  border-radius:10px;padding:10px 16px}
+.dh-wd{font-family:var(--fh);font-size:12px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase}
+.dh-sep{color:rgba(255,255,255,.3);font-size:14px}
+.dh-dt{font-family:var(--fh);font-size:13px;font-weight:700;color:#fff}
+
+/* ── STAT GRID ── */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:18px}
+
+.stat-card{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:16px;overflow:hidden;box-shadow:var(--sh);
+  transition:transform .2s,box-shadow .2s;
+  position:relative;
+}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 60%,white));
+}
+.stat-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(15,37,87,.14)}
+
+.sc-top{display:flex;align-items:center;gap:14px;padding:20px 20px 16px}
+.sc-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.sc-meta{flex:1}
+.sc-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--slate);margin-bottom:4px}
+.sc-value{font-family:var(--fh);font-size:32px;font-weight:800;color:var(--text);line-height:1}
+.sc-trend{display:flex;align-items:center;gap:4px;font-family:var(--fh);
+  font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:4px 10px;border-radius:20px;}
+.sc-trend-up{background:#eff6ff;color:#2563eb}
+.sc-trend-green{background:#ecfdf5;color:#059669}
+.sc-trend-amber{background:#fffbeb;color:#d97706}
+
+.sc-divider{height:1px;background:var(--border);margin:0 20px}
+
+.sc-bottom{padding:14px 20px 18px}
+.sc-sub{display:flex;align-items:center;gap:7px;margin-bottom:10px}
+.sc-sub-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sc-sub-green .sc-sub-dot{background:var(--green)}
+.sc-sub-red .sc-sub-dot{background:var(--red)}
+.sc-sub-amber .sc-sub-dot{background:var(--amber)}
+.sc-sub-lbl{font-size:12px;color:var(--slate);font-weight:500;flex:1}
+.sc-sub-val{font-family:var(--fh);font-size:14px;font-weight:800;color:var(--text)}
+.sc-sep{height:1px;background:var(--bg);margin:2px 0 10px}
+
+/* Progress bar */
+.sc-bar-wrap{height:6px;background:var(--bg);border-radius:20px;overflow:hidden;margin-top:4px}
+.sc-bar{
+  height:100%;border-radius:20px;
+  background:var(--clr);
+  width:var(--pct);
+  transition:width 1.2s cubic-bezier(.22,1,.36,1);
 }
 
+/* ── QUICK ROW ── */
+.quick-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.quick-card{
+  background:var(--white);border:1px solid var(--border);border-radius:12px;
+  padding:16px;display:flex;align-items:center;gap:12px;
+  box-shadow:var(--sh);transition:border-color .2s,box-shadow .2s;
+}
+.quick-card:hover{border-color:#c7d2e8;box-shadow:0 6px 20px rgba(15,37,87,.1)}
+.qc-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0}
+.qc-info{flex:1}
+.qc-lbl{font-size:11px;color:var(--slate);font-weight:500;margin-bottom:2px}
+.qc-val{font-family:var(--fh);font-size:18px;font-weight:800;color:var(--text)}
+.qc-spark{width:40px;height:24px;border-radius:4px;flex-shrink:0}
+.qc-spark-blue{background:linear-gradient(135deg,#dbeafe,#bfdbfe)}
+.qc-spark-green{background:linear-gradient(135deg,#d1fae5,#a7f3d0)}
+.qc-spark-amber{background:linear-gradient(135deg,#fef3c7,#fde68a)}
+.qc-spark-red{background:linear-gradient(135deg,#fee2e2,#fecaca)}
 
-    #toast-container{
-            position:fixed;
-            top:30px;
-            right:40px;
-            z-index:9999;
-            display:flex;
-            flex-direction:column;
-            gap:12px;
-        } 
+/* ── TOASTS ── */
+#toast-container{position:fixed;top:28px;right:28px;z-index:9999;
+  display:flex;flex-direction:column;gap:10px}
+.toast{
+  background:var(--white);border-radius:12px;min-width:280px;max-width:380px;
+  box-shadow:0 8px 24px rgba(0,0,0,.12);overflow:hidden;
+  display:flex;align-items:center;gap:10px;padding:14px 16px;
+  animation:slideInToast .35s cubic-bezier(.68,-.55,.265,1.55) forwards;
+  position:relative;transition:opacity .4s,transform .4s;
+}
+.toast-success{border-left:4px solid var(--green)}
+.toast-success .toast-icon{background:#d1fae5;color:#065f46}
+.toast-error{border-left:4px solid var(--red)}
+.toast-error .toast-icon{background:#fee2e2;color:#991b1b}
+.toast-warning{border-left:4px solid var(--amber)}
+.toast-warning .toast-icon{background:#fef9c3;color:#854d0e}
+.toast-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0}
+.toast-msg{flex:1;font-size:13px;font-weight:600;color:var(--text)}
+.toast-bar{position:absolute;bottom:0;left:0;height:3px;width:100%;
+  background:linear-gradient(90deg,var(--accent),var(--green));
+  animation:barShrink 3.5s linear forwards}
+@keyframes slideInToast{
+  from{transform:translateX(110%);opacity:0}
+  to{transform:translateX(0);opacity:1}
+}
+@keyframes barShrink{from{width:100%}to{width:0}}
 
-        .toast{
-            background:linear-gradient(135deg,#ffffff,#f8f9ff);
-            padding:20px 20px;
-            border-radius:10px;
-            min-width:270px;
-            box-shadow:0 8px 20px rgba(0,0,0,0.15);
-            font-size:18px;
-            position:relative;
-            font-weight:900;
-            display:flex;
-            align-items:center;
-            gap:10px;
-            animation:slideIn 0.4s ease;
-        }
-
-        /* success message */
-        .toast.success{
-            border-left:6px solid #2ecc71;
-            color:#155724;
-        }
-
-        /* error message */
-        .toast.error{
-            border-left:6px solid #e74c3c;
-            color:#721c24;
-        }
-
-        /* warning message */
-        .toast.warning{
-            border-left:6px solid #f39c12;
-            color:#7a5200;
-        }
-
-        /* timer bar */
-        .toast-timer{
-            position:absolute;
-            bottom:0;
-            left:0;
-            height:4px;
-            width:100%;
-            background:linear-gradient(90deg,#4e73df,#1cc88a);
-            animation:timerBar 3s linear forwards;
-        }
-
-        /* slide animation */
-        @keyframes slideIn{
-            from{
-                transform:translateX(100%);
-                opacity:0;
-            }
-            to{
-                transform:translateX(0);
-                opacity:1;
-            }
-        }
-
-        /* timer animation */
-        @keyframes timerBar{
-            from{width:100%;}
-            to{width:0%;}
-        }
-    @media(max-width: 1024px) {
-        .shop-main {
-            margin-left: 20px;
-            margin-right: 20px;
-        }
-        .product-detail {
-            grid-template-columns: 1fr;
-            gap: 30px;
-        }
-        #toast-container{
-        right:50px;
-        left:10px;
-        top:15px;
-        }
-
-        .toast{
-            width:100%;
-            max-width:100%;
-            font-size:14px;
-            padding:12px 15px;
-            border-radius:8px;
-        }
-    }
+/* ── RESPONSIVE ── */
+@media(max-width:1200px){.dash-shell{margin-left:20px;margin-right:20px;margin-top:90px;margin-bottom:100px}}
+@media(max-width:1024px){
+  .stat-grid{grid-template-columns:1fr}
+  .quick-row{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:768px){
+  .dash-shell{margin:100px 12px 120px}
+  .dash-header{flex-direction:column;align-items:flex-start;gap:12px;padding:18px}
+  .quick-row{grid-template-columns:1fr}
+  #toast-container{right:10px;left:10px;top:12px}
+  .toast{min-width:auto;max-width:100%}
+}
 </style>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-
-        const dashboard = document.querySelector('.dashboard');
-        const menuBar2 = document.querySelector('.menu-bar2');
-        const svg1 = document.querySelector('.svg1');
-        const svg3 = document.querySelector('.svg3');
-
-        svg1.addEventListener('click', () => {
-            menuBar2.classList.remove('active');
-            dashboard.classList.remove('shifted');
-        });
-
-        svg3.addEventListener('click', () => {
-            menuBar2.classList.add('active');
-            dashboard.classList.add('shifted');
-        });
-
-    });
-</script>
-<script>
-setTimeout(function(){
-    document.querySelectorAll(".toast").forEach(function(toast){
-        toast.style.opacity="0";
-        toast.style.transform="translateX(100%)";
-        setTimeout(()=>toast.remove(),400);
-    });
-},3000);
-</script>
-
-{% endblock%}
+{% endblock %}

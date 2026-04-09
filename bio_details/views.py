@@ -52,7 +52,7 @@ def members(request):
                 user=user,
                 phone=phone,
                 designation=request.POST.get('designation'),
-                role=request.POST.get('role', 'employee'),  # Default to employee if not provided
+                role=request.POST.get('role', 'user'),  # Default to employee if not provided
                 address1=request.POST.get('address1'),
                 city=request.POST.get('city'),
                 state=request.POST.get('state'),
