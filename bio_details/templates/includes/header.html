@@ -168,13 +168,14 @@
             <svg class="svg3" xmlns="http://www.w3.org/2000/svg" height="32px" viewBox="0 -960 960 960" width="32px" fill="black"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
         </div>
         <ul class="menu-list">
-            {%if user.is_authenticated and user.member and user.member.role == 'user' %}
-                <a href="/my-profile/" class="menu-bar2-text {% if request.path == '/my-profile/' %}active{% endif %}">
+            {%if user.is_authenticated and not user.is_superuser %}
+               <a href="{% url 'bio_details:user_profile_detail' user.id %}" class="menu-bar2-text {% if request.resolver_match.url_name == 'user_profile_detail' %}active{% endif %}">
                     <li style="display: flex; align-items: center; gap: 10px;">
-                        <svg  xmlns="http://www.w3.org/2000/svg" height="35px" viewBox="0 -960 960 960" width="35px" fill="black"><path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Zm80-80h480v-32q0-11-5.5-20T700-306q-54-27-109-40.5T480-360q-56 0-111 13.5T260-306q-9 5-14.5 14t-5.5 20v32Zm240-320q33 0 56.5-23.5T560-640q0-33-23.5-56.5T480-720q-33 0-56.5 23.5T400-640q0 33 23.5 56.5T480-560Zm0-80Zm0 400Z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" height="35px" viewBox="0 -960 960 960" width="35px" fill="black"><path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Zm80-80h480v-32q0-11-5.5-20T700-306q-54-27-109-40.5T480-360q-56 0-111 13.5T260-306q-9 5-14.5 14t-5.5 20v32Zm240-320q33 0 56.5-23.5T560-640q0-33-23.5-56.5T480-720q-33 0-56.5 23.5T400-640q0 33 23.5 56.5T480-560Zm0-80Zm0 400Z"/></svg>
                         My profile
                     </li>
                 </a>
+
                 <a href="/my-orders/" class="menu-bar2-text {% if request.path == '/my-orders/' %}active{% endif %}">
                     <li style="display: flex; align-items: center; gap: 10px;">
                         <svg xmlns="http://www.w3.org/2000/svg" height="35px" viewBox="0 -960 960 960" width="35px" fill="black"><path d="M160-160v-516L82-846l72-34 94 202h464l94-202 72 34-78 170v516H160Zm240-280h160q17 0 28.5-11.5T600-480q0-17-11.5-28.5T560-520H400q-17 0-28.5 11.5T360-480q0 17 11.5 28.5T400-440ZM240-240h480v-358H240v358Zm0 0v-358 358Z"/></svg>
@@ -204,7 +205,7 @@
                 </a>
             {% endif %}
            
-            {%if user.is_authenticated and user.member and user.member.role == 'admin' %}
+            {%if user.is_superuser %}
                 <a href="/dashboard/" class="menu-bar2-text {% if request.path == '/dashboard/' %}active{% endif %}">
                     <li style="display: flex; align-items: center; gap: 10px;">
                         <svg xmlns="http://www.w3.org/2000/svg" height="35px" viewBox="0 -960 960 960" width="35px" fill="black"><path d="M520-600v-240h320v240H520ZM120-440v-400h320v400H120Zm400 320v-400h320v400H520Zm-400 0v-240h320v240H120Zm80-400h160v-240H200v240Zm400 320h160v-240H600v240Zm0-480h160v-80H600v80ZM200-200h160v-80H200v80Zm160-320Zm240-160Zm0 240ZM360-280Z"/></svg>
@@ -225,7 +226,7 @@
                         Invoice Management
                     </li>
                 </a>
-                <a href="/usertable/" class="menu-bar2-text {% if request.path == '/usertable/' %}active{% endif %}">
+                <a href="/user-profiles/" class="menu-bar2-text {% if request.path == '/user-profiles/' %}active{% endif %}">
                     <li style="display: flex; align-items: center; gap: 10px;">
                         <svg xmlns="http://www.w3.org/2000/svg" height="35px" viewBox="0 -960 960 960" width="38px" fill="black"><path d="M381-481q-41-41-41-99t41-99q41-41 99-41t99 41q41 41 41 99t-41 99q-41 41-99 41t-99-41Zm141.5-56.5Q540-555 540-580t-17.5-42.5Q505-640 480-640t-42.5 17.5Q420-605 420-580t17.5 42.5Q455-520 480-520t42.5-17.5ZM480-60 120-280v-400l360-220 360 220v400L480-60Zm0-93 147-91q-34-18-71.5-27t-75.5-9q-38 0-75.5 9T333-244l147 91ZM256-291q50-34 107-51.5T480-360q60 0 117 17.5T704-291l56-33v-311L480-806 200-635v311l56 33Zm224-189Z"/></svg>
                         User Management

@@ -61,16 +61,45 @@ class Currency(models.Model):
         db_table = 'currency'
 
 
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    profile_id = models.CharField(max_length=10, unique=True, null=True, blank=True)
+    phone = models.CharField(max_length=15, null=True, blank=True)
+    address1 = models.CharField(max_length=200, null=True, blank=True)
+    city = models.CharField(max_length=50)
+    state = models.CharField(max_length=50)
+    pincode = models.CharField(max_length=10, null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=50)
+    
+    def save(self, *args, **kwargs):
+        if not self.profile_id:
+            last_user = UserProfile.objects.order_by('-id').first()
+            if last_user and last_user.profile_id:
+                last_id = int(last_user.profile_id.replace('USR', ''))
+                new_id = last_id + 1
+            else:
+                new_id = 1
+            self.profile_id = f"USR{new_id:03d}"
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return self.user.username
+    
+    class Meta:
+        db_table = 'user_profile'
+
 class Member(models.Model):
     ROLE_CHOICES = [
-        ('user', 'User'),
         ('employee', 'Employee'),
         ('hr', 'HR'),
         ('admin', 'Admin'),
     ]
     
     emp_id = models.CharField(max_length=10, unique=True, null=True, blank=True)
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100,null=True, blank=True)
+    email = models.EmailField(unique=True,null=True, blank=True)
     phone = models.CharField(max_length=15)
     address1 = models.CharField(max_length=200, null=True, blank=True)
     city = models.CharField(max_length=50)
@@ -79,7 +108,7 @@ class Member(models.Model):
     date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=50)
     designation = models.CharField(max_length=100)
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='employee')
     profile_pic = models.ImageField(upload_to='profile/', null=True, blank=True)
     account_type = models.CharField(max_length=50, null=True, blank=True)
     bank_name = models.CharField(max_length=100, null=True, blank=True)
@@ -106,18 +135,16 @@ class Member(models.Model):
 
     def is_hr_or_admin(self):
         """Check if user is HR or Admin"""
-        return self.role in ['hr', 'admin'] or self.user.is_superuser
+        return self.role in ['hr', 'admin']
     
     def is_hr(self):
         """Check if user is HR"""
         return self.role == 'hr'
     
     def __str__(self):
-        return self.user.username
-
+        return self.name or self.emp_id or f"Member {self.id}"
     class Meta:
-        db_table = 'member_details'
-
+        db_table = 'bio_details_member' 
 
 
 class Category(models.Model):
@@ -495,8 +522,8 @@ class Attendance(models.Model):
         ('half_day', 'Half Day'),
     ]
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='attendance_records')
-    date = models.DateField()
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='attendance_records')
+    date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES)
     check_in = models.TimeField(null=True, blank=True)
     check_out = models.TimeField(null=True, blank=True)
@@ -541,7 +568,7 @@ class Attendance(models.Model):
         super().save(*args, **kwargs)
     
     def __str__(self):
-        return f"{self.user.username} - {self.date} - {self.status}"
+        return f"{self.member} - {self.date} - {self.status}"
     
     @property
     def formatted_hours(self):
@@ -555,7 +582,7 @@ class Attendance(models.Model):
     
     class Meta:
         db_table = 'attendance'
-        unique_together = ('user', 'date')
+        unique_together = ('member', 'date')
         ordering = ['-date']
 
 
@@ -578,12 +605,12 @@ class LeaveApplication(models.Model):
         ('rejected', 'Rejected'),
     ]
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='leave_applications')
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='leave_applications')
     leave_type = models.CharField(max_length=10, choices=LEAVE_TYPE_CHOICES)
     duration = models.CharField(max_length=10, choices=DURATION_CHOICES)
-    from_date = models.DateField()
-    to_date = models.DateField()
-    reason = models.TextField()
+    from_date = models.DateField(null=True, blank=True)
+    to_date = models.DateField(null=True, blank=True)
+    reason = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     applied_at = models.DateTimeField(auto_now_add=True)
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_leaves')
@@ -596,7 +623,7 @@ class LeaveApplication(models.Model):
         return days / 2 if self.duration == 'half_day' else days
     
     def __str__(self):
-        return f"{self.user.username} - {self.leave_type} ({self.from_date} to {self.to_date})"
+        return f"{self.member} - {self.leave_type} ({self.from_date} to {self.to_date})"
     
     class Meta:
         db_table = 'leave_application'

@@ -1,0 +1,621 @@
+{% extends "main.html" %}
+{% block content %}
+{% load static %}
+
+
+<div class="profile-wrapper">
+
+  <!-- Hero Banner -->
+  <div class="profile-hero">
+    <div class="hero-bg"></div>
+    <div class="hero-content">
+      <div class="avatar-ring">
+        {% if user.member.profile_pic %}
+          <img src="{{ user.member.profile_pic.url }}" alt="Profile" class="avatar-img" id="profileImage">
+        {% else %}
+          <div class="avatar-placeholder" id="profileImage">
+            <span>{{ user.username|first|upper }}</span>
+          </div>
+        {% endif %}
+        <input type="file" id="profileImageInput" accept="image/*" style="display:none;">
+        <div class="avatar-edit-btn" id="imageEditOverlay" style="display:none;" onclick="document.getElementById('profileImageInput').click()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </div>
+      </div>
+      <div class="hero-info">
+        <h1 class="hero-name" id="heroName">{{ user.get_full_name|default:user.username }}</h1>
+        <p class="hero-designation">{% if user.member %}{{ user.member.designation|default:"Team Member" }}{% else %}Team Member{% endif %}</p>
+        <div class="hero-meta">
+          <span class="meta-badge">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/></svg>
+            EMP: {% if user.member %}{{ user.member.emp_id }}{% else %}—{% endif %}
+          </span>
+          <span class="meta-badge status-badge {% if user.member and user.member.account_status %}active{% else %}inactive{% endif %}">
+            <span class="status-dot"></span>
+            {% if user.member %}{% if user.member.account_status %}Active{% else %}Inactive{% endif %}{% else %}No Profile{% endif %}
+          </span>
+          <span class="meta-badge">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Since {{ user.date_joined|date:"M Y" }}
+          </span>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button id="editBtn" class="btn btn-edit">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit Profile
+        </button>
+        <button id="saveBtn" class="btn btn-save" style="display:none;">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Save Changes
+        </button>
+        <button id="cancelBtn" class="btn btn-cancel" style="display:none;">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Sections -->
+  <div class="profile-body">
+    {% csrf_token %}
+
+    <!-- Personal Info -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <h3>Personal Information</h3>
+      </div>
+      <div class="fields-grid">
+        <div class="field-item">
+          <label>Full Name</label>
+          <div class="field-value" data-field="full_name">{{ user.get_full_name|default:user.username }}</div>
+          <input type="text" class="field-input detail-input" data-field="full_name" value="{{ user.get_full_name|default:user.username }}" style="display:none;" placeholder="Enter full name">
+        </div>
+        <div class="field-item">
+          <label>Email Address</label>
+          <div class="field-value detail-value" data-field="email">{{ user.email }}</div>
+          <input type="email" class="field-input detail-input" data-field="email" value="{{ user.email }}" style="display:none;" placeholder="Enter email">
+        </div>
+        <div class="field-item">
+          <label>Phone Number</label>
+          <div class="field-value detail-value" data-field="phone">{% if user.member %}{{ user.member.phone|default:"Not provided" }}{% else %}Not provided{% endif %}</div>
+          <input type="text" class="field-input detail-input" data-field="phone" value="{% if user.member %}{{ user.member.phone|default:'' }}{% endif %}" style="display:none;" placeholder="Enter phone">
+        </div>
+        <div class="field-item">
+          <label>Designation</label>
+          <div class="field-value detail-value" data-field="designation">{% if user.member %}{{ user.member.designation|default:"Not specified" }}{% else %}Not specified{% endif %}</div>
+          <input type="text" class="field-input detail-input" data-field="designation" value="{% if user.member %}{{ user.member.designation|default:'' }}{% endif %}" style="display:none;" placeholder="Enter designation">
+        </div>
+        <div class="field-item">
+          <label>Gender</label>
+          <div class="field-value detail-value" data-field="gender">{% if user.member %}{{ user.member.gender|default:"Not specified" }}{% else %}Not specified{% endif %}</div>
+          <select class="field-input detail-input" data-field="gender" style="display:none;">
+            <option value="Male" {% if user.member.gender == 'Male' %}selected{% endif %}>Male</option>
+            <option value="Female" {% if user.member.gender == 'Female' %}selected{% endif %}>Female</option>
+            <option value="Other" {% if user.member.gender == 'Other' %}selected{% endif %}>Other</option>
+          </select>
+        </div>
+        <div class="field-item">
+          <label>Date of Birth</label>
+          <div class="field-value detail-value" data-field="date_of_birth">{% if user.member %}{{ user.member.date_of_birth|default:"Not provided" }}{% else %}Not provided{% endif %}</div>
+          <input type="date" class="field-input detail-input" data-field="date_of_birth" value="{% if user.member %}{{ user.member.date_of_birth|date:'Y-m-d'|default:'' }}{% endif %}" style="display:none;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Address -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-icon">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <h3>Address Details</h3>
+      </div>
+      <div class="fields-grid">
+        <div class="field-item">
+          <label>City</label>
+          <div class="field-value detail-value" data-field="city">{% if user.member %}{{ user.member.city|default:"Not provided" }}{% else %}Not provided{% endif %}</div>
+          <input type="text" class="field-input detail-input" data-field="city" value="{% if user.member %}{{ user.member.city|default:'' }}{% endif %}" style="display:none;" placeholder="Enter city">
+        </div>
+        <div class="field-item">
+          <label>State</label>
+          <div class="field-value detail-value" data-field="state">{% if user.member %}{{ user.member.state|default:"Not provided" }}{% else %}Not provided{% endif %}</div>
+          <input type="text" class="field-input detail-input" data-field="state" value="{% if user.member %}{{ user.member.state|default:'' }}{% endif %}" style="display:none;" placeholder="Enter state">
+        </div>
+        <div class="field-item">
+          <label>Pincode</label>
+          <div class="field-value detail-value" data-field="pincode">{% if user.member %}{{ user.member.pincode|default:"Not provided" }}{% else %}Not provided{% endif %}</div>
+          <input type="text" class="field-input detail-input" data-field="pincode" value="{% if user.member %}{{ user.member.pincode|default:'' }}{% endif %}" style="display:none;" placeholder="Enter pincode">
+        </div>
+         <div class="field-item span-2">
+          <label>Address</label>
+          <div class="field-value detail-value" data-field="address1">{% if user.member %}{{ user.member.address1|default:"Not provided" }}{% else %}Not provided{% endif %}</div>
+          <textarea class="field-input detail-input" data-field="address1" style="display:none;" placeholder="Enter address">{% if user.member %}{{ user.member.address1|default:'' }}{% endif %}</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+    .profile-wrapper.shifted{
+        margin-left:100px;
+    }
+
+  :root {
+    --blue: #0052cc;
+    --blue-light: #e8f0fe;
+    --blue-mid: #4285f4;
+    --dark: #0a1628;
+    --text: #2d3748;
+    --muted: #718096;
+    --border: #e2e8f0;
+    --white: #ffffff;
+    --success: #10b981;
+    --danger: #ef4444;
+    --card-shadow: 0 2px 16px rgba(0,82,204,0.08);
+  }
+
+  body { background: #f0f4ff; }
+
+  .profile-wrapper {
+    margin-top: 140px;
+    margin-left: 360px;
+    margin-right: 24px;
+    margin-bottom: 150px;
+     font-family: "Roboto", sans-serif;
+    transition: margin-left 0.3s ease;
+  }
+
+  /* ── HERO ── */
+  .profile-hero {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 24px;
+    background: var(--dark);
+  }
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #0a1628 0%, #0052cc 55%, #1a73e8 100%);
+    opacity: .95;
+  }
+  .hero-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  .hero-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 36px 40px;
+    flex-wrap: wrap;
+  }
+
+  /* Avatar */
+  .avatar-ring {
+    position: relative;
+    flex-shrink: 0;
+    width: 110px;
+    height: 110px;
+  }
+  .avatar-ring::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.3) 100%);
+    z-index: 0;
+  }
+  .avatar-img, .avatar-placeholder {
+    position: relative;
+    z-index: 0;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(255,255,255,0.9);
+  }
+  .avatar-placeholder {
+    background: linear-gradient(135deg, #1a73e8, #0a1628);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Roboto", sans-serif;
+    font-size: 42px;
+    color: white;
+    font-weight: 700;
+  }
+  .avatar-edit-btn {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    z-index: 2;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: white;
+    color: var(--blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+  }
+  .avatar-edit-btn:hover { transform: scale(1.12); }
+
+  /* Hero Info */
+  .hero-info { flex: 1; min-width: 200px; }
+  .hero-name {
+    font-family: "Roboto", sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: white;
+    line-height: 1.2;
+    margin-bottom: 6px;
+    letter-spacing: -0.3px;
+  }
+  .hero-designation {
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    font-weight: 400;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+  }
+  .hero-meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .meta-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.18);
+    color: rgba(255,255,255,0.9);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    backdrop-filter: blur(4px);
+  }
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 2px rgba(16,185,129,0.3);
+  }
+  .status-badge.inactive .status-dot {
+    background: #ef4444;
+    box-shadow: 0 0 0 2px rgba(239,68,68,0.3);
+  }
+
+  /* Buttons */
+  .hero-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+     font-family: "Roboto", sans-serif;
+    transition: all 0.2s ease;
+    letter-spacing: 0.2px;
+  }
+  .btn-edit {
+    background: rgba(255,255,255,0.15);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    backdrop-filter: blur(4px);
+  }
+  .btn-edit:hover { background: rgba(255,255,255,0.25); transform: translateY(-1px); }
+  .btn-save {
+    background: var(--success);
+    color: white;
+    box-shadow: 0 4px 12px rgba(16,185,129,0.35);
+  }
+  .btn-save:hover { background: #059669; transform: translateY(-1px); }
+  .btn-cancel {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.8);
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .btn-cancel:hover { background: rgba(255,255,255,0.18); }
+
+  /* ── BODY ── */
+  .profile-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .section-card {
+    background: white;
+    border-radius: 16px;
+    padding: 28px 32px;
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--border);
+    animation: slideUp 0.4s ease both;
+  }
+  .section-card:nth-child(2) { animation-delay: 0.05s; }
+  .section-card:nth-child(3) { animation-delay: 0.1s; }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--blue-light);
+    color: var(--blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .section-header h3 {
+    font-family: "Roboto", sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--dark);
+  }
+
+  /* Fields */
+  .fields-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px 28px;
+  }
+  .field-item { display: flex; flex-direction: column; gap: 10px; margin-right:10px; }
+  .field-item.span-2 { grid-column: span 2; }
+
+  .field-item label {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .field-value {
+    font-size: 15px;
+    color: var(--text);
+    font-weight: 500;
+    padding: 10px 0;
+    border-bottom: 2px solid transparent;
+    min-height: 40px;
+    transition: color 0.2s;
+  }
+  .field-input {
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 500;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    outline: none;
+     font-family: "Roboto", sans-serif;
+    background: #fafbff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+  .field-input:focus {
+    border-color: var(--blue-mid);
+    box-shadow: 0 0 0 3px rgba(66,133,244,0.12);
+    background: white;
+  }
+  textarea.field-input { resize: vertical; min-height: 80px; }
+  select.field-input { cursor: pointer; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    background: var(--dark);
+    color: white;
+    padding: 14px 22px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+     font-family: "Roboto", sans-serif;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(-12px);
+    transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success::before { content: '✓'; width: 22px; height: 22px; background: var(--success); border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+  .toast.error { background: #1a0a0a; }
+  .toast.error::before { content: '✕'; width: 22px; height: 22px; background: var(--danger); border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .toast{width:auto;}
+    .profile-wrapper { margin-left: 20px; margin-right: 16px; }
+    .fields-grid { grid-template-columns: repeat(2, 1fr); }
+    .field-item.span-2 { grid-column: span 2; }
+  }
+  @media (max-width: 768px) {
+    .toast{width:auto;}
+    .profile-wrapper { margin-left: 12px; margin-right: 12px; margin-top: 100px; }
+    .hero-content { padding: 24px 20px; flex-direction: column; align-items: flex-start; gap: 16px; }
+    .section-card { padding: 20px 16px; }
+    .fields-grid { grid-template-columns: 1fr 1fr; }
+    .field-item.span-2 { grid-column: span 2; }
+  }
+  @media (max-width: 480px) {
+    .toast{width:auto;}
+    .fields-grid { grid-template-columns: 1fr; }
+    .field-item.span-2 { grid-column: span 1; }
+    .hero-name { font-size: 22px; }
+  }
+</style>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function(){
+        const container = document.querySelector(".profile-wrapper");
+        const svg1 = document.querySelector(".svg1");
+        const svg3 = document.querySelector(".svg3");
+        let isMenuOpen = false;
+
+        function toggleMenu() {
+            if(isMenuOpen) {
+                container.classList.remove("shifted");
+                isMenuOpen = false;
+            } else {
+                container.classList.add("shifted");
+                isMenuOpen = true;
+            }
+        }
+
+        if(svg1) {
+            svg1.addEventListener("click", toggleMenu);
+        }
+        
+        if(svg3) {
+            svg3.addEventListener("click", toggleMenu);
+        }
+    }
+  );
+
+    document.addEventListener("DOMContentLoaded", function () {
+    // Sidebar toggle
+    const container = document.querySelector(".profile-wrapper");
+    [".svg1", ".svg3"].forEach(sel => {
+        const el = document.querySelector(sel);
+        if (el) el.addEventListener("click", () => container.classList.toggle("sidebar-open"));
+    });
+
+    const editBtn    = document.getElementById('editBtn');
+    const saveBtn    = document.getElementById('saveBtn');
+    const cancelBtn  = document.getElementById('cancelBtn');
+    const overlay    = document.getElementById('imageEditOverlay');
+    const imgInput   = document.getElementById('profileImageInput');
+    const allValues  = document.querySelectorAll('.field-value, .detail-value');
+    const allInputs  = document.querySelectorAll('.field-input, .detail-input');
+
+    function enterEdit() {
+        editBtn.style.display = 'none';
+        saveBtn.style.display = 'inline-flex';
+        cancelBtn.style.display = 'inline-flex';
+        overlay.style.display = 'flex';
+        allValues.forEach(v => { if (v.dataset.field) v.style.display = 'none'; });
+        allInputs.forEach(i => { if (i.dataset.field) i.style.display = 'block'; });
+    }
+
+    function exitEdit() {
+        editBtn.style.display = 'inline-flex';
+        saveBtn.style.display = 'none';
+        cancelBtn.style.display = 'none';
+        overlay.style.display = 'none';
+        allValues.forEach(v => { if (v.dataset.field) v.style.display = ''; });
+        allInputs.forEach(i => { if (i.dataset.field) i.style.display = 'none'; });
+    }
+
+    editBtn.addEventListener('click', enterEdit);
+    cancelBtn.addEventListener('click', exitEdit);
+
+    imgInput.addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (ev) {
+        let img = document.getElementById('profileImage');
+        if (img.tagName === 'IMG') {
+            img.src = ev.target.result;
+        } else {
+            const newImg = document.createElement('img');
+            newImg.src = ev.target.result;
+            newImg.className = 'avatar-img';
+            newImg.id = 'profileImage';
+            img.parentNode.replaceChild(newImg, img);
+        }
+        };
+        reader.readAsDataURL(file);
+    });
+
+    saveBtn.addEventListener('click', function () {
+        const formData = new FormData();
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        formData.append('csrfmiddlewaretoken', csrf);
+
+        if (imgInput.files[0]) formData.append('profile_pic', imgInput.files[0]);
+
+        allInputs.forEach(i => { if (i.dataset.field) formData.append(i.dataset.field, i.value); });
+
+        fetch('/my-profile/', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf }
+        })
+        .then(r => r.json())
+        .then(data => {
+        if (data.success) {
+            allInputs.forEach(i => {
+            if (i.dataset.field) {
+                const v = document.querySelector(`.field-value[data-field="${i.dataset.field}"], .detail-value[data-field="${i.dataset.field}"]`);
+                if (v) v.textContent = i.value || 'Not provided';
+            }
+            });
+            const fn = document.querySelector('.field-input[data-field="full_name"]');
+            if (fn && fn.value) {
+            const h1 = document.querySelector('.hero-name');
+            if (h1) h1.textContent = fn.value;
+            }
+            exitEdit();
+            showToast('Profile updated successfully!', 'success');
+        } else {
+            showToast('Error updating profile', 'error');
+        }
+        })
+        .catch(() => showToast('Error updating profile', 'error'));
+    });
+    });
+
+    function showToast(msg, type = 'success') {
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.classList.add('show'), 80);
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 350); }, 3200);
+    }
+</script>
+
+{% endblock %}

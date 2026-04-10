@@ -129,3 +129,29 @@ def convert_cart_item_total(item, currency='IN'):
 def amount_to_words(amount, country_code='IN'):
     """Convert amount to words based on country currency"""
     return number_to_words(amount, country_code)
+
+@register.filter
+def get_avatar_color(profile):
+    """Generate a consistent color for user avatar based on user ID"""
+    colors = [
+        '#1e3a8a',  # navy
+        '#1d4ed8',  # blue
+        '#2563eb',  # accent
+        '#059669',  # green
+        '#d97706',  # amber
+        '#dc2626',  # red
+        '#0284c7',  # sky
+        '#7c3aed',  # violet
+        '#db2777',  # pink
+        '#ea580c',  # orange
+    ]
+    
+    # Use user_id to get consistent color
+    if hasattr(profile, 'user_id'):
+        color_index = hash(str(profile.user_id)) % len(colors)
+    elif hasattr(profile, 'user') and hasattr(profile.user, 'id'):
+        color_index = hash(str(profile.user.id)) % len(colors)
+    else:
+        color_index = 0
+    
+    return colors[color_index]
