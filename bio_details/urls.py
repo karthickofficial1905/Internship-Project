@@ -49,6 +49,9 @@ urlpatterns = [
     path('save-currency-selection/', views.save_currency_selection, name='save_currency_selection'),
     path('attendance/', views.attendance, name='attendance'),
     path('attendance-stats/', views.attendance_stats, name='attendance_stats'),
+    path('get-attendance-data/', views.get_attendance_data, name='get_attendance_data'),
+    path('get-employee-joins-data/', views.get_employee_joins_data, name='get_employee_joins_data'),
+    path('get-orders-data/', views.get_orders_data, name='get_orders_data'),
     path('manage-leave-applications/', views.manage_leave_applications, name='manage_leave_applications'),
     path('leave-action/', views.leave_action, name='leave_action'),
 ]

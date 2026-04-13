@@ -174,6 +174,118 @@
     </div>
 
   </div><!-- /stat-grid -->
+  {% if user.is_authenticated and user.member and user.member.role == 'hr' %}
+    <!-- Attendance Section -->
+    <div class="attendance-section">
+      <div class="section-header">
+        <h2 class="section-title">Attendance Overview</h2>
+        <div class="month-selector">
+          <select id="monthSelect" class="month-select">
+            {% for month_name in month_names %}
+              <option value="{{ forloop.counter }}" {% if forloop.counter == selected_month %}selected{% endif %}>
+                {{ month_name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      
+      <div class="attendance-grid">
+        <!-- Attendance Chart -->
+        <div class="attendance-chart-card">
+          <div class="chart-header">
+            <h3>Monthly Attendance</h3>
+            <div class="chart-legend">
+              <div class="legend-item"><span class="legend-dot present"></span>Present</div>
+              <div class="legend-item"><span class="legend-dot leave"></span>Leave</div>
+              <div class="legend-item"><span class="legend-dot halfday"></span>Half Day</div>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="attendanceChart" width="400" height="200"></canvas>
+          </div>
+        </div>
+        
+        <!-- Attendance Stats -->
+        <div class="attendance-stats">
+          <div class="stat-item present-stat">
+            <div class="stat-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+            </div>
+            <div class="stat-info">
+              <div class="stat-label">Present Days</div>
+              <div class="stat-value" id="presentDays">{{ present_days }}</div>
+            </div>
+          </div>
+          
+          <div class="stat-item leave-stat">
+            <div class="stat-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </div>
+            <div class="stat-info">
+              <div class="stat-label">Leave Days</div>
+              <div class="stat-value" id="leaveDays">{{ leave_days }}</div>
+            </div>
+          </div>
+          
+          <div class="stat-item halfday-stat">
+            <div class="stat-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+              </svg>
+            </div>
+            <div class="stat-info">
+              <div class="stat-label">Half Days</div>
+              <div class="stat-value" id="halfDays">{{ half_days }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics Section -->
+    <div class="analytics-section">
+      <div class="section-header">
+        <h2 class="section-title">Analytics Overview</h2>
+      </div>
+      
+      <div class="analytics-grid">
+        <!-- Category Distribution -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Category Distribution</h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="categoryChart" width="300" height="300"></canvas>
+          </div>
+        </div>
+        
+        <!-- Employee Joins Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Monthly Employee Joins</h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="employeeChart" width="400" height="300"></canvas>
+          </div>
+        </div>
+        
+        <!-- Orders Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Monthly Orders</h3>
+          </div>
+          <div class="chart-container">
+            <canvas id="ordersChart" width="400" height="300"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
 
   <!-- Quick Info Row -->
   <div class="quick-row">
@@ -251,6 +363,91 @@ document.querySelectorAll('.sc-value[data-target]').forEach(function(el){
   requestAnimationFrame(step);
 });
 
+/* CHARTS */
+document.addEventListener('DOMContentLoaded', function() {
+  // Employee Joins Chart
+  const employeeCtx = document.getElementById('employeeChart');
+  if (employeeCtx) {
+    fetch('/get-employee-joins-data/')
+      .then(response => response.json())
+      .then(data => {
+        new Chart(employeeCtx, {
+          type: 'line',
+          data: {
+            labels: data.months,
+            datasets: [{
+              label: 'Employee Joins',
+              data: data.joins,
+              borderColor: '#2563eb',
+              backgroundColor: 'rgba(37, 99, 235, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1
+                }
+              }
+            }
+          }
+        });
+      })
+      .catch(error => console.error('Error loading employee data:', error));
+  }
+
+  // Orders Chart
+  const ordersCtx = document.getElementById('ordersChart');
+  if (ordersCtx) {
+    fetch('/get-orders-data/')
+      .then(response => response.json())
+      .then(data => {
+        new Chart(ordersCtx, {
+          type: 'bar',
+          data: {
+            labels: data.months,
+            datasets: [{
+              label: 'Orders',
+              data: data.orders,
+              backgroundColor: '#059669',
+              borderColor: '#047857',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1
+                }
+              }
+            }
+          }
+        });
+      })
+      .catch(error => console.error('Error loading orders data:', error));
+  }
+});
+
 /* SIDEBAR */
 document.addEventListener('DOMContentLoaded', function(){
   var shell = document.querySelector('.dash-shell');
@@ -268,6 +465,215 @@ setTimeout(function(){
     setTimeout(function(){ t.remove(); }, 400);
   });
 }, 3500);
+
+/* ATTENDANCE CHART */
+function createAttendanceChart() {
+  const ctx = document.getElementById('attendanceChart');
+  if (!ctx) return null;
+  
+  // Get weekly data from Django context
+  const weeklyData = {{ weekly_data|safe }};
+  
+  const labels = [];
+  const presentData = [];
+  const leaveData = [];
+  const halfdayData = [];
+  
+  weeklyData.forEach((week, index) => {
+    labels.push(`Week ${index + 1}`);
+    presentData.push(week.present);
+    leaveData.push(week.leave);
+    halfdayData.push(week.halfday);
+  });
+  
+  return new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Present',
+        data: presentData,
+        backgroundColor: '#10b981',
+        borderRadius: 4
+      }, {
+        label: 'Leave',
+        data: leaveData,
+        backgroundColor: '#ef4444',
+        borderRadius: 4
+      }, {
+        label: 'Half Day',
+        data: halfdayData,
+        backgroundColor: '#f59e0b',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, grid: { color: '#f1f5f9' } }
+      }
+    }
+  });
+}
+
+/* CATEGORY PIE CHART */
+function createCategoryChart() {
+  const ctx = document.getElementById('categoryChart');
+  if (!ctx) return;
+  
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Employees', 'Orders', 'Products'],
+      datasets: [{
+        data: [{{ total_employees|default:0 }}, {{ total_orders|default:0 }}, {{ total_products|default:0 }}],
+        backgroundColor: ['#3b82f6', '#f59e0b', '#10b981'],
+        borderWidth: 0,
+        cutout: '60%'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            padding: 20,
+            usePointStyle: true,
+            font: { size: 12, weight: '600' }
+          }
+        }
+      }
+    }
+  });
+}
+
+/* PERFORMANCE CHART */
+function createPerformanceChart() {
+  const ctx = document.getElementById('performanceChart');
+  if (!ctx) return;
+  
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+      datasets: [{
+        label: 'Employee Performance',
+        data: [85, 88, 92, 89, 94, 96],
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        fill: true,
+        tension: 0.4
+      }, {
+        label: 'Order Completion',
+        data: [78, 82, 85, 88, 91, 93],
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            padding: 20,
+            usePointStyle: true,
+            font: { size: 12, weight: '600' }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, max: 100, grid: { color: '#f1f5f9' } }
+      }
+    }
+  });
+}
+
+/* MONTH SELECTOR */
+document.getElementById('monthSelect')?.addEventListener('change', function() {
+  const month = this.value;
+  const year = new Date().getFullYear();
+  
+  // Show loading state
+  document.getElementById('presentDays').textContent = '...';
+  document.getElementById('leaveDays').textContent = '...';
+  document.getElementById('halfDays').textContent = '...';
+  
+  // Fetch attendance data for selected month
+  fetch(`/get-attendance-data/?month=${month}&year=${year}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Update attendance statistics
+        document.getElementById('presentDays').textContent = data.present_days;
+        document.getElementById('leaveDays').textContent = data.leave_days;
+        document.getElementById('halfDays').textContent = data.half_days;
+        
+        // Update chart with new data
+        updateAttendanceChart(data.weekly_data);
+      } else {
+        console.error('Error fetching attendance data:', data.error);
+        // Reset to default values on error
+        document.getElementById('presentDays').textContent = '0';
+        document.getElementById('leaveDays').textContent = '0';
+        document.getElementById('halfDays').textContent = '0';
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      // Reset to default values on error
+      document.getElementById('presentDays').textContent = '0';
+      document.getElementById('leaveDays').textContent = '0';
+      document.getElementById('halfDays').textContent = '0';
+    });
+});
+
+function updateAttendanceChart(weeklyData) {
+  const ctx = document.getElementById('attendanceChart');
+  if (!ctx || !window.attendanceChart) return;
+  
+  const labels = [];
+  const presentData = [];
+  const leaveData = [];
+  const halfdayData = [];
+  
+  weeklyData.forEach((week, index) => {
+    labels.push(`Week ${index + 1}`);
+    presentData.push(week.present);
+    leaveData.push(week.leave);
+    halfdayData.push(week.halfday);
+  });
+  
+  // Update chart data
+  window.attendanceChart.data.labels = labels;
+  window.attendanceChart.data.datasets[0].data = presentData;
+  window.attendanceChart.data.datasets[1].data = leaveData;
+  window.attendanceChart.data.datasets[2].data = halfdayData;
+  window.attendanceChart.update();
+}
+
+function updateAttendanceData(month) {
+  // This function is kept for backward compatibility
+  // The actual update is now handled by the change event listener above
+}
+
+/* INITIALIZE CHARTS */
+document.addEventListener('DOMContentLoaded', function() {
+  window.attendanceChart = createAttendanceChart();
+  createCategoryChart();
+  createPerformanceChart();
+});
 </script>
 
 <style>
@@ -280,7 +686,7 @@ setTimeout(function(){
 
 .dash-shell{
   font-family:var(--fn);color:var(--text);
-  margin:120px 40px 60px 360px;transition:margin-left .3s;
+  margin:120px 40px 120px 360px;transition:margin-left .3s;
 }
 .dash-shell.shifted{margin-left:90px}
 
@@ -308,6 +714,14 @@ setTimeout(function(){
 
 /* ── STAT GRID ── */
 .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:18px}
+
+@media(max-width:1024px){
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+@media(max-width:768px){
+  .stat-grid{grid-template-columns:1fr}
+}
 
 .stat-card{
   background:var(--white);border:1px solid var(--border);
@@ -403,18 +817,269 @@ setTimeout(function(){
 }
 @keyframes barShrink{from{width:100%}to{width:0}}
 
-/* ── RESPONSIVE ── */
-@media(max-width:1200px){.dash-shell{margin-left:20px;margin-right:20px;margin-top:90px;margin-bottom:100px}}
-@media(max-width:1024px){
-  .stat-grid{grid-template-columns:1fr}
-  .quick-row{grid-template-columns:repeat(2,1fr)}
+/* ── ATTENDANCE SECTION ── */
+.attendance-section{
+  margin-bottom:24px;
 }
+.section-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:16px;
+}
+.section-title{
+  font-family:var(--fh);font-size:20px;font-weight:700;
+  color:var(--text);margin:0;
+}
+.month-selector{
+  position:relative;
+}
+.month-select{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:8px;padding:8px 32px 8px 12px;
+  font-size:14px;font-weight:500;color:var(--text);
+  cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position:right 8px center;
+  background-repeat:no-repeat;
+  background-size:16px;
+}
+.month-select:focus{
+  outline:none;border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(37,99,235,0.1);
+}
+
+.attendance-grid{
+  display:grid;grid-template-columns:2fr 1fr;gap:20px;
+}
+.attendance-chart-card{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:16px;padding:20px;box-shadow:var(--sh);
+}
+.chart-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:16px;
+}
+.chart-header h3{
+  font-family:var(--fh);font-size:16px;font-weight:700;
+  color:var(--text);margin:0;
+}
+.chart-legend{
+  display:flex;gap:16px;
+}
+.legend-item{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:500;color:var(--slate);
+}
+.legend-dot{
+  width:8px;height:8px;border-radius:50%;
+}
+.legend-dot.present{background:#10b981}
+.legend-dot.leave{background:#ef4444}
+.legend-dot.halfday{background:#f59e0b}
+.chart-container{
+  position:relative;height:200px;
+}
+
+.attendance-stats{
+  display:flex;flex-direction:column;gap:12px;
+}
+.stat-item{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:12px;padding:16px;display:flex;align-items:center;
+  gap:12px;box-shadow:var(--sh);
+}
+.stat-item.present-stat{border-left:4px solid #10b981}
+.stat-item.leave-stat{border-left:4px solid #ef4444}
+.stat-item.halfday-stat{border-left:4px solid #f59e0b}
+.stat-icon{
+  width:36px;height:36px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+}
+.present-stat .stat-icon{background:#ecfdf5;color:#10b981}
+.leave-stat .stat-icon{background:#fef2f2;color:#ef4444}
+.halfday-stat .stat-icon{background:#fffbeb;color:#f59e0b}
+.stat-info{flex:1}
+.stat-label{
+  font-size:11px;color:var(--slate);font-weight:500;
+  margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em;
+}
+.stat-value{
+  font-family:var(--fh);font-size:24px;font-weight:800;
+  color:var(--text);
+}
+
+/* ── ANALYTICS SECTION ── */
+.analytics-section{
+  margin-bottom:24px;
+}
+.analytics-grid{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;
+}
+.chart-card{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:16px;padding:20px;box-shadow:var(--sh);
+}
+.chart-card .chart-container{
+  position:relative;height:300px;
+}
+
+/* ── MOBILE TOUCH IMPROVEMENTS ── */
 @media(max-width:768px){
-  .dash-shell{margin:100px 12px 120px}
-  .dash-header{flex-direction:column;align-items:flex-start;gap:12px;padding:18px}
-  .quick-row{grid-template-columns:1fr}
-  #toast-container{right:10px;left:10px;top:12px}
-  .toast{min-width:auto;max-width:100%}
+  /* Increase touch targets */
+  .month-select{
+    min-height:44px;
+    padding:12px 32px 12px 12px;
+    font-size:14px;
+  }
+  
+  /* Better spacing for touch */
+  .stat-card:hover{
+    transform:none; /* Disable hover effects on mobile */
+  }
+  
+  .quick-card:hover{
+    transform:none;
+    border-color:var(--border);
+  }
+  
+  /* Improve chart readability */
+  .chart-container{
+    height:250px; /* Increase height on mobile */
+  }
+  
+  /* Better text sizing */
+  .sc-sub-lbl, .sc-sub-val{
+    font-size:11px;
+  }
+  
+  /* Improve attendance section */
+  .attendance-chart-card .chart-container{
+    height:220px;
+  }
+}
+
+@media(max-width:480px){
+  /* Very small screens */
+  .chart-container{
+    height:200px;
+  }
+  
+  .attendance-chart-card .chart-container{
+    height:180px;
+  }
+  
+  /* Compact legend */
+  .chart-legend{
+    gap:8px;
+  }
+  
+  .legend-item{
+    font-size:10px;
+  }
+  
+  /* Smaller icons but maintain touch targets */
+  .dash-header-icon{
+    width:36px;
+    height:36px;
+  }
+  
+  .toast-icon{
+    width:24px;
+    height:24px;
+  }
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1200px){
+  .dash-shell{margin-left:20px;margin-right:20px;margin-top:90px;margin-bottom:100px}
+}
+
+@media(max-width:1024px){
+  .stat-grid{grid-template-columns:repeat(2,1fr);gap:16px}
+  .quick-row{grid-template-columns:repeat(2,1fr);gap:12px}
+  .attendance-grid{grid-template-columns:1fr;gap:16px}
+  .analytics-grid{grid-template-columns:repeat(2,1fr);gap:16px}
+  .dash-shell{margin:80px 16px 80px}
+}
+
+@media(max-width:768px){
+  .dash-shell{margin:20px 12px 120px;transition:none}
+  .dash-shell.shifted{margin-left:12px}
+  
+  /* Header adjustments */
+  .dash-header{flex-direction:column;align-items:flex-start;gap:16px;padding:20px 16px}
+  .dash-header-left{width:100%}
+  .dash-header-date{align-self:flex-end}
+  .dash-title{font-size:20px}
+  
+  /* Grid layouts */
+  .stat-grid{grid-template-columns:1fr;gap:12px}
+  .quick-row{grid-template-columns:1fr;gap:10px}
+  .attendance-grid{grid-template-columns:1fr;gap:12px}
+  .analytics-grid{grid-template-columns:1fr;gap:12px}
+  
+  /* Card adjustments */
+  .stat-card{border-radius:12px}
+  .sc-top{padding:16px 16px 12px}
+  .sc-bottom{padding:12px 16px 16px}
+  .sc-value{font-size:28px}
+  .sc-icon{width:40px;height:40px}
+  
+  .quick-card{padding:14px;border-radius:10px}
+  .qc-val{font-size:16px}
+  .qc-icon{width:32px;height:32px}
+  
+  /* Section headers */
+  .section-header{flex-direction:column;align-items:flex-start;gap:12px}
+  .section-title{font-size:18px}
+  
+  /* Chart cards */
+  .chart-card, .attendance-chart-card{padding:16px;border-radius:12px}
+  .chart-header h3{font-size:14px}
+  .chart-legend{flex-wrap:wrap;gap:12px}
+  .legend-item{font-size:11px}
+  
+  /* Attendance stats */
+  .attendance-stats{gap:10px}
+  .stat-item{padding:12px;border-radius:10px}
+  .stat-icon{width:32px;height:32px}
+  .stat-value{font-size:20px}
+  .stat-label{font-size:10px}
+  
+  /* Toast adjustments */
+  #toast-container{right:8px;left:8px;top:8px}
+  .toast{min-width:auto;max-width:100%;padding:12px 14px}
+  .toast-msg{font-size:12px}
+  
+  /* Month selector */
+  .month-select{padding:6px 28px 6px 10px;font-size:13px}
+}
+
+@media(max-width:480px){
+  .dash-shell{margin:100px 10px 100px}
+  
+  .dash-header{padding:16px 12px}
+  .dash-title{font-size:18px}
+  .dash-eyebrow{font-size:10px}
+  
+  .stat-grid{gap:10px}
+  .sc-top{padding:14px 14px 10px}
+  .sc-bottom{padding:10px 14px 14px}
+  .sc-value{font-size:24px}
+  .sc-label{font-size:10px}
+  
+  .quick-row{gap:8px}
+  .quick-card{padding:12px}
+  .qc-val{font-size:14px}
+  .qc-lbl{font-size:10px}
+  .chart-card, .attendance-chart-card {
+        width: 92%;
+        padding: 10px;
+    }
+  .attendance-section{width:100%;}
+  .section-title{font-size:16px}
+  
+  .stat-item{padding:10px}
+  .stat-value{font-size:18px}
 }
 </style>
 

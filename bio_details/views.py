@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from datetime import datetime
+from datetime import datetime, timedelta
 from .models import Invoice, InvoiceItem
 from decimal import Decimal
 from django.http import JsonResponse
@@ -90,30 +90,126 @@ def dashboard(request):
     if not request.user.is_authenticated:
         return redirect('bio_details:login')
     
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.role == 'hr')):
         messages.error(request, "Access denied. Admin privileges required.")
         return redirect('bio_details:product_view')
     
+    from datetime import datetime, date
+    from django.db.models import Count, Q
+    from calendar import monthrange
     
+    # Get selected month from request (default to current month)
+    selected_month = int(request.GET.get('month', datetime.now().month))
+    selected_year = int(request.GET.get('year', datetime.now().year))
+    
+    # Employee statistics
     total_employees = Member.objects.filter(user__is_superuser=False,role="employee").count()
     active_employees = Member.objects.filter(account_status=True,role="employee",user__is_superuser=False).count()
     inactive_employees = Member.objects.filter(account_status=False,role="employee",user__is_superuser=False).count()
     
+    # Product statistics
     total_products = Product.objects.count()
     available_products = Product.objects.filter(current_stock__gt=0).count()
     out_of_stock_products = Product.objects.filter(current_stock=0).count()
     
-    # Order counts based on user type
+    # Order statistics
     if request.user.is_superuser:
-        # Super admin sees all orders
         total_orders = Order.objects.count()
         paid_orders = Invoice.objects.filter(payment_status='paid').count()
         pending_orders = Invoice.objects.filter(payment_status='pending').count()
     else:
-        # Normal user sees only their own orders
         total_orders = Order.objects.filter(user=request.user).count()
         paid_orders = Invoice.objects.filter(order__user=request.user, payment_status='paid').count()
         pending_orders = Invoice.objects.filter(order__user=request.user, payment_status='pending').count()
+    
+    # Attendance statistics for selected month
+    # Get all employees with employee role
+    employees = Member.objects.filter(role='employee', account_status=True, user__is_superuser=False)
+    
+    # Calculate attendance stats for selected month
+    present_days = Attendance.objects.filter(
+        date__month=selected_month,
+        date__year=selected_year,
+        status='present'
+    ).count()
+    
+    leave_days = Attendance.objects.filter(
+        date__month=selected_month,
+        date__year=selected_year,
+        status='absent'
+    ).count()
+    
+    # Add approved leaves to leave count
+    approved_leaves = LeaveApplication.objects.filter(
+        status='approved',
+        from_date__month__lte=selected_month,
+        to_date__month__gte=selected_month,
+        from_date__year=selected_year
+    )
+    
+    # Calculate total leave days for the month
+    for leave in approved_leaves:
+        # Calculate overlap with selected month
+        month_start = date(selected_year, selected_month, 1)
+        month_end = date(selected_year, selected_month, monthrange(selected_year, selected_month)[1])
+        
+        overlap_start = max(leave.from_date, month_start)
+        overlap_end = min(leave.to_date, month_end)
+        
+        if overlap_start <= overlap_end:
+            days_in_month = (overlap_end - overlap_start).days + 1
+            if leave.duration == 'half_day':
+                leave_days += days_in_month * 0.5
+            else:
+                leave_days += days_in_month
+    
+    half_days = Attendance.objects.filter(
+        date__month=selected_month,
+        date__year=selected_year,
+        status='half_day'
+    ).count()
+    
+    # Weekly attendance data for charts (last 4 weeks of selected month)
+    weekly_data = []
+    month_start = date(selected_year, selected_month, 1)
+    month_end = date(selected_year, selected_month, monthrange(selected_year, selected_month)[1])
+    
+    # Calculate weekly data
+    current_date = month_start
+    week_num = 1
+    while current_date <= month_end and week_num <= 4:
+        week_end = min(current_date + timedelta(days=6), month_end)
+        
+        week_present = Attendance.objects.filter(
+            date__range=[current_date, week_end],
+            status='present'
+        ).count()
+        
+        week_leave = Attendance.objects.filter(
+            date__range=[current_date, week_end],
+            status='absent'
+        ).count()
+        
+        week_halfday = Attendance.objects.filter(
+            date__range=[current_date, week_end],
+            status='half_day'
+        ).count()
+        
+        weekly_data.append({
+            'week': f'Week {week_num}',
+            'present': week_present,
+            'leave': week_leave,
+            'halfday': week_halfday
+        })
+        
+        current_date = week_end + timedelta(days=1)
+        week_num += 1
+    
+    # Month names for dropdown
+    month_names = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ]
     
     context = {
         'total_employees': total_employees,
@@ -124,7 +220,16 @@ def dashboard(request):
         'out_of_stock_products': out_of_stock_products,
         'total_orders': total_orders,
         'completed_orders': paid_orders,
-        'pending_orders': pending_orders
+        'pending_orders': pending_orders,
+        # Attendance data
+        'present_days': int(present_days),
+        'leave_days': int(leave_days),
+        'half_days': int(half_days),
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'selected_month_name': month_names[selected_month - 1],
+        'weekly_data': weekly_data,
+        'month_names': month_names,
     }
     
     return render(request, "dashboard.html", context)
@@ -2814,6 +2919,199 @@ def attendance_stats(request):
         
     except User.DoesNotExist:
         return JsonResponse({'error': 'Employee not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def get_attendance_data(request):
+    """AJAX endpoint to get attendance data for selected month"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    if not (request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.role == 'hr')):
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:product_view')
+    
+    try:
+        from datetime import datetime, date, timedelta
+        from calendar import monthrange
+        
+        # Get selected month and year
+        selected_month = int(request.GET.get('month', datetime.now().month))
+        selected_year = int(request.GET.get('year', datetime.now().year))
+        
+        # Calculate attendance stats for selected month
+        present_days = Attendance.objects.filter(
+            date__month=selected_month,
+            date__year=selected_year,
+            status='present'
+        ).count()
+        
+        leave_days = Attendance.objects.filter(
+            date__month=selected_month,
+            date__year=selected_year,
+            status='absent'
+        ).count()
+        
+        # Add approved leaves to leave count
+        approved_leaves = LeaveApplication.objects.filter(
+            status='approved',
+            from_date__month__lte=selected_month,
+            to_date__month__gte=selected_month,
+            from_date__year=selected_year
+        )
+        
+        # Calculate total leave days for the month
+        for leave in approved_leaves:
+            # Calculate overlap with selected month
+            month_start = date(selected_year, selected_month, 1)
+            month_end = date(selected_year, selected_month, monthrange(selected_year, selected_month)[1])
+            
+            overlap_start = max(leave.from_date, month_start)
+            overlap_end = min(leave.to_date, month_end)
+            
+            if overlap_start <= overlap_end:
+                days_in_month = (overlap_end - overlap_start).days + 1
+                if leave.duration == 'half_day':
+                    leave_days += days_in_month * 0.5
+                else:
+                    leave_days += days_in_month
+        
+        half_days = Attendance.objects.filter(
+            date__month=selected_month,
+            date__year=selected_year,
+            status='half_day'
+        ).count()
+        
+        # Weekly attendance data for charts (last 4 weeks of selected month)
+        weekly_data = []
+        month_start = date(selected_year, selected_month, 1)
+        month_end = date(selected_year, selected_month, monthrange(selected_year, selected_month)[1])
+        
+        # Calculate weekly data
+        current_date = month_start
+        week_num = 1
+        while current_date <= month_end and week_num <= 4:
+            week_end = min(current_date + timedelta(days=6), month_end)
+            
+            week_present = Attendance.objects.filter(
+                date__range=[current_date, week_end],
+                status='present'
+            ).count()
+            
+            week_leave = Attendance.objects.filter(
+                date__range=[current_date, week_end],
+                status='absent'
+            ).count()
+            
+            week_halfday = Attendance.objects.filter(
+                date__range=[current_date, week_end],
+                status='half_day'
+            ).count()
+            
+            weekly_data.append({
+                'present': week_present,
+                'leave': week_leave,
+                'halfday': week_halfday
+            })
+            
+            current_date = week_end + timedelta(days=1)
+            week_num += 1
+        
+        return JsonResponse({
+            'success': True,
+            'present_days': int(present_days),
+            'leave_days': int(leave_days),
+            'half_days': int(half_days),
+            'weekly_data': weekly_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def get_employee_joins_data(request):
+    """AJAX endpoint to get monthly employee joins data"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    if not (request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.role == 'hr')):
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:product_view')
+    
+    try:
+        from datetime import datetime, timedelta
+        from django.db.models import Count
+        from django.contrib.auth.models import User
+        
+        # Get data for last 12 months
+        current_date = datetime.now()
+        months = []
+        joins = []
+        
+        for i in range(11, -1, -1):
+            # Calculate month and year
+            month_date = current_date - timedelta(days=30*i)
+            month_name = month_date.strftime('%b')
+            
+            # Count employee joins for this month (users with member role='employee')
+            joins_count = User.objects.filter(
+                date_joined__year=month_date.year,
+                date_joined__month=month_date.month,
+                member__role='employee'
+            ).count()
+            
+            months.append(month_name)
+            joins.append(joins_count)
+        
+        return JsonResponse({
+            'success': True,
+            'months': months,
+            'joins': joins
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def get_orders_data(request):
+    """AJAX endpoint to get monthly orders data"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    if not (request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.role == 'hr')):
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:product_view')
+    
+    try:
+        from datetime import datetime, timedelta
+        from django.db.models import Count
+        
+        # Get data for last 12 months
+        current_date = datetime.now()
+        months = []
+        orders = []
+        
+        for i in range(11, -1, -1):
+            # Calculate month and year
+            month_date = current_date - timedelta(days=30*i)
+            month_name = month_date.strftime('%b')
+            
+            # Count orders for this month
+            orders_count = Order.objects.filter(
+                created_at__year=month_date.year,
+                created_at__month=month_date.month
+            ).count()
+            
+            months.append(month_name)
+            orders.append(orders_count)
+        
+        return JsonResponse({
+            'success': True,
+            'months': months,
+            'orders': orders
+        })
+        
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
