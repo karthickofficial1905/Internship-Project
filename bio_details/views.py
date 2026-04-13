@@ -94,7 +94,7 @@ def dashboard(request):
         messages.error(request, "Access denied. Admin privileges required.")
         return redirect('bio_details:product_view')
     
-    from datetime import datetime, date
+    from datetime import datetime, date, timedelta
     from django.db.models import Count, Q
     from calendar import monthrange
     
@@ -113,7 +113,7 @@ def dashboard(request):
     out_of_stock_products = Product.objects.filter(current_stock=0).count()
     
     # Order statistics
-    if request.user.is_superuser:
+    if request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.role == 'hr'):
         total_orders = Order.objects.count()
         paid_orders = Invoice.objects.filter(payment_status='paid').count()
         pending_orders = Invoice.objects.filter(payment_status='pending').count()
@@ -189,6 +189,24 @@ def dashboard(request):
             date__range=[current_date, week_end],
             status='absent'
         ).count()
+        
+        # Add approved leaves for this week
+        week_approved_leaves = LeaveApplication.objects.filter(
+            status='approved',
+            from_date__lte=week_end,
+            to_date__gte=current_date
+        )
+        
+        for leave in week_approved_leaves:
+            overlap_start = max(leave.from_date, current_date)
+            overlap_end = min(leave.to_date, week_end)
+            
+            if overlap_start <= overlap_end:
+                days_in_week = (overlap_end - overlap_start).days + 1
+                if leave.duration == 'half_day':
+                    week_leave += days_in_week * 0.5
+                else:
+                    week_leave += days_in_week
         
         week_halfday = Attendance.objects.filter(
             date__range=[current_date, week_end],

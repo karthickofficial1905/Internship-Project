@@ -258,9 +258,12 @@
         <div class="chart-card">
           <div class="chart-header">
             <h3>Category Distribution</h3>
+            <div class="chart-stats">
+              <span class="total-items">Total: {{ total_employees|add:total_orders|add:total_products }}</span>
+            </div>
           </div>
           <div class="chart-container">
-            <canvas id="categoryChart" width="300" height="300"></canvas>
+            <canvas id="categoryChart" width="340" height="300"></canvas>
           </div>
         </div>
         
@@ -514,7 +517,7 @@ function createAttendanceChart() {
         legend: { display: false }
       },
       scales: {
-        x: { grid: { display: false } },
+        x: { grid: { display: true} },
         y: { beginAtZero: true, grid: { color: '#f1f5f9' } }
       }
     }
@@ -526,15 +529,39 @@ function createCategoryChart() {
   const ctx = document.getElementById('categoryChart');
   if (!ctx) return;
   
+  const totalEmployees = {{ total_employees|default:0 }};
+  const totalOrders = {{ total_orders|default:0 }};
+  const totalProducts = {{ total_products|default:0 }};
+  const activeEmployees = {{ active_employees|default:0 }};
+  const inactiveEmployees = {{ inactive_employees|default:0 }};
+  const completedOrders = {{ completed_orders|default:0 }};
+  const pendingOrders = {{ pending_orders|default:0 }};
+  const availableProducts = {{ available_products|default:0 }};
+  const outOfStockProducts = {{ out_of_stock_products|default:0 }};
+  
   new Chart(ctx, {
-    type: 'doughnut',
+    type: 'pie',
     data: {
-      labels: ['Employees', 'Orders', 'Products'],
+      labels: [
+        'Active Employees', 'Inactive Employees',
+        'Completed Orders', 'Pending Orders', 
+        'Avl Products', 'Out of Stock Product'
+      ],
       datasets: [{
-        data: [{{ total_employees|default:0 }}, {{ total_orders|default:0 }}, {{ total_products|default:0 }}],
-        backgroundColor: ['#3b82f6', '#f59e0b', '#10b981'],
-        borderWidth: 0,
-        cutout: '60%'
+        data: [
+          activeEmployees, inactiveEmployees,
+          completedOrders, pendingOrders,
+          availableProducts, outOfStockProducts
+        ],
+        backgroundColor: [
+          '#10b981', '#ef4444',
+          '#3b82f6', '#f59e0b',
+          '#059669', '#dc2626'
+        ],
+        borderColor: '#ffffff',
+        borderWidth: 3,
+        hoverBorderWidth: 4,
+        hoverOffset: 8
       }]
     },
     options: {
@@ -542,13 +569,62 @@ function createCategoryChart() {
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          position: 'bottom',
+          position: 'right',
           labels: {
-            padding: 20,
+            padding: 10,
             usePointStyle: true,
-            font: { size: 12, weight: '600' }
+            pointStyle: 'circle',
+            font: { size: 11, weight: '600' },
+            color: '#374151',
+            generateLabels: function(chart) {
+              const data = chart.data;
+              if (data.labels.length && data.datasets.length) {
+                return data.labels.map((label, i) => {
+                  const value = data.datasets[0].data[i];
+                  const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+                  const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                  return {
+                    text: `${label}: ${value} (${percentage}%)`,
+                    fillStyle: data.datasets[0].backgroundColor[i],
+                    strokeStyle: data.datasets[0].borderColor,
+                    lineWidth: data.datasets[0].borderWidth,
+                    hidden: false,
+                    index: i
+                  };
+                });
+              }
+              return [];
+            }
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          titleColor: '#ffffff',
+          bodyColor: '#ffffff',
+          borderColor: '#374151',
+          borderWidth: 1,
+          cornerRadius: 8,
+          displayColors: true,
+          callbacks: {
+            label: function(context) {
+              const label = context.label || '';
+              const value = context.parsed;
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return `${label}: ${value} (${percentage}%)`;
+            }
           }
         }
+      },
+      animation: {
+        animateRotate: true,
+        animateScale: true,
+        duration: 1500,
+        easing: 'easeOutQuart'
+      },
+      interaction: {
+        intersect: false,
+        mode: 'point'
       }
     }
   });
@@ -912,7 +988,7 @@ document.addEventListener('DOMContentLoaded', function() {
   margin-bottom:24px;
 }
 .analytics-grid{
-  display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;
 }
 .chart-card{
   background:var(--white);border:1px solid var(--border);
