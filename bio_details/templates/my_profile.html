@@ -24,7 +24,7 @@
       </div>
       <div class="hero-info">
         <h1 class="hero-name" id="heroName">{{ user.get_full_name|default:user.username }}</h1>
-        <p class="hero-designation">{% if user.member %}{{ user.member.designation|default:"Team Member" }}{% else %}Team Member{% endif %}</p>
+        <p class="hero-designation">{% if user.member %}{{ user.member.designation|default:"" }}{% else %}{% endif %}</p>
         <div class="hero-meta">
           <span class="meta-badge">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/></svg>

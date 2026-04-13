@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Member, Product, Cart, CartItem, Order, OrderItem, Invoice, InvoiceItem, Attendance, LeaveApplication, UserProfile
+from .models import Member, Product, Cart, CartItem, Order, OrderItem, Invoice, InvoiceItem, Attendance, LeaveApplication
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -18,37 +18,53 @@ def members(request):
         # Get form data
         name = request.POST.get('name')
         email = request.POST.get('email')
+        password = request.POST.get('password')
+        cpassword = request.POST.get('cpassword')
         phone = request.POST.get('phone')
         
         # Validation
-        if not all([name, email, phone]):
+        if not all([name, email, password, cpassword, phone]):
             messages.error(request, "Please fill all required fields!")
             return render(request, "main_content.html")
+            
+        if password != cpassword:
+            messages.error(request, "Passwords do not match!")
+            return render(request, "main_content.html")
         
-        if Member.objects.filter(email=email).exists():
+        if User.objects.filter(email=email).exists():
             messages.error(request, "Email already exists!")
             return render(request, "main_content.html")
         
+        if User.objects.filter(username=name).exists():
+            messages.error(request, "Username already exists!")
+            return render(request, "main_content.html")
+        
         try:
-            # Create member profile only (no User account)
-            member = Member.objects.create(
-                name=name,
+            # Create user
+            user = User.objects.create_user(
+                username=name,
                 email=email,
+                password=password
+            )
+            
+            # Create member profile
+            member = Member.objects.create(
+                user=user,
                 phone=phone,
-                designation=request.POST.get('designation', ''),
-                role=request.POST.get('role', 'employee'),
-                address1=request.POST.get('address1', ''),
-                city=request.POST.get('city', ''),
-                state=request.POST.get('state', ''),
-                pincode=request.POST.get('pincode', ''),
+                designation=request.POST.get('designation'),
+                role=request.POST.get('role', 'user'),  # Default to employee if not provided
+                address1=request.POST.get('address1'),
+                city=request.POST.get('city'),
+                state=request.POST.get('state'),
+                pincode=request.POST.get('pincode'),
                 date_of_birth=request.POST.get('date_of_birth') or None,
-                gender=request.POST.get('gender', ''),
-                account_type=request.POST.get('account_type', ''),
-                bank_name=request.POST.get('bank_name', ''),
-                ifsc_code=request.POST.get('ifsc_code', ''),
-                account_number=request.POST.get('account_number', ''),
-                branch_loction=request.POST.get('branch_location', ''),
-                pan_num=request.POST.get('pan_num', '')
+                gender=request.POST.get('gender'),
+                account_type=request.POST.get('account_type'),
+                bank_name=request.POST.get('bank_name'),
+                ifsc_code=request.POST.get('ifsc_code'),
+                account_number=request.POST.get('account_number'),
+                branch_loction=request.POST.get('branch_location'),
+                pan_num=request.POST.get('pan_num')
             )
             
             # Handle profile picture
@@ -79,9 +95,9 @@ def dashboard(request):
         return redirect('bio_details:product_view')
     
     
-    total_employees = Member.objects.filter(role="employee").count()
-    active_employees = Member.objects.filter(account_status=True,role="employee").count()
-    inactive_employees = Member.objects.filter(account_status=False,role="employee").count()
+    total_employees = Member.objects.filter(user__is_superuser=False,role="employee").count()
+    active_employees = Member.objects.filter(account_status=True,role="employee",user__is_superuser=False).count()
+    inactive_employees = Member.objects.filter(account_status=False,role="employee",user__is_superuser=False).count()
     
     total_products = Product.objects.count()
     available_products = Product.objects.filter(current_stock__gt=0).count()
@@ -172,10 +188,10 @@ def table(request):
     except ValueError:
         per_page = 5
     
-    members = Member.objects.filter(role='employee').order_by('id')  # Ensure consistent ordering
+    members = Member.objects.filter(user__is_superuser=False,role='employee').order_by('id')  # Ensure consistent ordering
 
     if search:
-        members = members.filter(name__icontains=search)
+        members = members.filter(user__username__icontains=search)
 
     paginator = Paginator(members, per_page) 
     page_number = request.GET.get('page')
@@ -183,6 +199,32 @@ def table(request):
 
     return render(request, "tables.html", {"page_obj": page_obj, "members": page_obj})
 
+
+def usertable(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    search = request.GET.get('search')
+    per_page = request.GET.get('per_page', 5) 
+    try:
+        per_page = int(per_page)
+    except ValueError:
+        per_page = 5
+    
+    members = Member.objects.filter(user__is_superuser=False, role='user').order_by('id')  # Ensure consistent ordering
+
+    if search:
+        members = members.filter(user__username__icontains=search)
+
+    paginator = Paginator(members, per_page) 
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, "user.html", {"page_obj": page_obj, "members": page_obj})
 
 
 def delete_member(request, id):
@@ -757,7 +799,7 @@ def order_view(request):
         per_page = 5
     
     # Get all orders with their related data
-    orders = Order.objects.select_related('user', 'invoice').order_by('created_at')
+    orders = Order.objects.select_related('user', 'invoice').prefetch_related('user__member').order_by('created_at')
 
     if search:
         orders = orders.filter(
@@ -1429,6 +1471,8 @@ def update_payment_method(request, invoice_id):
 def remove_invoice_item(request, item_id):
     if not request.user.is_authenticated:
         return redirect('bio_details:login')
+    
+
     print(f"Remove item request - Method: {request.method}, Item ID: {item_id}")
     
     if request.method == 'POST':
@@ -1533,7 +1577,7 @@ def my_orders(request):
     except ValueError:
         per_page = 5
     
-    user_orders = Order.objects.filter(user=request.user).select_related('invoice').prefetch_related('items', 'invoice__items').order_by('-created_at')
+    user_orders = Order.objects.filter(user=request.user).select_related('invoice').prefetch_related('items', 'invoice__items').order_by('created_at')
     
     if search:
         user_orders = user_orders.filter(
@@ -2130,7 +2174,7 @@ def attendance(request):
             
             # Check if this date has approved leave
             approved_leave = LeaveApplication.objects.filter(
-                member__user=employee_user,
+                user=employee_user,
                 status='approved',
                 from_date__lte=selected_date,
                 to_date__gte=selected_date
@@ -2142,7 +2186,7 @@ def attendance(request):
             
             # Check if this date has pending leave application
             pending_leave = LeaveApplication.objects.filter(
-                member__user=employee_user,
+                user=employee_user,
                 status='pending',
                 from_date__lte=selected_date,
                 to_date__gte=selected_date
@@ -2155,7 +2199,7 @@ def attendance(request):
             try:
                 # Check if attendance already exists for this date
                 existing_attendance = Attendance.objects.filter(
-                    member__user=employee_user,
+                    user=employee_user,
                     date=date
                 ).first()
                 
@@ -2182,15 +2226,8 @@ def attendance(request):
                     messages.success(request, f'Attendance updated successfully for {employee_user.get_full_name() or employee_user.username}!')
                 else:
                     # Create new attendance record
-                    # Get the member object for this user
-                    try:
-                        member = Member.objects.get(user=employee_user)
-                    except Member.DoesNotExist:
-                        messages.error(request, f'Member profile not found for {employee_user.get_full_name() or employee_user.username}!')
-                        return redirect('bio_details:attendance')
-                    
                     attendance_record = Attendance.objects.create(
-                        member=member,
+                        user=employee_user,
                         date=date,
                         status=status,
                         check_in=check_in,
@@ -2222,9 +2259,8 @@ def attendance(request):
             # Get the employee user (for superusers and HR) or use current user
             if (request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.is_hr_or_admin())) and employee_id:
                 try:
-                    member = Member.objects.get(id=employee_id)
-                    employee_user = member.user
-                except Member.DoesNotExist:
+                    employee_user = User.objects.get(id=employee_id)
+                except User.DoesNotExist:
                     messages.error(request, 'Employee not found!')
                     return redirect('bio_details:attendance')
             else:
@@ -2237,7 +2273,7 @@ def attendance(request):
                 to_date_obj = datetime.strptime(to_date, '%Y-%m-%d').date()
                 
                 overlapping_leaves = LeaveApplication.objects.filter(
-                    member__user=employee_user,
+                    user=employee_user,
                     status__in=['pending', 'approved'],
                     from_date__lte=to_date_obj,
                     to_date__gte=from_date_obj
@@ -2249,7 +2285,7 @@ def attendance(request):
                 
                 # Check if there are existing attendance records for the leave dates and delete them
                 existing_attendance = Attendance.objects.filter(
-                    member__user=employee_user,
+                    user=employee_user,
                     date__gte=from_date_obj,
                     date__lte=to_date_obj
                 )
@@ -2259,15 +2295,8 @@ def attendance(request):
                     existing_attendance.delete()
                     print(f"DEBUG: Deleted {deleted_count} attendance records for leave dates")
                 
-                # Get the member object for this user
-                try:
-                    member = Member.objects.get(user=employee_user)
-                except Member.DoesNotExist:
-                    messages.error(request, f'Member profile not found for {employee_user.get_full_name() or employee_user.username}!')
-                    return redirect('bio_details:attendance')
-                
                 leave_application = LeaveApplication.objects.create(
-                    member=member,
+                    user=employee_user,
                     leave_type=leave_type,
                     duration=duration,
                     from_date=from_date_obj,
@@ -2294,22 +2323,24 @@ def attendance(request):
     # For regular users, show only themselves. For admins and HR, show all employees with 'employee' role only
     if request.user.is_superuser:
         # Admin can see all employees with 'employee' role only
-        employees = Member.objects.filter(
-            account_status=True,
-            role='employee'  # Only show employees
-        ).order_by('name')
+        employees = User.objects.filter(
+            member__isnull=False,
+            member__account_status=True,
+            member__role='employee'  # Only show employees
+        ).select_related('member').order_by('first_name', 'last_name', 'username')
     elif hasattr(request.user, 'member') and request.user.member.is_hr_or_admin():
         # HR can see all employees with 'employee' role only
-        employees = Member.objects.filter(
-            account_status=True,
-            role='employee'  # Only show employees
-        ).order_by('name')
+        employees = User.objects.filter(
+            member__isnull=False,
+            member__account_status=True,
+            member__role='employee'  # Only show employees
+        ).select_related('member').order_by('first_name', 'last_name', 'username')
     else:
         # Regular users see only themselves if they have employee role
         if hasattr(request.user, 'member') and request.user.member.role == 'employee':
-            employees = Member.objects.filter(id=request.user.member.id)
+            employees = User.objects.filter(id=request.user.id).select_related('member')
         else:
-            employees = Member.objects.none()  # Empty QuerySet if user doesn't have employee role
+            employees = User.objects.none()  # Empty QuerySet if user doesn't have employee role
     
     # Add today's attendance status and leave information to each employee
     today = date_obj.today()
@@ -2319,13 +2350,13 @@ def attendance(request):
     for employee in employees:
         # Check today's attendance
         today_attendance = Attendance.objects.filter(
-            member=employee,
+            user=employee,
             date=today
         ).first()
         
         # Check if employee has approved leave today
         today_leave = LeaveApplication.objects.filter(
-            member=employee,
+            user=employee,
             status='approved',
             from_date__lte=today,
             to_date__gte=today
@@ -2348,21 +2379,21 @@ def attendance(request):
         
         # Calculate individual user statistics for current month
         employee.present_count = Attendance.objects.filter(
-            member=employee,
+            user=employee,
             date__month=current_month,
             date__year=current_year,
             status='present'
         ).count()
         
         employee.halfday_count = Attendance.objects.filter(
-            member=employee,
+            user=employee,
             date__month=current_month,
             date__year=current_year,
             status='half_day'
         ).count()
         
         employee.absent_count = Attendance.objects.filter(
-            member=employee,
+            user=employee,
             date__month=current_month,
             date__year=current_year,
             status='absent'
@@ -2370,14 +2401,14 @@ def attendance(request):
         
         # Count approved leaves for current year
         approved_leaves = LeaveApplication.objects.filter(
-            member=employee,
+            user=employee,
             from_date__year=current_year,
             status='approved'
         )
         employee.leaves_used = sum(leave.total_days for leave in approved_leaves)
         
         # Add department from member designation
-        employee.department = employee.designation if hasattr(employee, 'designation') else 'Staff'
+        employee.department = employee.member.designation if hasattr(employee, 'member') else 'Staff'
         
         # Add avatar color (you can customize this logic)
         colors = ['#1e3a8a', '#059669', '#dc2626', '#d97706', '#7c3aed', '#0284c7']
@@ -2409,25 +2440,25 @@ def attendance(request):
     else:
         # Regular users see only their own statistics
         present_today = Attendance.objects.filter(
-            member__user=request.user,
+            user=request.user,
             date=today,
             status='present'
         ).count()
         
         halfday_count = Attendance.objects.filter(
-            member__user=request.user,
+            user=request.user,
             date=today,
             status='half_day'
         ).count()
         
         absent_today = Attendance.objects.filter(
-            member__user=request.user,
+            user=request.user,
             date=today,
             status='absent'
         ).count()
         
         on_leave_today = LeaveApplication.objects.filter(
-            member__user=request.user,
+            user=request.user,
             status='approved',
             from_date__lte=today,
             to_date__gte=today
@@ -2442,18 +2473,18 @@ def attendance(request):
         if selected_employee_id:
             try:
                 selected_employee = User.objects.get(id=selected_employee_id)
-                attendance_records = Attendance.objects.filter(member__user=selected_employee).select_related('member__user').order_by('-date', '-created_at')[:50]
-                leave_records = LeaveApplication.objects.filter(member__user=selected_employee).select_related('member__user').order_by('-applied_at')[:50]
+                attendance_records = Attendance.objects.filter(user=selected_employee).select_related('user').order_by('-date', '-created_at')[:50]
+                leave_records = LeaveApplication.objects.filter(user=selected_employee).select_related('user').order_by('-applied_at')[:50]
             except User.DoesNotExist:
-                attendance_records = Attendance.objects.select_related('member__user').order_by('-date', '-created_at')[:50]
-                leave_records = LeaveApplication.objects.select_related('member__user').order_by('-applied_at')[:50]
+                attendance_records = Attendance.objects.select_related('user').order_by('-date', '-created_at')[:50]
+                leave_records = LeaveApplication.objects.select_related('user').order_by('-applied_at')[:50]
         else:
-            attendance_records = Attendance.objects.select_related('member__user').order_by('-date', '-created_at')[:50]
-            leave_records = LeaveApplication.objects.select_related('member__user').order_by('-applied_at')[:50]
+            attendance_records = Attendance.objects.select_related('user').order_by('-date', '-created_at')[:50]
+            leave_records = LeaveApplication.objects.select_related('user').order_by('-applied_at')[:50]
     else:
         # Regular users see only their own records
-        attendance_records = Attendance.objects.filter(member__user=request.user).select_related('member__user').order_by('-date', '-created_at')[:50]
-        leave_records = LeaveApplication.objects.filter(member__user=request.user).select_related('member__user').order_by('-applied_at')[:50]
+        attendance_records = Attendance.objects.filter(user=request.user).select_related('user').order_by('-date', '-created_at')[:50]
+        leave_records = LeaveApplication.objects.filter(user=request.user).select_related('user').order_by('-applied_at')[:50]
     
     print(f"DEBUG: Found {len(employees)} employees")
     print(f"DEBUG: Today's stats - Present: {present_today}, Absent: {absent_today}, On Leave: {on_leave_today}")
@@ -2500,13 +2531,13 @@ def manage_leave_applications(request):
                 leave_app.status = 'approved'
                 leave_app.approved_by = request.user
                 leave_app.approved_at = timezone.now()
-                messages.success(request, f'Leave approved for {leave_app.member.user.get_full_name() or leave_app.member.user.username}')
+                messages.success(request, f'Leave approved for {leave_app.user.get_full_name() or leave_app.user.username}')
                 
             elif action == 'reject':
                 leave_app.status = 'rejected'
                 leave_app.approved_by = request.user
                 leave_app.approved_at = timezone.now()
-                messages.success(request, f'Leave rejected for {leave_app.member.user.get_full_name() or leave_app.member.user.username}')
+                messages.success(request, f'Leave rejected for {leave_app.user.get_full_name() or leave_app.user.username}')
             
             leave_app.save()
             
@@ -2518,22 +2549,23 @@ def manage_leave_applications(request):
     today = date_obj.today()
     
     # Get all employees with today's attendance status (exclude superusers)
-    employees = Member.objects.filter(
-        account_status=True,
-        role='employee'
-    ).order_by('name')
+    employees = User.objects.filter(
+        member__isnull=False,
+        member__account_status=True,
+        member__role='employee'
+    ).select_related('member').order_by('first_name', 'last_name', 'username')
     
     # Add today's attendance status to each employee
     for employee in employees:
         # Check today's attendance
         today_attendance = Attendance.objects.filter(
-            member=employee,
+            user=employee,
             date=today
         ).first()
         
         # Check if employee has approved leave today
         today_leave = LeaveApplication.objects.filter(
-            member=employee,
+            user=employee,
             status='approved',
             from_date__lte=today,
             to_date__gte=today
@@ -2566,14 +2598,14 @@ def manage_leave_applications(request):
         current_year = today.year
         
         employee.present_days = Attendance.objects.filter(
-            member=employee,
+            user=employee,
             date__month=current_month,
             date__year=current_year,
             status='present'
         ).count()
         
         employee.halfday_days = Attendance.objects.filter(
-            member=employee,
+            user=employee,
             date__month=current_month,
             date__year=current_year,
             status='half_day'
@@ -2582,22 +2614,26 @@ def manage_leave_applications(request):
         
         # Count approved leaves for current year
         approved_leaves = LeaveApplication.objects.filter(
-            member=employee,
+            user=employee,
             from_date__year=current_year,
             status='approved'
         )
         employee.leave_days = sum(leave.total_days for leave in approved_leaves)
         
         # Add department and avatar color
-        employee.department = employee.designation if hasattr(employee, 'designation') else 'Staff'
+        employee.department = employee.member.designation if hasattr(employee, 'member') else 'Staff'
         
         # Generate initials for avatar
-        if employee.name:
-            name_parts = employee.name.split()
+        if employee.first_name and employee.last_name:
+            employee.initials = f"{employee.first_name[0].upper()}{employee.last_name[0].upper()}"
+        elif employee.first_name:
+            employee.initials = f"{employee.first_name[0].upper()}{employee.first_name[1].upper() if len(employee.first_name) > 1 else 'X'}"
+        elif employee.username:
+            name_parts = employee.username.split()
             if len(name_parts) >= 2:
                 employee.initials = f"{name_parts[0][0].upper()}{name_parts[1][0].upper()}"
             else:
-                employee.initials = f"{employee.name[0].upper()}{employee.name[1].upper() if len(employee.name) > 1 else 'X'}"
+                employee.initials = f"{employee.username[0].upper()}{employee.username[1].upper() if len(employee.username) > 1 else 'X'}"
         else:
             employee.initials = "XX"
         
@@ -2620,12 +2656,12 @@ def manage_leave_applications(request):
     not_marked_today = total_employees - marked_attendance
     
     # Get leave requests
-    leave_requests = LeaveApplication.objects.select_related('member__user', 'approved_by').order_by('-applied_at')
+    leave_requests = LeaveApplication.objects.select_related('user', 'approved_by').order_by('-applied_at')
     pending_count = leave_requests.filter(status='pending').count()
     
     # Add initials and avatar colors to leave request users
     for leave in leave_requests:
-        user = leave.member.user
+        user = leave.user
         # Generate initials for avatar
         if user.first_name and user.last_name:
             user.initials = f"{user.first_name[0].upper()}{user.last_name[0].upper()}"
@@ -2686,13 +2722,13 @@ def leave_action(request):
                 leave_app.status = 'approved'
                 leave_app.approved_by = request.user
                 leave_app.approved_at = timezone.now()
-                messages.success(request, f'Leave approved for {leave_app.member.user.get_full_name() or leave_app.member.user.username}')
+                messages.success(request, f'Leave approved for {leave_app.user.get_full_name() or leave_app.user.username}')
                 
             elif action == 'reject':
                 leave_app.status = 'rejected'
                 leave_app.approved_by = request.user
                 leave_app.approved_at = timezone.now()
-                messages.success(request, f'Leave rejected for {leave_app.member.user.get_full_name() or leave_app.member.user.username}')
+                messages.success(request, f'Leave rejected for {leave_app.user.get_full_name() or leave_app.user.username}')
             
             leave_app.save()
             
@@ -2737,7 +2773,7 @@ def attendance_stats(request):
         
         # Count present days
         present_count = Attendance.objects.filter(
-            member__user=employee,
+            user=employee,
             date__month=current_month,
             date__year=current_year,
             status='present'
@@ -2745,7 +2781,7 @@ def attendance_stats(request):
         
         # Count half-day attendance
         halfday_count = Attendance.objects.filter(
-            member__user=employee,
+            user=employee,
             date__month=current_month,
             date__year=current_year,
             status='half_day'
@@ -2753,7 +2789,7 @@ def attendance_stats(request):
         
         # Count absent days
         absent_count = Attendance.objects.filter(
-            member__user=employee,
+            user=employee,
             date__month=current_month,
             date__year=current_year,
             status='absent'
@@ -2761,7 +2797,7 @@ def attendance_stats(request):
         
         # Count approved leaves for current year
         approved_leaves = LeaveApplication.objects.filter(
-            member__user=employee,
+            user=employee,
             from_date__year=current_year,
             status='approved'
         )
@@ -2780,170 +2816,6 @@ def attendance_stats(request):
         return JsonResponse({'error': 'Employee not found'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
-
-def user_profile_list(request):
-    if not request.user.is_authenticated:
-        return redirect('bio_details:login')
-    
-    if not request.user.is_superuser:
-        messages.error(request, "Access denied. Admin privileges required.")
-        return redirect('bio_details:dashboard')
-    
-    search = request.GET.get('search')
-    per_page = request.GET.get('per_page', 10)
-    try:
-        per_page = int(per_page)
-    except ValueError:
-        per_page = 10
-    
-    profiles = UserProfile.objects.select_related('user').order_by('-id')
-    
-    if search:
-        profiles = profiles.filter(
-            models.Q(user__username__icontains=search) |
-            models.Q(user__email__icontains=search) |
-            models.Q(phone__icontains=search) |
-            models.Q(user_id__icontains=search)
-        )
-    
-    paginator = Paginator(profiles, per_page)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    return render(request, 'user_profile_list.html', {'page_obj': page_obj})
-
-
-def user_profile_create(request):
-    # if not request.user.is_authenticated:
-    #     return redirect('bio_details:login')
-    
-    if request.method == 'POST':
-        try:
-            # Create Django user first
-            username = request.POST.get('username')
-            email = request.POST.get('email')
-            password = request.POST.get('password')
-            
-            if User.objects.filter(username=username).exists():
-                messages.error(request, 'Username already exists!')
-                return render(request, 'user_profile_form.html')
-            
-            if User.objects.filter(email=email).exists():
-                messages.error(request, 'Email already exists!')
-                return render(request, 'user_profile_form.html')
-            
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-                password=password,
-                first_name=request.POST.get('first_name', ''),
-                last_name=request.POST.get('last_name', '')
-            )
-            
-            # Create UserProfile
-            profile = UserProfile.objects.create(
-                user=user,
-                phone=request.POST.get('phone', ''),
-                address1=request.POST.get('address1', ''),
-                city=request.POST.get('city'),
-                state=request.POST.get('state'),
-                pincode=request.POST.get('pincode', ''),
-                date_of_birth=request.POST.get('date_of_birth') or None,
-                gender=request.POST.get('gender')
-            )
-            
-            messages.success(request, f'User profile created successfully with ID: {profile.user_id}')
-            return redirect('bio_details:user_profile_list')
-            
-        except Exception as e:
-            messages.error(request, f'Error creating profile: {str(e)}')
-    
-    return render(request, 'user_profile_form.html')
-
-
-
-def user_profile_edit(request, user_id):
-    if not request.user.is_authenticated:
-        return redirect('bio_details:login')
-    
-    try:
-        profile = UserProfile.objects.get(user_id=user_id)
-    except UserProfile.DoesNotExist:
-        messages.error(request, 'User profile not found!')
-        return redirect('bio_details:user_profile_list')
-    
-    # Allow users to edit their own profile or admin to edit any
-    if profile.user != request.user and not request.user.is_superuser:
-        messages.error(request, 'Access denied!')
-        return redirect('bio_details:user_profile_list')
-    
-    if request.method == 'POST':
-        try:
-            # Update Django user
-            profile.user.username = request.POST.get('username')
-            profile.user.email = request.POST.get('email')
-            profile.user.first_name = request.POST.get('first_name', '')
-            profile.user.last_name = request.POST.get('last_name', '')
-            profile.user.save()
-            
-            # Update UserProfile
-            profile.phone = request.POST.get('phone', '')
-            profile.address1 = request.POST.get('address1', '')
-            profile.city = request.POST.get('city')
-            profile.state = request.POST.get('state')
-            profile.pincode = request.POST.get('pincode', '')
-            profile.date_of_birth = request.POST.get('date_of_birth') or None
-            profile.gender = request.POST.get('gender')
-            profile.save()
-            
-            messages.success(request, 'Profile updated successfully!')
-            if request.user.is_superuser:
-                return redirect('bio_details:user_profile_list')
-            else:
-                return redirect('bio_details:user_profile_detail', user_id=profile.user_id)
-            
-        except Exception as e:
-            messages.error(request, f'Error updating profile: {str(e)}')
-    
-    return render(request, 'user_profile_form.html', {'profile': profile, 'edit_mode': True})
-
-
-def user_profile_detail(request, user_id):
-    if not request.user.is_authenticated:
-        return redirect('bio_details:login')
-    
-    try:
-        profile = UserProfile.objects.get(user_id=user_id)
-    except UserProfile.DoesNotExist:
-        messages.error(request, 'User profile not found!')
-        return redirect('bio_details:user_profile_list')
-    
-    # Allow users to view their own profile or admin to view any
-    if profile.user != request.user and not request.user.is_superuser:
-        messages.error(request, 'Access denied!')
-        return redirect('bio_details:dashboard')
-    
-    return render(request, 'user_profile_detail.html', {'user': profile.user})
-
-
-def user_profile_delete(request, user_id):
-    if not request.user.is_authenticated:
-        return redirect('bio_details:login')
-    
-    if not request.user.is_superuser:
-        messages.error(request, "Access denied. Admin privileges required.")
-        return redirect('bio_details:dashboard')
-    
-    try:
-        profile = UserProfile.objects.get(user_id=user_id)
-        username = profile.user.username
-        profile.user.delete()  # This will also delete the profile due to CASCADE
-        messages.success(request, f'User profile for {username} deleted successfully!')
-    except UserProfile.DoesNotExist:
-        messages.error(request, 'User profile not found!')
-    
-    return redirect('bio_details:user_profile_list')
 
 
 
