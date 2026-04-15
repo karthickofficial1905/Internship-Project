@@ -1,6 +1,7 @@
 {% extends "main.html" %}
 {% block content %}
 {% load static %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <div class="dash-shell">
 
@@ -187,6 +188,11 @@
               </option>
             {% endfor %}
           </select>
+          <select id="yearSelect" class="year-select">
+            {% for year in available_years %}
+              <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+            {% endfor %}
+          </select>
         </div>
       </div>
       
@@ -251,39 +257,152 @@
     <div class="analytics-section">
       <div class="section-header">
         <h2 class="section-title">Analytics Overview</h2>
+        <div class="analytics-controls">
+          <select id="analyticsMonth" class="month-select">
+            {% for month_name in month_names %}
+              <option value="{{ forloop.counter }}" {% if forloop.counter == selected_month %}selected{% endif %}>
+                {{ month_name }}
+              </option>
+            {% endfor %}
+          </select>
+          <select id="analyticsYear" class="year-select">
+            {% for year in analytics_years %}
+              <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>{{ year }}</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
-      
-      <div class="analytics-grid">
-        <!-- Category Distribution -->
-        <div class="chart-card">
+      <!-- Employee Analytics -->
+      <div  style="display: flex; gap: 15px; margin-bottom:15px;">
+        <div class="chart-card" style="flex: 0 0 300px;">
           <div class="chart-header">
-            <h3>Category Distribution</h3>
+            <h3>Employee Status</h3>
             <div class="chart-stats">
-              <span class="total-items">Total: {{ total_employees|add:total_orders|add:total_products }}</span>
+              <span class="total-items">Total: {{ total_employees }}</span>
             </div>
           </div>
-          <div class="chart-container">
-            <canvas id="categoryChart" width="340" height="300"></canvas>
+          <div class="chart-with-stats">
+            <div class="chart-container" style="padding:50px;">
+              <canvas id="employeeStatusChart" width="200" height="200"></canvas>
+            </div>
+            <div class="chart-status">
+              <div class="status-item active">
+                <div class="status-dot"></div>
+                <div class="status-info">
+                  <div class="status-label">Active</div>
+                  <div class="status-value">{{ active_employees|default:0 }}</div>
+                </div>
+              </div>
+              <div class="status-item inactive">
+                <div class="status-dot"></div>
+                <div class="status-info">
+                  <div class="status-label">Inactive</div>
+                  <div class="status-value">{{ inactive_employees|default:0 }}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        
-        <!-- Employee Joins Chart -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3>Monthly Employee Joins</h3>
+        <div class="analytics-card" style="flex: 1;">
+          <div class="analytics-header">
+            <h3>Employee Status Monthly Trends</h3>
+            <div class="current-stats">
+              <span class="stat-badge active">Active: {{ active_employees|default:0 }}</span>
+              <span class="stat-badge inactive">Inactive: {{ inactive_employees|default:0 }}</span>
+            </div>
           </div>
-          <div class="chart-container">
-            <canvas id="employeeChart" width="400" height="300"></canvas>
+          <div class="chart-container-large">
+            <canvas id="employeeMonthlyChart" width="400" height="200"></canvas>
           </div>
         </div>
-        
-        <!-- Orders Chart -->
-        <div class="chart-card">
+      </div>
+      
+      <!-- Product Analytics -->
+      <div  style="display: flex; gap: 15px; margin-bottom:15px;">
+        <div class="chart-card" style="flex: 0 0 300px;">
           <div class="chart-header">
-            <h3>Monthly Orders</h3>
+            <h3>Product Stock Status</h3>
+            <div class="chart-stats">
+              <span class="total-items">Total: {{ total_products }}</span>
+            </div>
           </div>
-          <div class="chart-container">
-            <canvas id="ordersChart" width="400" height="300"></canvas>
+          <div class="chart-with-stats">
+            <div class="chart-container" style="padding:50px;">
+              <canvas id="stockChart" width="200" height="200"></canvas>
+            </div>
+            <div class="chart-status">
+              <div class="status-item in-stock">
+                <div class="status-dot"></div>
+                <div class="status-info">
+                  <div class="status-label">In Stock</div>
+                  <div class="status-value">{{ available_products|default:0 }}</div>
+                </div>
+              </div>
+              <div class="status-item out-stock">
+                <div class="status-dot"></div>
+                <div class="status-info">
+                  <div class="status-label">Out of Stock</div>
+                  <div class="status-value">{{ out_of_stock_products|default:0 }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="analytics-card" style="flex: 1;">
+          <div class="analytics-header">
+            <h3>Product Stock Monthly Trends</h3>
+            <div class="current-stats">
+              <span class="stat-badge in-stock">In Stock: {{ available_products|default:0 }}</span>
+              <span class="stat-badge out-stock">Out of Stock: {{ out_of_stock_products|default:0 }}</span>
+            </div>
+          </div>
+          <div class="chart-container-large">
+            <canvas id="productMonthlyChart" width="400" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Order Analytics -->
+      <div  style="display: flex; gap: 15px; margin-bottom:15px;">
+        <div class="chart-card" style="flex: 0 0 300px;">
+          <div class="chart-header">
+            <h3>Order Status</h3>
+            <div class="chart-stats">
+              <span class="total-items">Total: {{ total_orders }}</span>
+            </div>
+          </div>
+          <div class="chart-with-stats">
+            <div class="chart-container" style="padding:50px;">
+              <canvas id="orderStatusChart" width="200" height="200"></canvas>
+            </div>
+            <div class="chart-status">
+              <div class="status-item completed">
+                <div class="status-dot"></div>
+                <div class="status-info">
+                  <div class="status-label">Completed</div>
+                  <div class="status-value">{{ completed_orders|default:0 }}</div>
+                </div>
+              </div>
+              <div class="status-item pending">
+                <div class="status-dot"></div>
+                <div class="status-info">
+                  <div class="status-label">Pending</div>
+                  <div class="status-value">{{ pending_orders|default:0 }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="analytics-card" style="flex: 1;">
+          <div class="analytics-header">
+            <h3>Order Status Monthly Trends</h3>
+            <div class="current-stats">
+              <span class="stat-badge completed">Completed: {{ completed_orders|default:0 }}</span>
+              <span class="stat-badge pending">Pending: {{ pending_orders|default:0 }}</span>
+            </div>
+          </div>
+          <div class="chart-container-large">
+            <canvas id="orderMonthlyChart" width="400" height="200"></canvas>
           </div>
         </div>
       </div>
@@ -524,6 +643,297 @@ function createAttendanceChart() {
   });
 }
 
+/* EMPLOYEE STATUS PIE CHART */
+function createEmployeeStatusChart(selectedMonth = null, selectedYear = null) {
+  const ctx = document.getElementById('employeeStatusChart');
+  if (!ctx) return;
+  
+  const month = selectedMonth || document.getElementById('analyticsMonth')?.value;
+  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
+  
+  // Fetch data for selected month and year
+  let url = `/get-employee-status-data/?year=${year}`;
+  if (month) {
+    url += `&month=${month}`;
+  }
+  
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.employeeStatusChart = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: ['Active', 'Inactive'],
+            datasets: [{
+              data: [data.active_employees, data.inactive_employees],
+              backgroundColor: ['#10b981', '#ef4444'],
+              borderColor: '#ffffff',
+              borderWidth: 3,
+              hoverBorderWidth: 4,
+              hoverOffset: 8
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  padding: 15,
+                  usePointStyle: true,
+                  pointStyle: 'circle',
+                  font: { size: 12, weight: '600' },
+                  color: '#374151'
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleColor: '#ffffff',
+                bodyColor: '#ffffff',
+                callbacks: {
+                  label: function(context) {
+                    const label = context.label || '';
+                    const value = context.parsed;
+                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                    return `${label}: ${value} (${percentage}%)`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    })
+    .catch(error => console.error('Error fetching employee status data:', error));
+}
+
+/* PRODUCT STOCK PIE CHART */
+function createStockChart(selectedMonth = null, selectedYear = null) {
+  const ctx = document.getElementById('stockChart');
+  if (!ctx) return;
+  
+  const month = selectedMonth || document.getElementById('analyticsMonth')?.value;
+  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
+  
+  // Fetch data for selected month and year
+  let url = `/get-product-status-data/?year=${year}`;
+  if (month) {
+    url += `&month=${month}`;
+  }
+  
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.stockChart = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: ['In Stock', 'Out of Stock'],
+            datasets: [{
+              data: [data.available_products, data.out_of_stock_products],
+              backgroundColor: ['#1e3a8a', '#dc2626'],
+              borderColor: '#ffffff',
+              borderWidth: 3,
+              hoverBorderWidth: 4,
+              hoverOffset: 8
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  padding: 15,
+                  usePointStyle: true,
+                  pointStyle: 'circle',
+                  font: { size: 12, weight: '600' },
+                  color: '#374151'
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleColor: '#ffffff',
+                bodyColor: '#ffffff',
+                callbacks: {
+                  label: function(context) {
+                    const label = context.label || '';
+                    const value = context.parsed;
+                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                    return `${label}: ${value} (${percentage}%)`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    })
+    .catch(error => console.error('Error fetching product status data:', error));
+}
+
+/* ORDER STATUS PIE CHART */
+function createOrderStatusChart(selectedMonth = null, selectedYear = null) {
+  const ctx = document.getElementById('orderStatusChart');
+  if (!ctx) return;
+  
+  const month = selectedMonth || document.getElementById('analyticsMonth')?.value;
+  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
+  
+  // Fetch data for selected month and year
+  let url = `/get-order-status-data/?year=${year}`;
+  if (month) {
+    url += `&month=${month}`;
+  }
+  
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.orderStatusChart = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: ['Completed', 'Pending'],
+            datasets: [{
+              data: [data.completed_orders, data.pending_orders],
+              backgroundColor: ['#3b82f6', '#f59e0b'],
+              borderColor: '#ffffff',
+              borderWidth: 3,
+              hoverBorderWidth: 4,
+              hoverOffset: 8
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  padding: 15,
+                  usePointStyle: true,
+                  pointStyle: 'circle',
+                  font: { size: 12, weight: '600' },
+                  color: '#374151'
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleColor: '#ffffff',
+                bodyColor: '#ffffff',
+                callbacks: {
+                  label: function(context) {
+                    const label = context.label || '';
+                    const value = context.parsed;
+                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                    return `${label}: ${value} (${percentage}%)`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    })
+    .catch(error => console.error('Error fetching order status data:', error));
+}
+
+/* UPDATE STATUS VALUES IN UI */
+function updateStatusValues(selectedMonth = null, selectedYear = null) {
+  const month = selectedMonth || document.getElementById('analyticsMonth')?.value;
+  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
+  
+  // Update employee status values
+  fetch(`/get-employee-status-data/?year=${year}${month ? `&month=${month}` : ''}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Update employee status values in the UI
+        const activeElements = document.querySelectorAll('.status-item.active .status-value');
+        const inactiveElements = document.querySelectorAll('.status-item.inactive .status-value');
+        
+        activeElements.forEach(el => el.textContent = data.active_employees);
+        inactiveElements.forEach(el => el.textContent = data.inactive_employees);
+        
+        // Update current stats badges for employees
+        const activeStatBadges = document.querySelectorAll('.stat-badge.active');
+        const inactiveStatBadges = document.querySelectorAll('.stat-badge.inactive');
+        
+        activeStatBadges.forEach(el => el.textContent = `Active: ${data.active_employees}`);
+        inactiveStatBadges.forEach(el => el.textContent = `Inactive: ${data.inactive_employees}`);
+        
+        // Update total in chart header
+        const totalEmployeesEl = document.querySelector('.chart-card .total-items');
+        if (totalEmployeesEl) {
+          totalEmployeesEl.textContent = `Total: ${data.total_employees}`;
+        }
+      }
+    })
+    .catch(error => console.error('Error updating employee status values:', error));
+  
+  // Update product status values
+  fetch(`/get-product-status-data/?year=${year}${month ? `&month=${month}` : ''}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Update product status values in the UI
+        const inStockElements = document.querySelectorAll('.status-item.in-stock .status-value');
+        const outStockElements = document.querySelectorAll('.status-item.out-stock .status-value');
+        
+        inStockElements.forEach(el => el.textContent = data.available_products);
+        outStockElements.forEach(el => el.textContent = data.out_of_stock_products);
+        
+        // Update current stats badges for products
+        const inStockStatBadges = document.querySelectorAll('.stat-badge.in-stock');
+        const outStockStatBadges = document.querySelectorAll('.stat-badge.out-stock');
+        
+        inStockStatBadges.forEach(el => el.textContent = `In Stock: ${data.available_products}`);
+        outStockStatBadges.forEach(el => el.textContent = `Out of Stock: ${data.out_of_stock_products}`);
+        
+        // Update total in chart header
+        const totalProductsEl = document.querySelectorAll('.chart-card .total-items')[1];
+        if (totalProductsEl) {
+          totalProductsEl.textContent = `Total: ${data.total_products}`;
+        }
+      }
+    })
+    .catch(error => console.error('Error updating product status values:', error));
+  
+  // Update order status values
+  fetch(`/get-order-status-data/?year=${year}${month ? `&month=${month}` : ''}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Update order status values in the UI
+        const completedElements = document.querySelectorAll('.status-item.completed .status-value');
+        const pendingElements = document.querySelectorAll('.status-item.pending .status-value');
+        
+        completedElements.forEach(el => el.textContent = data.completed_orders);
+        pendingElements.forEach(el => el.textContent = data.pending_orders);
+        
+        // Update current stats badges for orders
+        const completedStatBadges = document.querySelectorAll('.stat-badge.completed');
+        const pendingStatBadges = document.querySelectorAll('.stat-badge.pending');
+        
+        completedStatBadges.forEach(el => el.textContent = `Completed: ${data.completed_orders}`);
+        pendingStatBadges.forEach(el => el.textContent = `Pending: ${data.pending_orders}`);
+        
+        // Update total in chart header
+        const totalOrdersEl = document.querySelectorAll('.chart-card .total-items')[2];
+        if (totalOrdersEl) {
+          totalOrdersEl.textContent = `Total: ${data.total_orders}`;
+        }
+      }
+    })
+    .catch(error => console.error('Error updating order status values:', error));
+}
+
 /* CATEGORY PIE CHART */
 function createCategoryChart() {
   const ctx = document.getElementById('categoryChart');
@@ -677,47 +1087,55 @@ function createPerformanceChart() {
 }
 
 /* MONTH SELECTOR */
-document.getElementById('monthSelect')?.addEventListener('change', function() {
-  const month = this.value;
-  const year = new Date().getFullYear();
-  
-  // Show loading state
-  document.getElementById('presentDays').textContent = '...';
-  document.getElementById('leaveDays').textContent = '...';
-  document.getElementById('halfDays').textContent = '...';
-  
-  // Fetch attendance data for selected month
-  fetch(`/get-attendance-data/?month=${month}&year=${year}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // Update attendance statistics
-        document.getElementById('presentDays').textContent = data.present_days;
-        document.getElementById('leaveDays').textContent = data.leave_days;
-        document.getElementById('halfDays').textContent = data.half_days;
-        
-        // Update chart with new data
-        updateAttendanceChart(data.weekly_data);
-      } else {
-        console.error('Error fetching attendance data:', data.error);
-        // Reset to default values on error
-        document.getElementById('presentDays').textContent = '0';
-        document.getElementById('leaveDays').textContent = '0';
-        document.getElementById('halfDays').textContent = '0';
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      // Reset to default values on error
-      document.getElementById('presentDays').textContent = '0';
-      document.getElementById('leaveDays').textContent = '0';
-      document.getElementById('halfDays').textContent = '0';
+document.addEventListener('DOMContentLoaded', function() {
+  const monthSelect = document.getElementById('monthSelect');
+  if (monthSelect) {
+    monthSelect.addEventListener('change', function() {
+      const month = this.value;
+      const year = new Date().getFullYear();
+      
+      // Show loading state
+      const presentDays = document.getElementById('presentDays');
+      const leaveDays = document.getElementById('leaveDays');
+      const halfDays = document.getElementById('halfDays');
+      
+      if (presentDays) presentDays.textContent = '...';
+      if (leaveDays) leaveDays.textContent = '...';
+      if (halfDays) halfDays.textContent = '...';
+      
+      // Fetch attendance data for selected month
+      fetch(`/get-attendance-data/?month=${month}&year=${year}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // Update attendance statistics
+            if (presentDays) presentDays.textContent = data.present_days;
+            if (leaveDays) leaveDays.textContent = data.leave_days;
+            if (halfDays) halfDays.textContent = data.half_days;
+            
+            // Update chart with new data
+            updateAttendanceChart(data.weekly_data);
+          } else {
+            console.error('Error fetching attendance data:', data.error);
+            // Reset to default values on error
+            if (presentDays) presentDays.textContent = '0';
+            if (leaveDays) leaveDays.textContent = '0';
+            if (halfDays) halfDays.textContent = '0';
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          // Reset to default values on error
+          if (presentDays) presentDays.textContent = '0';
+          if (leaveDays) leaveDays.textContent = '0';
+          if (halfDays) halfDays.textContent = '0';
+        });
     });
+  }
 });
 
 function updateAttendanceChart(weeklyData) {
-  const ctx = document.getElementById('attendanceChart');
-  if (!ctx || !window.attendanceChart) return;
+  if (!window.attendanceChart || !weeklyData) return;
   
   const labels = [];
   const presentData = [];
@@ -726,9 +1144,9 @@ function updateAttendanceChart(weeklyData) {
   
   weeklyData.forEach((week, index) => {
     labels.push(`Week ${index + 1}`);
-    presentData.push(week.present);
-    leaveData.push(week.leave);
-    halfdayData.push(week.halfday);
+    presentData.push(week.present || 0);
+    leaveData.push(week.leave || 0);
+    halfdayData.push(week.halfday || 0);
   });
   
   // Update chart data
@@ -736,7 +1154,7 @@ function updateAttendanceChart(weeklyData) {
   window.attendanceChart.data.datasets[0].data = presentData;
   window.attendanceChart.data.datasets[1].data = leaveData;
   window.attendanceChart.data.datasets[2].data = halfdayData;
-  window.attendanceChart.update();
+  window.attendanceChart.update('active');
 }
 
 function updateAttendanceData(month) {
@@ -744,11 +1162,351 @@ function updateAttendanceData(month) {
   // The actual update is now handled by the change event listener above
 }
 
+/* MONTHLY ANALYTICS CHARTS */
+function createEmployeeMonthlyChart(selectedMonth = null, selectedYear = null) {
+  const ctx = document.getElementById('employeeMonthlyChart');
+  if (!ctx) return;
+  
+  // Get selected year (ignore month parameter, always show all 12 months)
+  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
+  
+  // Fetch real data from Django backend (only pass year, not month)
+  fetch(`/get-employee-monthly-data/?year=${year}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.employeeChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.months,
+            datasets: [{
+              label: 'Active Employees',
+              data: data.active_data,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: '#10b981',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              pointRadius: 6
+            }, {
+              label: 'Inactive Employees',
+              data: data.inactive_data,
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: '#ef4444',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              pointRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: {
+                  padding: 20,
+                  usePointStyle: true,
+                  font: { size: 12, weight: '600' }
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleColor: '#ffffff',
+                bodyColor: '#ffffff',
+                borderColor: '#374151',
+                borderWidth: 1,
+                cornerRadius: 8
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { font: { weight: '600' } }
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: '#f1f5f9' },
+                ticks: { font: { weight: '600' } }
+              }
+            },
+            interaction: {
+              intersect: false,
+              mode: 'index'
+            }
+          }
+        });
+      } else {
+        console.error('Error loading employee data:', data.error);
+      }
+    })
+    .catch(error => console.error('Error fetching employee data:', error));
+}
+
+function createProductMonthlyChart(selectedMonth = null, selectedYear = null) {
+  const ctx = document.getElementById('productMonthlyChart');
+  if (!ctx) return;
+  
+  // Get selected year (ignore month parameter, always show all 12 months)
+  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
+  
+  // Fetch real data from Django backend (only pass year, not month)
+  fetch(`/get-product-monthly-data/?year=${year}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.productChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: data.months,
+            datasets: [{
+              label: 'In Stock',
+              data: data.in_stock_data,
+              backgroundColor: '#059669',
+              borderColor: '#047857',
+              borderWidth: 1,
+              borderRadius: 4
+            }, {
+              label: 'Out of Stock',
+              data: data.out_of_stock_data,
+              backgroundColor: '#dc2626',
+              borderColor: '#b91c1c',
+              borderWidth: 1,
+              borderRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: {
+                  padding: 20,
+                  usePointStyle: true,
+                  font: { size: 12, weight: '600' }
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleColor: '#ffffff',
+                bodyColor: '#ffffff'
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { font: { weight: '600' } }
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: '#f1f5f9' },
+                ticks: { font: { weight: '600' } }
+              }
+            }
+          }
+        });
+      } else {
+        console.error('Error loading product data:', data.error);
+      }
+    })
+    .catch(error => console.error('Error fetching product data:', error));
+}
+
+function createOrderMonthlyChart(selectedMonth = null, selectedYear = null) {
+  const ctx = document.getElementById('orderMonthlyChart');
+  if (!ctx) return;
+  
+  // Get selected year (ignore month parameter, always show all 12 months)
+  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
+  
+  // Fetch real data from Django backend (only pass year, not month)
+  fetch(`/get-order-monthly-data/?year=${year}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.orderChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.months,
+            datasets: [{
+              label: 'Completed Orders',
+              data: data.completed_data,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: '#3b82f6',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              pointRadius: 6
+            }, {
+              label: 'Pending Orders',
+              data: data.pending_data,
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: '#f59e0b',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              pointRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: {
+                  padding: 20,
+                  usePointStyle: true,
+                  font: { size: 12, weight: '600' }
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleColor: '#ffffff',
+                bodyColor: '#ffffff'
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { font: { weight: '600' } }
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: '#f1f5f9' },
+                ticks: { font: { weight: '600' } }
+              }
+            },
+            interaction: {
+              intersect: false,
+              mode: 'index'
+            }
+          }
+        });
+      } else {
+        console.error('Error loading order data:', data.error);
+      }
+    })
+    .catch(error => console.error('Error fetching order data:', error));
+}
+
+/* ANALYTICS MONTH AND YEAR SELECTOR */
+document.addEventListener('DOMContentLoaded', function() {
+  const analyticsMonth = document.getElementById('analyticsMonth');
+  const analyticsYear = document.getElementById('analyticsYear');
+  
+  function updateAnalyticsCharts() {
+    const month = analyticsMonth ? analyticsMonth.value : new Date().getMonth() + 1;
+    const year = analyticsYear ? analyticsYear.value : new Date().getFullYear();
+    
+    console.log(`Updating analytics for ${month}/${year}`);
+    
+    // Destroy existing charts before creating new ones
+    if (window.employeeChart) {
+      window.employeeChart.destroy();
+      window.employeeChart = null;
+    }
+    if (window.productChart) {
+      window.productChart.destroy();
+      window.productChart = null;
+    }
+    if (window.orderChart) {
+      window.orderChart.destroy();
+      window.orderChart = null;
+    }
+    if (window.employeeStatusChart) {
+      window.employeeStatusChart.destroy();
+      window.employeeStatusChart = null;
+    }
+    if (window.stockChart) {
+      window.stockChart.destroy();
+      window.stockChart = null;
+    }
+    if (window.orderStatusChart) {
+      window.orderStatusChart.destroy();
+      window.orderStatusChart = null;
+    }
+    
+    // Update all charts with selected month and year
+    createEmployeeMonthlyChart(month, year);
+    createProductMonthlyChart(month, year);
+    createOrderMonthlyChart(month, year);
+    
+    // Update pie charts with selected month and year
+    createEmployeeStatusChart(month, year);
+    createStockChart(month, year);
+    createOrderStatusChart(month, year);
+    
+    // Update status values in the UI
+    updateStatusValues(month, year);
+  }
+  
+  if (analyticsMonth) {
+    analyticsMonth.addEventListener('change', updateAnalyticsCharts);
+  }
+  
+  if (analyticsYear) {
+    analyticsYear.addEventListener('change', updateAnalyticsCharts);
+  }
+});
+
 /* INITIALIZE CHARTS */
 document.addEventListener('DOMContentLoaded', function() {
   window.attendanceChart = createAttendanceChart();
-  createCategoryChart();
-  createPerformanceChart();
+  
+  // Initialize analytics charts with current month and year
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getFullYear();
+  
+  createEmployeeStatusChart(currentMonth, currentYear);
+  createStockChart(currentMonth, currentYear);
+  createOrderStatusChart(currentMonth, currentYear);
+  
+  // Initialize monthly analytics charts
+  createEmployeeMonthlyChart(currentMonth, currentYear);
+  createProductMonthlyChart(currentMonth, currentYear);
+  createOrderMonthlyChart(currentMonth, currentYear);
+});
+
+// Handle month and year selection for attendance
+document.addEventListener('DOMContentLoaded', function() {
+    const monthSelect = document.getElementById('monthSelect');
+    const yearSelect = document.getElementById('yearSelect');
+    
+    if (monthSelect && yearSelect) {
+        // Function to update attendance data
+        function updateAttendanceData() {
+            const selectedMonth = monthSelect.value;
+            const selectedYear = yearSelect.value;
+            
+            console.log('Selected Month:', selectedMonth);
+            console.log('Selected Year:', selectedYear);
+            
+            // Redirect to dashboard with selected month and year
+            const url = new URL(window.location.href);
+            url.searchParams.set('month', selectedMonth);
+            url.searchParams.set('year', selectedYear);
+            window.location.href = url.toString();
+        }
+        
+        // Add event listeners
+        monthSelect.addEventListener('change', updateAttendanceData);
+        yearSelect.addEventListener('change', updateAttendanceData);
+    }
 });
 </script>
 
@@ -987,6 +1745,71 @@ document.addEventListener('DOMContentLoaded', function() {
 .analytics-section{
   margin-bottom:24px;
 }
+.analytics-controls{
+  display:flex;align-items:center;gap:12px;
+}
+.month-select, .year-select{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:8px;padding:8px 32px 8px 12px;
+  font-size:14px;font-weight:500;color:var(--text);
+  cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position:right 8px center;
+  background-repeat:no-repeat;
+  background-size:16px;
+}
+.month-select:focus, .year-select:focus{
+  outline:none;border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(37,99,235,0.1);
+}
+
+.analytics-card{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:16px;padding:20px;
+  box-shadow:var(--sh);
+}
+.analytics-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:20px;
+}
+.analytics-header h3{
+  font-family:var(--fh);font-size:18px;font-weight:700;
+  color:var(--text);margin:0;
+}
+.current-stats{
+  display:flex;gap:12px;
+}
+.stat-badge{
+  padding:6px 12px;border-radius:20px;
+  font-size:12px;font-weight:600;
+  text-transform:uppercase;letter-spacing:0.05em;
+}
+.stat-badge.active{
+  background:#ecfdf5;color:#065f46;
+}
+.stat-badge.inactive{
+  background:#fef2f2;color:#991b1b;
+}
+.stat-badge.in-stock{
+  background:#ecfdf5;color:#047857;
+}
+.stat-badge.out-stock{
+  background:#fef2f2;color:#b91c1c;
+}
+.stat-badge.completed{
+  background:#eff6ff;color:#1d4ed8;
+}
+.stat-badge.pending{
+  background:#fffbeb;color:#92400e;
+}
+
+.chart-container-large{
+  position:relative;height:300px;width:100%;
+}
+
+.summary-grid{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:24px;
+}
 .analytics-grid{
   display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;
 }
@@ -994,8 +1817,36 @@ document.addEventListener('DOMContentLoaded', function() {
   background:var(--white);border:1px solid var(--border);
   border-radius:16px;padding:20px;box-shadow:var(--sh);
 }
+.chart-with-stats{
+  display:block;align-items:center;
+}
 .chart-card .chart-container{
-  position:relative;height:300px;
+  position:relative;height:200px;width:200px;flex-shrink:0;
+}
+.chart-status{
+  display:flex;gap:16px;flex:1;
+}
+.status-item{
+  display:flex;align-items:center;gap:12px;width:100%;
+  padding:10px;border-radius:8px;background:var(--bg);
+}
+.status-dot{
+  width:12px;height:12px;border-radius:50%;flex-shrink:0;
+}
+.status-item.active .status-dot{background:#10b981}
+.status-item.inactive .status-dot{background:#ef4444}
+.status-item.in-stock .status-dot{background:#1e3a8a}
+.status-item.out-stock .status-dot{background:#dc2626}
+.status-item.completed .status-dot{background:#3b82f6}
+.status-item.pending .status-dot{background:#f59e0b}
+.status-info{flex:1}
+.status-label{
+  font-size:12px;color:var(--slate);font-weight:500;
+  margin-bottom:2px;
+}
+.status-value{
+  font-family:var(--fh);font-size:18px;font-weight:800;
+  color:var(--text);
 }
 
 /* ── MOBILE TOUCH IMPROVEMENTS ── */
@@ -1074,7 +1925,10 @@ document.addEventListener('DOMContentLoaded', function() {
   .quick-row{grid-template-columns:repeat(2,1fr);gap:12px}
   .attendance-grid{grid-template-columns:1fr;gap:16px}
   .analytics-grid{grid-template-columns:repeat(2,1fr);gap:16px}
+  .summary-grid{grid-template-columns:repeat(2,1fr);gap:14px}
   .dash-shell{margin:80px 16px 80px}
+  .analytics-header{flex-direction:column;align-items:flex-start;gap:12px}
+  .current-stats{flex-wrap:wrap}
 }
 
 @media(max-width:768px){
@@ -1092,6 +1946,13 @@ document.addEventListener('DOMContentLoaded', function() {
   .quick-row{grid-template-columns:1fr;gap:10px}
   .attendance-grid{grid-template-columns:1fr;gap:12px}
   .analytics-grid{grid-template-columns:1fr;gap:12px}
+  .summary-grid{grid-template-columns:1fr;gap:12px}
+  
+  /* Analytics adjustments */
+  .analytics-card{padding:16px}
+  .chart-container-large{height:250px}
+  .analytics-header h3{font-size:16px}
+  .stat-badge{font-size:11px;padding:4px 8px}
   
   /* Card adjustments */
   .stat-card{border-radius:12px}
@@ -1156,7 +2017,18 @@ document.addEventListener('DOMContentLoaded', function() {
   
   .stat-item{padding:10px}
   .stat-value{font-size:18px}
+  
+  /* Analytics mobile */
+  .analytics-card{padding:12px}
+  .chart-container-large{height:200px}
+  .analytics-header{gap:8px}
+  .analytics-header h3{font-size:14px}
+  .current-stats{gap:6px}
+  .stat-badge{font-size:10px;padding:3px 6px}
 }
+
+
+
 </style>
 
 {% endblock %}

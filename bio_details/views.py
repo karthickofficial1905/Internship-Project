@@ -229,6 +229,15 @@ def dashboard(request):
         'July', 'August', 'September', 'October', 'November', 'December'
     ]
     
+    # Generate years for analytics (from 2020 to current year + 1)
+    from datetime import datetime
+    current_year = datetime.now().year
+    analytics_years = list(range(2020, current_year + 2))  # 2020 to next year
+    analytics_years.reverse()  # Show newest years first
+    
+    # Generate available years for attendance year selector (same as analytics)
+    available_years = analytics_years
+    
     context = {
         'total_employees': total_employees,
         'active_employees': active_employees,
@@ -248,6 +257,9 @@ def dashboard(request):
         'selected_month_name': month_names[selected_month - 1],
         'weekly_data': weekly_data,
         'month_names': month_names,
+        'analytics_years': analytics_years,
+        'current_year': current_year,
+        'available_years': available_years,
     }
     
     return render(request, "dashboard.html", context)
@@ -3128,6 +3140,334 @@ def get_orders_data(request):
             'success': True,
             'months': months,
             'orders': orders
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def get_employee_monthly_data(request):
+    """AJAX endpoint to get monthly employee data for analytics charts"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    if not (request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.role == 'hr')):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    try:
+        from datetime import datetime, timedelta
+        from django.db.models import Count
+        from django.contrib.auth.models import User
+        
+        # Get selected year from request
+        selected_year = int(request.GET.get('year', datetime.now().year))
+        
+        # Always show all 12 months
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        active_data = []
+        inactive_data = []
+        
+        for month_num in range(1, 13):
+            # Count active employees who joined up to this month in the selected year
+            active_count = Member.objects.filter(
+                user__date_joined__year=selected_year,
+                user__date_joined__month=month_num,
+                account_status=True,
+                role='employee',
+                user__is_superuser=False
+            ).count()
+            
+            # Count inactive employees who joined in this month in the selected year
+            inactive_count = Member.objects.filter(
+                user__date_joined__year=selected_year,
+                user__date_joined__month=month_num,
+                account_status=False,
+                role='employee',
+                user__is_superuser=False
+            ).count()
+            
+            active_data.append(active_count)
+            inactive_data.append(inactive_count)
+        
+        return JsonResponse({
+            'success': True,
+            'months': months,
+            'active_data': active_data,
+            'inactive_data': inactive_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def get_product_monthly_data(request):
+    """AJAX endpoint to get monthly product stock data for analytics charts"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    if not (request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.role == 'hr')):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    try:
+        from datetime import datetime, timedelta
+        from django.db.models import Count
+        
+        # Get selected year from request
+        selected_year = int(request.GET.get('year', datetime.now().year))
+        
+        # Always show all 12 months
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        in_stock_data = []
+        out_of_stock_data = []
+        
+        for month_num in range(1, 13):
+            # Count products created in this specific month that are in stock
+            in_stock_count = Product.objects.filter(
+                created_at__year=selected_year,
+                created_at__month=month_num,
+                current_stock__gt=0
+            ).count()
+            
+            # Count products created in this specific month that are out of stock
+            out_of_stock_count = Product.objects.filter(
+                created_at__year=selected_year,
+                created_at__month=month_num,
+                current_stock=0
+            ).count()
+            
+            in_stock_data.append(in_stock_count)
+            out_of_stock_data.append(out_of_stock_count)
+        
+        return JsonResponse({
+            'success': True,
+            'months': months,
+            'in_stock_data': in_stock_data,
+            'out_of_stock_data': out_of_stock_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def get_order_monthly_data(request):
+    """AJAX endpoint to get monthly order data for analytics charts"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    if not (request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.role == 'hr')):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    try:
+        from datetime import datetime, timedelta
+        from django.db.models import Count
+        
+        # Get selected year from request
+        selected_year = int(request.GET.get('year', datetime.now().year))
+        
+        # Always show all 12 months
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        completed_data = []
+        pending_data = []
+        
+        for month_num in range(1, 13):
+            # Count completed orders for this specific month
+            completed_count = Invoice.objects.filter(
+                invoice_date__year=selected_year,
+                invoice_date__month=month_num,
+                payment_status='paid'
+            ).count()
+            
+            # Count pending orders for this specific month
+            pending_count = Invoice.objects.filter(
+                invoice_date__year=selected_year,
+                invoice_date__month=month_num,
+                payment_status='pending'
+            ).count()
+            
+            completed_data.append(completed_count)
+            pending_data.append(pending_count)
+        
+        return JsonResponse({
+            'success': True,
+            'months': months,
+            'completed_data': completed_data,
+            'pending_data': pending_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def get_employee_status_data(request):
+    """AJAX endpoint to get employee status data for pie charts"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    if not (request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.role == 'hr')):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    try:
+        from datetime import datetime
+        
+        # Get selected year and month from request
+        selected_year = int(request.GET.get('year', datetime.now().year))
+        selected_month = request.GET.get('month')
+        
+        if selected_month:
+            # Filter by specific month and year
+            selected_month = int(selected_month)
+            
+            # Count employees who joined up to the selected month/year
+            active_employees = Member.objects.filter(
+                user__date_joined__year__lte=selected_year,
+                user__date_joined__month__lte=selected_month if selected_year == datetime.now().year else 12,
+                account_status=True,
+                role='employee',
+                user__is_superuser=False
+            ).count()
+            
+            inactive_employees = Member.objects.filter(
+                user__date_joined__year__lte=selected_year,
+                user__date_joined__month__lte=selected_month if selected_year == datetime.now().year else 12,
+                account_status=False,
+                role='employee',
+                user__is_superuser=False
+            ).count()
+        else:
+            # Filter by year only
+            active_employees = Member.objects.filter(
+                user__date_joined__year__lte=selected_year,
+                account_status=True,
+                role='employee',
+                user__is_superuser=False
+            ).count()
+            
+            inactive_employees = Member.objects.filter(
+                user__date_joined__year__lte=selected_year,
+                account_status=False,
+                role='employee',
+                user__is_superuser=False
+            ).count()
+        
+        total_employees = active_employees + inactive_employees
+        
+        return JsonResponse({
+            'success': True,
+            'active_employees': active_employees,
+            'inactive_employees': inactive_employees,
+            'total_employees': total_employees
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def get_product_status_data(request):
+    """AJAX endpoint to get product status data for pie charts"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    if not (request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.role == 'hr')):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    try:
+        from datetime import datetime
+        
+        # Get selected year and month from request
+        selected_year = int(request.GET.get('year', datetime.now().year))
+        selected_month = request.GET.get('month')
+        
+        if selected_month:
+            # Filter by specific month and year
+            selected_month = int(selected_month)
+            
+            # Count products created up to the selected month/year
+            available_products = Product.objects.filter(
+                created_at__year__lte=selected_year,
+                created_at__month__lte=selected_month if selected_year == datetime.now().year else 12,
+                current_stock__gt=0
+            ).count()
+            
+            out_of_stock_products = Product.objects.filter(
+                created_at__year__lte=selected_year,
+                created_at__month__lte=selected_month if selected_year == datetime.now().year else 12,
+                current_stock=0
+            ).count()
+        else:
+            # Filter by year only
+            available_products = Product.objects.filter(
+                created_at__year__lte=selected_year,
+                current_stock__gt=0
+            ).count()
+            
+            out_of_stock_products = Product.objects.filter(
+                created_at__year__lte=selected_year,
+                current_stock=0
+            ).count()
+        
+        total_products = available_products + out_of_stock_products
+        
+        return JsonResponse({
+            'success': True,
+            'available_products': available_products,
+            'out_of_stock_products': out_of_stock_products,
+            'total_products': total_products
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def get_order_status_data(request):
+    """AJAX endpoint to get order status data for pie charts"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    if not (request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.role == 'hr')):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    try:
+        from datetime import datetime
+        
+        # Get selected year and month from request
+        selected_year = int(request.GET.get('year', datetime.now().year))
+        selected_month = request.GET.get('month')
+        
+        if selected_month:
+            # Filter by specific month and year
+            selected_month = int(selected_month)
+            
+            # Count orders for the selected month/year
+            completed_orders = Invoice.objects.filter(
+                invoice_date__year=selected_year,
+                invoice_date__month=selected_month,
+                payment_status='paid'
+            ).count()
+            
+            pending_orders = Invoice.objects.filter(
+                invoice_date__year=selected_year,
+                invoice_date__month=selected_month,
+                payment_status='pending'
+            ).count()
+        else:
+            # Filter by year only
+            completed_orders = Invoice.objects.filter(
+                invoice_date__year=selected_year,
+                payment_status='paid'
+            ).count()
+            
+            pending_orders = Invoice.objects.filter(
+                invoice_date__year=selected_year,
+                payment_status='pending'
+            ).count()
+        
+        total_orders = completed_orders + pending_orders
+        
+        return JsonResponse({
+            'success': True,
+            'completed_orders': completed_orders,
+            'pending_orders': pending_orders,
+            'total_orders': total_orders
         })
         
     except Exception as e:

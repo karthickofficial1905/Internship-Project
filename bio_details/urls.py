@@ -52,6 +52,12 @@ urlpatterns = [
     path('get-attendance-data/', views.get_attendance_data, name='get_attendance_data'),
     path('get-employee-joins-data/', views.get_employee_joins_data, name='get_employee_joins_data'),
     path('get-orders-data/', views.get_orders_data, name='get_orders_data'),
+    path('get-employee-monthly-data/', views.get_employee_monthly_data, name='get_employee_monthly_data'),
+    path('get-product-monthly-data/', views.get_product_monthly_data, name='get_product_monthly_data'),
+    path('get-order-monthly-data/', views.get_order_monthly_data, name='get_order_monthly_data'),
+    path('get-employee-status-data/', views.get_employee_status_data, name='get_employee_status_data'),
+    path('get-product-status-data/', views.get_product_status_data, name='get_product_status_data'),
+    path('get-order-status-data/', views.get_order_status_data, name='get_order_status_data'),
     path('manage-leave-applications/', views.manage_leave_applications, name='manage_leave_applications'),
     path('leave-action/', views.leave_action, name='leave_action'),
 ]
