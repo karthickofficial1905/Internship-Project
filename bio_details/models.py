@@ -645,3 +645,19 @@ class LeaveApplication(models.Model):
     class Meta:
         db_table = 'leave_application'
         ordering = ['-applied_at']
+
+
+class ProductReview(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.product.name} ({self.rating}/5)"
+    
+    class Meta:
+        db_table = 'product_review'
+        unique_together = ('product', 'user')
+        ordering = ['-created_at']

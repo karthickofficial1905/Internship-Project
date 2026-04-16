@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Member,Category,Product,Brand,Cart,CartItem,Order,OrderItem,Invoice,InvoiceItem,Currency,Country,Tax,Attendance,LeaveApplication,Customer
+from .models import Member,Category,Product,Brand,Cart,CartItem,Order,OrderItem,Invoice,InvoiceItem,Currency,Country,Tax,Attendance,LeaveApplication,Customer,ProductReview
 
 admin.site.register(Member)
 admin.site.register(Category)
@@ -34,3 +34,12 @@ class LeaveApplicationAdmin(admin.ModelAdmin):
     date_hierarchy = 'applied_at'
     ordering = ['-applied_at']
     readonly_fields = ['applied_at', 'total_days']
+
+
+@admin.register(ProductReview)
+class ProductReviewAdmin(admin.ModelAdmin):
+    list_display = ['product', 'user', 'rating', 'created_at']
+    list_filter = ['rating', 'created_at', 'product']
+    search_fields = ['product__name', 'user__username', 'comment']
+    date_hierarchy = 'created_at'
+    ordering = ['-created_at']

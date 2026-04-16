@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Member, Customer, Product, Cart, CartItem, Order, OrderItem, Invoice, InvoiceItem, Attendance, LeaveApplication
+from .models import Member, Customer, Product, Cart, CartItem, Order, OrderItem, Invoice, InvoiceItem, Attendance, LeaveApplication, ProductReview
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -793,12 +793,29 @@ def shop_detail(request, product_id):
 
         elif product.current_stock <= 5:
             messages.warning(request, "Limited stock available!")
+        
+        # Get product reviews
+        reviews = ProductReview.objects.filter(product=product).select_related('user').order_by('-created_at')
+        
+        # Calculate average rating
+        from django.db.models import Avg
+        avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+        avg_rating = round(avg_rating, 1)
+        
+        # Check if current user has already reviewed this product
+        user_review = None
+        if hasattr(request.user, 'customer'):
+            user_review = reviews.filter(user=request.user).first()
 
         context = {
             'product': product,
             'converted_price': converted_price,
             'currency_symbol': currency_symbol,
-            'selected_currency': selected_currency
+            'selected_currency': selected_currency,
+            'reviews': reviews,
+            'avg_rating': avg_rating,
+            'user_review': user_review,
+            'review_count': reviews.count()
         }
         
         return render(request, 'shop.html', context)
@@ -806,6 +823,52 @@ def shop_detail(request, product_id):
     except Product.DoesNotExist:
         messages.error(request, "Product not found!")
         return redirect('bio_details:product_view')
+
+
+def add_review(request, product_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    # Check if user is a customer
+    try:
+        Customer.objects.get(user=request.user)
+    except Customer.DoesNotExist:
+        messages.error(request, 'Only customers can add reviews.')
+        return redirect('bio_details:shop_detail', product_id=product_id)
+    
+    if request.method == 'POST':
+        try:
+            product = Product.objects.get(product_id=product_id)
+            rating = int(request.POST.get('rating'))
+            comment = request.POST.get('comment')
+            
+            # Check if user already reviewed this product
+            existing_review = ProductReview.objects.filter(product=product, user=request.user).first()
+            
+            if existing_review:
+                # Update existing review
+                existing_review.rating = rating
+                existing_review.comment = comment
+                existing_review.save()
+                messages.success(request, 'Your review has been updated!')
+            else:
+                # Create new review
+                ProductReview.objects.create(
+                    product=product,
+                    user=request.user,
+                    rating=rating,
+                    comment=comment
+                )
+                messages.success(request, 'Thank you for your review!')
+            
+        except Product.DoesNotExist:
+            messages.error(request, 'Product not found!')
+        except ValueError:
+            messages.error(request, 'Invalid rating value!')
+        except Exception as e:
+            messages.error(request, f'Error adding review: {str(e)}')
+    
+    return redirect('bio_details:shop_detail', product_id=product_id)
 
 
 

@@ -71,6 +71,118 @@
             {% endif %}
         </div>
     </div>
+    
+    <!-- Reviews Section -->
+    <div class="reviews-section">
+        <div class="reviews-header">
+            <h2>Customer Reviews</h2>
+            <div class="rating-summary">
+                <div class="avg-rating">
+                    <span class="rating-number">{{ avg_rating }}</span>
+                    <div class="stars">
+                        {% for i in "12345" %}
+                            <span class="star {% if avg_rating >= i|add:0 %}filled{% endif %}">★</span>
+                        {% endfor %}
+                    </div>
+                    <span class="review-count">({{ review_count }} reviews)</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add Review Form (Only for customers) -->
+        {% if user.customer and not user_review %}
+        <div class="add-review">
+            <h3>Write a Review</h3>
+            <form method="POST" action="{% url 'bio_details:add_review' product.product_id %}">
+                {% csrf_token %}
+                <div class="rating-input">
+                    <label>Rating:</label>
+                    <div class="star-rating">
+                        <input type="radio" name="rating" value="5" id="star5">
+                        <label for="star5">★</label>
+                        <input type="radio" name="rating" value="4" id="star4">
+                        <label for="star4">★</label>
+                        <input type="radio" name="rating" value="3" id="star3">
+                        <label for="star3">★</label>
+                        <input type="radio" name="rating" value="2" id="star2">
+                        <label for="star2">★</label>
+                        <input type="radio" name="rating" value="1" id="star1">
+                        <label for="star1">★</label>
+                    </div>
+                </div>
+                <div class="comment-input">
+                    <label for="comment">Comment:</label>
+                    <textarea name="comment" id="comment" rows="4" placeholder="Share your experience with this product..." required></textarea>
+                </div>
+                <button type="submit" class="submit-review-btn">Submit Review</button>
+            </form>
+        </div>
+        {% elif user.customer and user_review %}
+        <div class="user-review">
+            <h3>Your Review</h3>
+            <div class="review-item user-review-item">
+                <div class="review-header">
+                    <span class="reviewer-name">{{ user.username }}</span>
+                    <div class="review-rating">
+                        {% for i in "12345" %}
+                            <span class="star {% if user_review.rating >= i|add:0 %}filled{% endif %}">★</span>
+                        {% endfor %}
+                    </div>
+                    <span class="review-date">{{ user_review.created_at|date:"M d, Y" }}</span>
+                </div>
+                <p class="review-comment">{{ user_review.comment }}</p>
+                <form method="POST" action="{% url 'bio_details:add_review' product.product_id %}" class="edit-review-form" style="display: none;">
+                    {% csrf_token %}
+                    <div class="rating-input">
+                        <label>Rating:</label>
+                        <div class="star-rating">
+                            <input type="radio" name="rating" value="5" id="edit-star5" {% if user_review.rating == 5 %}checked{% endif %}>
+                            <label for="edit-star5">★</label>
+                            <input type="radio" name="rating" value="4" id="edit-star4" {% if user_review.rating == 4 %}checked{% endif %}>
+                            <label for="edit-star4">★</label>
+                            <input type="radio" name="rating" value="3" id="edit-star3" {% if user_review.rating == 3 %}checked{% endif %}>
+                            <label for="edit-star3">★</label>
+                            <input type="radio" name="rating" value="2" id="edit-star2" {% if user_review.rating == 2 %}checked{% endif %}>
+                            <label for="edit-star2">★</label>
+                            <input type="radio" name="rating" value="1" id="edit-star1" {% if user_review.rating == 1 %}checked{% endif %}>
+                            <label for="edit-star1">★</label>
+                        </div>
+                    </div>
+                    <div class="comment-input">
+                        <textarea name="comment" rows="4" required>{{ user_review.comment }}</textarea>
+                    </div>
+                    <button type="submit" class="submit-review-btn">Update Review</button>
+                    <button type="button" class="cancel-edit-btn" onclick="cancelEdit()">Cancel</button>
+                </form>
+                <button class="edit-review-btn" onclick="editReview()">Edit Review</button>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Reviews List -->
+        <div class="reviews-list">
+            {% for review in reviews %}
+                {% if review.user != user %}
+                <div class="review-item">
+                    <div class="review-header">
+                        <span class="reviewer-name">{{ review.user.username }}</span>
+                        <div class="review-rating">
+                            {% for i in "12345" %}
+                                <span class="star {% if review.rating >= i|add:0 %}filled{% endif %}">★</span>
+                            {% endfor %}
+                        </div>
+                        <span class="review-date">{{ review.created_at|date:"M d, Y" }}</span>
+                    </div>
+                    <p class="review-comment">{{ review.comment }}</p>
+                </div>
+                {% endif %}
+            {% empty %}
+                {% if not user_review %}
+                <p class="no-reviews">No reviews yet. Be the first to review this product!</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
 </div>
 
 <script>
@@ -114,6 +226,18 @@
 
     function closeMessageModal() {
         document.getElementById('messageModal').style.display = 'none';
+    }
+    
+    function editReview() {
+        document.querySelector('.review-comment').style.display = 'none';
+        document.querySelector('.edit-review-btn').style.display = 'none';
+        document.querySelector('.edit-review-form').style.display = 'block';
+    }
+    
+    function cancelEdit() {
+        document.querySelector('.review-comment').style.display = 'block';
+        document.querySelector('.edit-review-btn').style.display = 'inline-block';
+        document.querySelector('.edit-review-form').style.display = 'none';
     }
 </script>
 
@@ -434,6 +558,239 @@
             padding:12px 15px;
             border-radius:8px;
         }
+        
+        .reviews-section {
+            margin-top: 20px;
+        }
+        
+        .star-rating {
+            flex-direction: row;
+        }
+    }
+    
+    /* Reviews Section Styles */
+    .reviews-section {
+        margin-top: 40px;
+        background: #fff;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    
+    .reviews-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 20px;
+    }
+    
+    .reviews-header h2 {
+        color: #222;
+        margin: 0;
+    }
+    
+    .rating-summary {
+        text-align: right;
+    }
+    
+    .avg-rating {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .rating-number {
+        font-size: 24px;
+        font-weight: bold;
+        color: #e67e22;
+    }
+    
+    .stars {
+        display: flex;
+        gap: 2px;
+    }
+    
+    .star {
+        font-size: 20px;
+        color: #ddd;
+    }
+    
+    .star.filled {
+        color: #ffc107;
+    }
+    
+    .review-count {
+        color: #666;
+        font-size: 14px;
+    }
+    
+    .add-review, .user-review {
+        background: #f8f9fa;
+        padding: 25px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .add-review h3, .user-review h3 {
+        color: #222;
+        margin-bottom: 20px;
+    }
+    
+    .rating-input {
+        margin-bottom: 20px;
+    }
+    
+    .rating-input label {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: bold;
+        color: #555;
+    }
+    
+    .star-rating {
+        display: flex;
+        flex-direction: row-reverse;
+        gap: 5px;
+    }
+    
+    .star-rating input {
+        display: none;
+    }
+    
+    .star-rating label {
+        font-size: 30px;
+        color: #ddd;
+        cursor: pointer;
+        transition: color 0.2s;
+        margin: 0;
+    }
+    
+    .star-rating label:hover,
+    .star-rating label:hover ~ label,
+    .star-rating input:checked ~ label {
+        color: #ffc107;
+    }
+    
+    .comment-input {
+        margin-bottom: 20px;
+    }
+    
+    .comment-input label {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: bold;
+        color: #555;
+    }
+    
+    .comment-input textarea {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-family: inherit;
+        resize: vertical;
+        min-height: 100px;
+    }
+    
+    .comment-input textarea:focus {
+        outline: none;
+        border-color: #e67e22;
+    }
+    
+    .submit-review-btn, .edit-review-btn, .cancel-edit-btn {
+        background: #e67e22;
+        color: white;
+        padding: 10px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        margin-top:20px;
+        margin-right: 10px;
+    }
+    
+    .submit-review-btn:hover, .edit-review-btn:hover {
+        background: #d35400;
+        transform: translateY(-2px);
+    }
+    
+    .cancel-edit-btn {
+        background: #6c757d;
+    }
+    
+    .cancel-edit-btn:hover {
+        background: #5a6268;
+    }
+    
+    .reviews-list {
+        margin-top: 30px;
+    }
+    
+    .review-item {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+    }
+    
+    .review-item:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .user-review-item {
+        border-left: 4px solid #e67e22;
+        background: #fff9f5;
+    }
+    
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .reviewer-name {
+        font-weight: bold;
+        color: #222;
+        font-size: 16px;
+    }
+    
+    .review-rating {
+        display: flex;
+        gap: 2px;
+    }
+    
+    .review-rating .star {
+        font-size: 16px;
+    }
+    
+    .review-date {
+        color: #666;
+        font-size: 14px;
+    }
+    
+    .review-comment {
+        color: #555;
+        line-height: 1.6;
+        margin: 0;
+    }
+    
+    .no-reviews {
+        text-align: center;
+        color: #666;
+        font-style: italic;
+        padding: 40px;
+        background: #f8f9fa;
+        border-radius: 10px;
     }
 </style>
 
