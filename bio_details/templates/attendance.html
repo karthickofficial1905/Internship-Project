@@ -162,25 +162,30 @@
                 <div class="warning-subtitle" id="warning-subtitle">Only HR can update existing attendance records.</div>
               </div>
             </div>
-            
+            {%if user.is_authenticated and user.member and user.member.role == 'hr' %}
             <div class="sp-btn" id="sp-present" onclick="pickStatus('present')">
               <div class="sp-icon sp-icon-present">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
               </div>
               <div class="sp-lbl">Present</div>
             </div>
+            {% endif %}
+            
             <div class="sp-btn" id="sp-absent" onclick="switchTabById('leave')">
               <div class="sp-icon sp-icon-absent">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </div>
               <div class="sp-lbl">Apply Leave</div>
             </div>
+            
+            {%if user.is_authenticated and user.member and user.member.role == 'hr' %}
             <div class="sp-btn" id="sp-half_day" onclick="pickStatus('half_day')">
               <div class="sp-icon sp-icon-halfday">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
               </div>
               <div class="sp-lbl">Half Day</div>
             </div>
+            {% endif %}
           </div>
 
           <div class="form-card" id="time-card" style="display:none">

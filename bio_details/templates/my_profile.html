@@ -28,7 +28,7 @@
         <div class="hero-meta">
           <span class="meta-badge">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/></svg>
-            EMP: {% if user.member %}{{ user.member.emp_id }}{% else %}—{% endif %}
+            {% if user.member %}{{ user.member.emp_id }}{% else %}Super Admin{% endif %}
           </span>
           <span class="meta-badge status-badge {% if user.member and user.member.account_status %}active{% else %}inactive{% endif %}">
             <span class="status-dot"></span>

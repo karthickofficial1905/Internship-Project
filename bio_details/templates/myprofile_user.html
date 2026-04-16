@@ -28,11 +28,11 @@
         <div class="hero-meta">
           <span class="meta-badge">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/></svg>
-            EMP: {% if user.customer %}{{ user.customer.emp_id }}{% else %}—{% endif %}
+             {% if user.customer %}{{ user.customer.customer_id }}{% else %}—{% endif %}
           </span>
-          <span class="meta-badge status-badge {% if user.customer and user.customer.account_status %}active{% else %}inactive{% endif %}">
+          <span class="meta-badge status-badge {% if user.customer and user.customer.is_active %}active{% else %}inactive{% endif %}">
             <span class="status-dot"></span>
-            {% if user.customer %}{% if user.customer.account_status %}Active{% else %}Inactive{% endif %}{% else %}No Profile{% endif %}
+            {% if user.customer %}{% if user.customer.is_active %}Active{% else %}Inactive{% endif %}{% else %}No Profile{% endif %}
           </span>
           <span class="meta-badge">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>

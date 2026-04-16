@@ -293,7 +293,7 @@
         </div>
       </div>
     </div>
-{% endif %}
+  {% endif %}
     <!-- Analytics Section -->
     <div class="analytics-section">
       <div class="section-header">
@@ -313,186 +313,187 @@
           </select>
         </div>
       </div>
+      {% if user.is_superuser%}
+        <!-- Customer Analytics -->
+        <div  style="display: flex; gap: 15px; margin-bottom:15px;">
+          <div class="chart-card" style="flex: 0 0 300px;">
+            <div class="chart-header">
+              <h3>Customer Status</h3>
+              <div class="chart-stats">
+                <span class="total-items">Total: {{ total_customers }}</span>
+              </div>
+            </div>
+            <div class="chart-with-stats">
+              <div class="chart-container" style="padding:50px;">
+                <canvas id="customerStatusChart" width="200" height="200"></canvas>
+              </div>
+              <div class="chart-status">
+                <div class="status-item active">
+                  <div class="status-dot" style='background:#1d4ed8 !important;'></div>
+                  <div class="status-info">
+                    <div class="status-label">Active</div>
+                    <div class="status-value">{{ active_customers|default:0 }}</div>
+                  </div>
+                </div>
+                <div class="status-item inactive">
+                  <div class="status-dot"></div>
+                  <div class="status-info">
+                    <div class="status-label">Inactive</div>
+                    <div class="status-value">{{ inactive_customers|default:0 }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="analytics-card" style="flex: 1;">
+            <div class="analytics-header">
+              <h3>Customer Status Monthly Trends</h3>
+              <div class="current-stats">
+                <span class="stat-badge active" >Active: {{ active_customers|default:0 }}</span>
+                <span class="stat-badge inactive">Inactive: {{ inactive_customers|default:0 }}</span>
+              </div>
+            </div>
+            <div class="chart-container-large">
+              <canvas id="customerMonthlyChart" width="400" height="200"></canvas>
+            </div>
+          </div>
+        </div>
+        <!-- Product Analytics -->
+        <div  style="display: flex; gap: 15px; margin-bottom:15px;">
+          <div class="chart-card" style="flex: 0 0 300px;">
+            <div class="chart-header">
+              <h3>Product Stock Status</h3>
+              <div class="chart-stats">
+                <span class="total-items">Total: {{ total_products }}</span>
+              </div>
+            </div>
+            <div class="chart-with-stats">
+              <div class="chart-container" style="padding:50px;">
+                <canvas id="stockChart" width="200" height="200"></canvas>
+              </div>
+              <div class="chart-status">
+                <div class="status-item in-stock">
+                  <div class="status-dot"></div>
+                  <div class="status-info">
+                    <div class="status-label">In Stock</div>
+                    <div class="status-value">{{ available_products|default:0 }}</div>
+                  </div>
+                </div>
+                <div class="status-item out-stock">
+                  <div class="status-dot"></div>
+                  <div class="status-info">
+                    <div class="status-label">Out of Stock</div>
+                    <div class="status-value">{{ out_of_stock_products|default:0 }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="analytics-card" style="flex: 1;">
+            <div class="analytics-header">
+              <h3>Product Stock Monthly Trends</h3>
+              <div class="current-stats">
+                <span class="stat-badge in-stock">In Stock: {{ available_products|default:0 }}</span>
+                <span class="stat-badge out-stock">Out of Stock: {{ out_of_stock_products|default:0 }}</span>
+              </div>
+            </div>
+            <div class="chart-container-large">
+              <canvas id="productMonthlyChart" width="400" height="200"></canvas>
+            </div>
+          </div>
+        </div>
+        <!-- Order Analytics -->
+        <div  style="display: flex; gap: 15px; margin-bottom:15px;">
+          <div class="chart-card" style="flex: 0 0 300px;">
+            <div class="chart-header">
+              <h3>Order Status</h3>
+              <div class="chart-stats">
+                <span class="total-items">Total: {{ total_orders }}</span>
+              </div>
+            </div>
+            <div class="chart-with-stats">
+              <div class="chart-container" style="padding:50px;">
+                <canvas id="orderStatusChart" width="200" height="200"></canvas>
+              </div>
+              <div class="chart-status">
+                <div class="status-item completed">
+                  <div class="status-dot"></div>
+                  <div class="status-info">
+                    <div class="status-label">Completed</div>
+                    <div class="status-value">{{ completed_orders|default:0 }}</div>
+                  </div>
+                </div>
+                <div class="status-item pending">
+                  <div class="status-dot"></div>
+                  <div class="status-info">
+                    <div class="status-label">Pending</div>
+                    <div class="status-value">{{ pending_orders|default:0 }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="analytics-card" style="flex: 1;">
+            <div class="analytics-header">
+              <h3>Order Status Monthly Trends</h3>
+              <div class="current-stats">
+                <span class="stat-badge completed">Completed: {{ completed_orders|default:0 }}</span>
+                <span class="stat-badge pending">Pending: {{ pending_orders|default:0 }}</span>
+              </div>
+            </div>
+            <div class="chart-container-large">
+              <canvas id="orderMonthlyChart" width="400" height="200"></canvas>
+            </div>
+          </div>
+        </div>
+      {% endif %}
 
-      <!-- Customer Analytics -->
-      <div  style="display: flex; gap: 15px; margin-bottom:15px;">
-        <div class="chart-card" style="flex: 0 0 300px;">
-          <div class="chart-header">
-            <h3>Customer Status</h3>
-            <div class="chart-stats">
-              <span class="total-items">Total: {{ total_customers }}</span>
-            </div>
-          </div>
-          <div class="chart-with-stats">
-            <div class="chart-container" style="padding:50px;">
-              <canvas id="customerStatusChart" width="200" height="200"></canvas>
-            </div>
-            <div class="chart-status">
-              <div class="status-item active">
-                <div class="status-dot" style='background:#1d4ed8 !important;'></div>
-                <div class="status-info">
-                  <div class="status-label">Active</div>
-                  <div class="status-value">{{ active_customers|default:0 }}</div>
-                </div>
-              </div>
-              <div class="status-item inactive">
-                <div class="status-dot"></div>
-                <div class="status-info">
-                  <div class="status-label">Inactive</div>
-                  <div class="status-value">{{ inactive_customers|default:0 }}</div>
-                </div>
+      {% if user.is_authenticated and user.member and user.member.role == 'hr' %}
+        <!-- Employee Analytics -->
+        <div  style="display: flex; gap: 15px; margin-bottom:15px;">
+          <div class="chart-card" style="flex: 0 0 300px;">
+            <div class="chart-header">
+              <h3>Employee Status</h3>
+              <div class="chart-stats">
+                <span class="total-items">Total: {{ total_employees }}</span>
               </div>
             </div>
-          </div>
-        </div>
-        <div class="analytics-card" style="flex: 1;">
-          <div class="analytics-header">
-            <h3>Customer Status Monthly Trends</h3>
-            <div class="current-stats">
-              <span class="stat-badge active" >Active: {{ active_customers|default:0 }}</span>
-              <span class="stat-badge inactive">Inactive: {{ inactive_customers|default:0 }}</span>
-            </div>
-          </div>
-          <div class="chart-container-large">
-            <canvas id="customerMonthlyChart" width="400" height="200"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- Employee Analytics -->
-      <div  style="display: flex; gap: 15px; margin-bottom:15px;">
-        <div class="chart-card" style="flex: 0 0 300px;">
-          <div class="chart-header">
-            <h3>Employee Status</h3>
-            <div class="chart-stats">
-              <span class="total-items">Total: {{ total_employees }}</span>
-            </div>
-          </div>
-          <div class="chart-with-stats">
-            <div class="chart-container" style="padding:50px;">
-              <canvas id="employeeStatusChart" width="200" height="200"></canvas>
-            </div>
-            <div class="chart-status">
-              <div class="status-item active">
-                <div class="status-dot"></div>
-                <div class="status-info">
-                  <div class="status-label">Active</div>
-                  <div class="status-value">{{ active_employees|default:0 }}</div>
-                </div>
+            <div class="chart-with-stats">
+              <div class="chart-container" style="padding:50px;">
+                <canvas id="employeeStatusChart" width="200" height="200"></canvas>
               </div>
-              <div class="status-item inactive">
-                <div class="status-dot"></div>
-                <div class="status-info">
-                  <div class="status-label">Inactive</div>
-                  <div class="status-value">{{ inactive_employees|default:0 }}</div>
+              <div class="chart-status">
+                <div class="status-item active">
+                  <div class="status-dot"></div>
+                  <div class="status-info">
+                    <div class="status-label">Active</div>
+                    <div class="status-value">{{ active_employees|default:0 }}</div>
+                  </div>
+                </div>
+                <div class="status-item inactive">
+                  <div class="status-dot"></div>
+                  <div class="status-info">
+                    <div class="status-label">Inactive</div>
+                    <div class="status-value">{{ inactive_employees|default:0 }}</div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div class="analytics-card" style="flex: 1;">
-          <div class="analytics-header">
-            <h3>Employee Status Monthly Trends</h3>
-            <div class="current-stats">
-              <span class="stat-badge active">Active: {{ active_employees|default:0 }}</span>
-              <span class="stat-badge inactive">Inactive: {{ inactive_employees|default:0 }}</span>
-            </div>
-          </div>
-          <div class="chart-container-large">
-            <canvas id="employeeMonthlyChart" width="400" height="200"></canvas>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Product Analytics -->
-      <div  style="display: flex; gap: 15px; margin-bottom:15px;">
-        <div class="chart-card" style="flex: 0 0 300px;">
-          <div class="chart-header">
-            <h3>Product Stock Status</h3>
-            <div class="chart-stats">
-              <span class="total-items">Total: {{ total_products }}</span>
-            </div>
-          </div>
-          <div class="chart-with-stats">
-            <div class="chart-container" style="padding:50px;">
-              <canvas id="stockChart" width="200" height="200"></canvas>
-            </div>
-            <div class="chart-status">
-              <div class="status-item in-stock">
-                <div class="status-dot"></div>
-                <div class="status-info">
-                  <div class="status-label">In Stock</div>
-                  <div class="status-value">{{ available_products|default:0 }}</div>
-                </div>
-              </div>
-              <div class="status-item out-stock">
-                <div class="status-dot"></div>
-                <div class="status-info">
-                  <div class="status-label">Out of Stock</div>
-                  <div class="status-value">{{ out_of_stock_products|default:0 }}</div>
-                </div>
+          <div class="analytics-card" style="flex: 1;">
+            <div class="analytics-header">
+              <h3>Employee Status Monthly Trends</h3>
+              <div class="current-stats">
+                <span class="stat-badge active">Active: {{ active_employees|default:0 }}</span>
+                <span class="stat-badge inactive">Inactive: {{ inactive_employees|default:0 }}</span>
               </div>
             </div>
-          </div>
-        </div>
-        <div class="analytics-card" style="flex: 1;">
-          <div class="analytics-header">
-            <h3>Product Stock Monthly Trends</h3>
-            <div class="current-stats">
-              <span class="stat-badge in-stock">In Stock: {{ available_products|default:0 }}</span>
-              <span class="stat-badge out-stock">Out of Stock: {{ out_of_stock_products|default:0 }}</span>
-            </div>
-          </div>
-          <div class="chart-container-large">
-            <canvas id="productMonthlyChart" width="400" height="200"></canvas>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Order Analytics -->
-      <div  style="display: flex; gap: 15px; margin-bottom:15px;">
-        <div class="chart-card" style="flex: 0 0 300px;">
-          <div class="chart-header">
-            <h3>Order Status</h3>
-            <div class="chart-stats">
-              <span class="total-items">Total: {{ total_orders }}</span>
-            </div>
-          </div>
-          <div class="chart-with-stats">
-            <div class="chart-container" style="padding:50px;">
-              <canvas id="orderStatusChart" width="200" height="200"></canvas>
-            </div>
-            <div class="chart-status">
-              <div class="status-item completed">
-                <div class="status-dot"></div>
-                <div class="status-info">
-                  <div class="status-label">Completed</div>
-                  <div class="status-value">{{ completed_orders|default:0 }}</div>
-                </div>
-              </div>
-              <div class="status-item pending">
-                <div class="status-dot"></div>
-                <div class="status-info">
-                  <div class="status-label">Pending</div>
-                  <div class="status-value">{{ pending_orders|default:0 }}</div>
-                </div>
-              </div>
+            <div class="chart-container-large">
+              <canvas id="employeeMonthlyChart" width="400" height="200"></canvas>
             </div>
           </div>
         </div>
-        <div class="analytics-card" style="flex: 1;">
-          <div class="analytics-header">
-            <h3>Order Status Monthly Trends</h3>
-            <div class="current-stats">
-              <span class="stat-badge completed">Completed: {{ completed_orders|default:0 }}</span>
-              <span class="stat-badge pending">Pending: {{ pending_orders|default:0 }}</span>
-            </div>
-          </div>
-          <div class="chart-container-large">
-            <canvas id="orderMonthlyChart" width="400" height="200"></canvas>
-          </div>
-        </div>
-      </div>
+      {% endif %}
     </div>
     
 
