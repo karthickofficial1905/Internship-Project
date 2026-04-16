@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Member, Product, Cart, CartItem, Order, OrderItem, Invoice, InvoiceItem, Attendance, LeaveApplication
+from .models import Member, Customer, Product, Cart, CartItem, Order, OrderItem, Invoice, InvoiceItem, Attendance, LeaveApplication
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -13,6 +13,123 @@ import json
 from .currency_utils import convert_currency, get_currency_info, COUNTRY_CURRENCY_MAP, get_live_exchange_rates
 from django.utils import timezone
 
+
+def customer_register(request):
+    """Customer registration for product purchase"""
+    if request.method == 'POST':
+        # Get all form data
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        cpassword = request.POST.get('cpassword')
+        phone = request.POST.get('phone')
+        city = request.POST.get('city')
+        state = request.POST.get('state')
+        pincode = request.POST.get('pincode')
+        date_of_birth = request.POST.get('date_of_birth')
+        gender = request.POST.get('gender')
+        address1 = request.POST.get('address1')
+        account_type = request.POST.get('account_type')
+        bank_name = request.POST.get('bank_name')
+        ifsc_code = request.POST.get('ifsc_code')
+        branch_location = request.POST.get('branch_location')
+        pan_num = request.POST.get('pan_num')
+        account_number = request.POST.get('account_number')
+        
+        # Validation
+        if not all([name, email, password, cpassword, phone]):
+            messages.error(request, "Please fill all required fields!")
+            return render(request, "customer_register.html")
+            
+        if password != cpassword:
+            messages.error(request, "Passwords do not match!")
+            return render(request, "customer_register.html")
+        
+        if User.objects.filter(username=name).exists():
+            messages.error(request, 'Username already exists!')
+            return render(request, "customer_register.html")
+        elif User.objects.filter(email=email).exists():
+            messages.error(request, 'Email already exists!')
+            return render(request, "customer_register.html")
+        else:
+            try:
+                user = User.objects.create_user(username=name, email=email, password=password)
+                Customer.objects.create(
+                    user=user,
+                    phone=phone,
+                    address=address1 or '',
+                    city=city or '',
+                    state=state or '',
+                    pincode=pincode or '',
+                    date_of_birth=date_of_birth or None,
+                    gender=gender or '',
+                    account_type=account_type or '',
+                    bank_name=bank_name or '',
+                    ifsc_code=ifsc_code or '',
+                    branch_location=branch_location or '',
+                    pan_num=pan_num or '',
+                    account_number=account_number or '',
+                    profile_pic=request.FILES.get('profile_pic')
+                )
+                messages.success(request, 'Customer account created successfully!')
+                return redirect('bio_details:login')
+            except Exception as e:
+                messages.error(request, f"Registration failed: {str(e)}")
+                return render(request, "customer_register.html")
+    
+    return render(request, 'customer_register.html')
+
+
+def rewrite_customer(request, customer_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    try:
+        customer = Customer.objects.get(customer_id=customer_id)
+    except Customer.DoesNotExist:
+        messages.error(request, "Customer not found!")
+        return redirect('bio_details:usertable')
+    
+    if request.method == "POST":
+        try:
+            # Update user fields
+            customer.user.username = request.POST.get('name')
+            customer.user.email = request.POST.get('email')
+            customer.user.save()
+            
+            # Update customer fields
+            customer.phone = request.POST.get('phone')
+            customer.address = request.POST.get('address')
+            customer.city = request.POST.get('city')
+            customer.state = request.POST.get('state')
+            customer.pincode = request.POST.get('pincode')
+            customer.date_of_birth = request.POST.get('date_of_birth') or None
+            customer.gender = request.POST.get('gender')
+            customer.account_type = request.POST.get('account_type')
+            customer.bank_name = request.POST.get('bank_name')
+            customer.ifsc_code = request.POST.get('ifsc_code')
+            customer.account_number = request.POST.get('account_number')
+            customer.branch_location = request.POST.get('branch_location')
+            customer.pan_num = request.POST.get('pan_num')
+            customer.is_active = bool(int(request.POST.get('is_active', '1')))
+            
+            if request.FILES.get('profile_pic'):
+                customer.profile_pic = request.FILES.get('profile_pic')
+            
+            customer.save()
+            messages.success(request, "Customer updated successfully")
+            return redirect('bio_details:usertable')
+            
+        except Exception as e:
+            messages.error(request, f"Error updating customer: {str(e)}")
+    
+    return render(request, "customer_rewrite.html", {"customer": customer})
+
+# Member Authentication and Registration
 def members(request):
     if request.method == "POST":
         # Get form data
@@ -101,6 +218,11 @@ def dashboard(request):
     # Get selected month from request (default to current month)
     selected_month = int(request.GET.get('month', datetime.now().month))
     selected_year = int(request.GET.get('year', datetime.now().year))
+    
+    # Customer statistics
+    total_customers = Customer.objects.count()
+    active_customers = Customer.objects.filter(is_active=True).count()
+    inactive_customers = Customer.objects.filter(is_active=False).count()
     
     # Employee statistics
     total_employees = Member.objects.filter(user__is_superuser=False,role="employee").count()
@@ -242,6 +364,9 @@ def dashboard(request):
         'total_employees': total_employees,
         'active_employees': active_employees,
         'inactive_employees': inactive_employees,
+        'total_customers': total_customers,
+        'active_customers': active_customers,
+        'inactive_customers': inactive_customers,
         'total_products': total_products,
         'available_products': available_products,
         'out_of_stock_products': out_of_stock_products,
@@ -293,7 +418,12 @@ def login_page(request):
                 if user.is_superuser:
                     return redirect('bio_details:dashboard')
                 else:
-                    return redirect('bio_details:my_profile')
+                    # Check if user is a customer
+                    try:
+                        Customer.objects.get(user=user)
+                        return redirect('bio_details:my_profile_user')  # Customer user
+                    except Customer.DoesNotExist:
+                        return redirect('bio_details:my_profile')  # Regular member/employee
             else:
                 messages.error(request, "Incorrect password")
                 return render(request, "login.html", {"email": email})
@@ -350,16 +480,40 @@ def usertable(request):
     except ValueError:
         per_page = 5
     
-    members = Member.objects.filter(user__is_superuser=False, role='user').order_by('id')  # Ensure consistent ordering
+    customers = Customer.objects.all().order_by('id')
 
     if search:
-        members = members.filter(user__username__icontains=search)
+        customers = customers.filter(
+            models.Q(user__username__icontains=search) |
+            models.Q(customer_id__icontains=search) |
+            models.Q(user__email__icontains=search) |
+            models.Q(phone__icontains=search)
+        )
 
-    paginator = Paginator(members, per_page) 
+    paginator = Paginator(customers, per_page) 
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    return render(request, "user.html", {"page_obj": page_obj, "members": page_obj})
+    return render(request, "user.html", {"page_obj": page_obj, "customers": page_obj})
+
+
+def delete_customer(request, id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    try:
+        customer = Customer.objects.get(id=id)
+        customer.is_active = False
+        customer.save()
+        messages.success(request, f"Customer {customer.user.username} deactivated successfully", extra_tags="delete-toast")
+    except Customer.DoesNotExist:
+        messages.error(request, "Customer not found!", extra_tags="delete-toast")
+    
+    return redirect("bio_details:usertable")
 
 
 def delete_member(request, id):
@@ -657,7 +811,14 @@ def shop_detail(request, product_id):
 
 def cart_view(request):
     if not request.user.is_authenticated:
-        return redirect('bio_details:login')
+        return redirect('bio_details:customer_login')
+    
+    # Check if user is a customer
+    try:
+        Customer.objects.get(user=request.user)
+    except Customer.DoesNotExist:
+        messages.error(request, 'Access denied. Customer account required.')
+        return redirect('bio_details:customer_login')
     
     cart, created = Cart.objects.get_or_create(user=request.user)
     cart_items = cart.items.all()
@@ -721,7 +882,14 @@ def cart_view(request):
 
 def add_to_cart(request, product_id):
     if not request.user.is_authenticated:
-        return redirect('bio_details:login')
+        return redirect('bio_details:customer_login')
+    
+    # Check if user is a customer
+    try:
+        Customer.objects.get(user=request.user)
+    except Customer.DoesNotExist:
+        messages.error(request, 'Access denied. Customer account required.')
+        return redirect('bio_details:customer_login')
     
     try:
         product = Product.objects.get(product_id=product_id)
@@ -831,7 +999,14 @@ def apply_discount(request):
 
 def checkout(request):
     if not request.user.is_authenticated:
-        return redirect('bio_details:login')
+        return redirect('bio_details:customer_login')
+    
+    # Check if user is a customer
+    try:
+        Customer.objects.get(user=request.user)
+    except Customer.DoesNotExist:
+        messages.error(request, 'Access denied. Customer account required.')
+        return redirect('bio_details:customer_login')
     
     try:
         cart = Cart.objects.get(user=request.user)
@@ -2130,6 +2305,84 @@ def print_invoice(request, order_id):
     except (Order.DoesNotExist, Invoice.DoesNotExist):
         messages.error(request, "Invoice not found!")
         return redirect('bio_details:my_orders')
+
+
+def my_profile_user(request):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if request.method == 'POST':
+        try:
+            # Update user fields
+            if request.POST.get('full_name'):
+                names = request.POST.get('full_name').split(' ', 1)
+                request.user.first_name = names[0]
+                request.user.last_name = names[1] if len(names) > 1 else ''
+                # Also update username to the full name
+                request.user.username = request.POST.get('full_name')
+            
+            if request.POST.get('email'):
+                request.user.email = request.POST.get('email')
+            
+            request.user.save()
+            
+            # Update member fields
+            try:
+                customer = request.user.customer
+            except Customer.DoesNotExist:
+                # Create member if doesn't exist
+                customer = Customer.objects.create(
+                    user=request.user,
+                    phone='',
+                    city='',
+                    state='',
+                    gender='',
+                    designation=''
+                )
+            
+            if request.POST.get('phone'):
+                customer.phone = request.POST.get('phone')
+            if request.POST.get('gender'):
+                customer.gender = request.POST.get('gender')
+            if request.POST.get('date_of_birth'):
+                customer.date_of_birth = request.POST.get('date_of_birth')
+            if request.POST.get('city'):
+                customer.city = request.POST.get('city')
+            if request.POST.get('state'):
+                customer.state = request.POST.get('state')
+            if request.POST.get('pincode'):
+                customer.pincode = request.POST.get('pincode')
+            if request.POST.get('address1'):
+                customer.address = request.POST.get('address1')
+            if request.POST.get('bank_name'):
+                customer.bank_name = request.POST.get('bank_name')
+            if request.POST.get('account_number'):
+                customer.account_number = request.POST.get('account_number')
+            if request.POST.get('ifsc_code'):
+                customer.ifsc_code = request.POST.get('ifsc_code')
+            if request.POST.get('pan_num'):
+                customer.pan_num = request.POST.get('pan_num')
+            
+            # Handle profile picture upload
+            if request.FILES.get('profile_pic'):
+                customer.profile_pic = request.FILES.get('profile_pic')
+            
+            customer.save()
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': 'Profile updated successfully'})
+            
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('bio_details:my_profile_user')
+            
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'message': str(e)})
+            
+            messages.error(request, f'Error updating profile: {str(e)}')
+    
+    return render(request, 'myprofile_user.html')
+
 
 
 def my_profile(request):
@@ -3468,6 +3721,111 @@ def get_order_status_data(request):
             'completed_orders': completed_orders,
             'pending_orders': pending_orders,
             'total_orders': total_orders
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def get_customer_monthly_data(request):
+    """AJAX endpoint to get monthly customer data for analytics charts"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    if not (request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.role == 'hr')):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    try:
+        from datetime import datetime, timedelta
+        from django.db.models import Count
+        
+        # Get selected year from request
+        selected_year = int(request.GET.get('year', datetime.now().year))
+        
+        # Always show all 12 months
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        active_data = []
+        inactive_data = []
+        
+        for month_num in range(1, 13):
+            # Count active customers who joined in this month in the selected year
+            active_count = Customer.objects.filter(
+                user__date_joined__year=selected_year,
+                user__date_joined__month=month_num,
+                is_active=True
+            ).count()
+            
+            # Count inactive customers who joined in this month in the selected year
+            inactive_count = Customer.objects.filter(
+                user__date_joined__year=selected_year,
+                user__date_joined__month=month_num,
+                is_active=False
+            ).count()
+            
+            active_data.append(active_count)
+            inactive_data.append(inactive_count)
+        
+        return JsonResponse({
+            'success': True,
+            'months': months,
+            'active_data': active_data,
+            'inactive_data': inactive_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def get_customer_status_data(request):
+    """AJAX endpoint to get customer status data for pie charts"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    if not (request.user.is_superuser or (hasattr(request.user, 'member') and request.user.member.role == 'hr')):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    try:
+        from datetime import datetime
+        
+        # Get selected year and month from request
+        selected_year = int(request.GET.get('year', datetime.now().year))
+        selected_month = request.GET.get('month')
+        
+        if selected_month:
+            # Filter by specific month and year
+            selected_month = int(selected_month)
+            
+            # Count customers who joined up to the selected month/year
+            active_customers = Customer.objects.filter(
+                user__date_joined__year__lte=selected_year,
+                user__date_joined__month__lte=selected_month if selected_year == datetime.now().year else 12,
+                is_active=True
+            ).count()
+            
+            inactive_customers = Customer.objects.filter(
+                user__date_joined__year__lte=selected_year,
+                user__date_joined__month__lte=selected_month if selected_year == datetime.now().year else 12,
+                is_active=False
+            ).count()
+        else:
+            # Filter by year only
+            active_customers = Customer.objects.filter(
+                user__date_joined__year__lte=selected_year,
+                is_active=True
+            ).count()
+            
+            inactive_customers = Customer.objects.filter(
+                user__date_joined__year__lte=selected_year,
+                is_active=False
+            ).count()
+        
+        total_customers = active_customers + inactive_customers
+        
+        return JsonResponse({
+            'success': True,
+            'active_customers': active_customers,
+            'inactive_customers': inactive_customers,
+            'total_customers': total_customers
         })
         
     except Exception as e:

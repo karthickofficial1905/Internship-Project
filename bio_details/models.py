@@ -62,6 +62,7 @@ class Currency(models.Model):
 
 
 class Member(models.Model):
+    """Company Employee Model"""
     ROLE_CHOICES = [
         ('user', 'User'),
         ('employee', 'Employee'),
@@ -103,7 +104,6 @@ class Member(models.Model):
 
         super().save(*args, **kwargs)
 
-
     def is_hr_or_admin(self):
         """Check if user is HR or Admin"""
         return self.role in ['hr', 'admin'] or self.user.is_superuser
@@ -117,6 +117,45 @@ class Member(models.Model):
 
     class Meta:
         db_table = 'member_details'
+
+
+class Customer(models.Model):
+    """Customer Model for Product Purchase"""
+    customer_id = models.CharField(max_length=10, unique=True, null=True, blank=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    phone = models.CharField(max_length=15)
+    address = models.TextField(null=True, blank=True)
+    city = models.CharField(max_length=50, null=True, blank=True)
+    state = models.CharField(max_length=50, null=True, blank=True)
+    pincode = models.CharField(max_length=10, null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=50, null=True, blank=True)
+    profile_pic = models.ImageField(upload_to='customer_profiles/', null=True, blank=True)
+    account_type = models.CharField(max_length=50, null=True, blank=True)
+    bank_name = models.CharField(max_length=100, null=True, blank=True)
+    ifsc_code = models.CharField(max_length=100, null=True, blank=True)
+    account_number = models.CharField(max_length=100, null=True, blank=True)
+    branch_location = models.CharField(max_length=100, null=True, blank=True)
+    pan_num = models.CharField(max_length=100, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.customer_id:
+            last_customer = Customer.objects.order_by('-id').first()
+            if last_customer and last_customer.customer_id:
+                last_id = int(last_customer.customer_id.replace('CUST', ''))
+                new_id = last_id + 1
+            else:
+                new_id = 1
+            self.customer_id = f"CUST{new_id:03d}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.customer_id} - {self.user.username}"
+
+    class Meta:
+        db_table = 'customer_details'
 
 
 
@@ -191,6 +230,11 @@ class Cart(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    @property
+    def is_customer_cart(self):
+        """Check if cart belongs to a customer"""
+        return hasattr(self.user, 'customer')
 
     def __str__(self):
         return f"Cart - {self.user.username}"

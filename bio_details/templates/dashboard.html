@@ -106,7 +106,7 @@
         </div>
         <div class="sc-trend sc-trend-green">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
-          In Stock
+          Stock
         </div>
       </div>
       <div class="sc-divider"></div>
@@ -132,7 +132,48 @@
       </div>
     </div>
 
-    <!-- ── ORDERS ── -->
+    <!-- ── Customer ── -->
+    <div class="stat-card" style="--accent:#1e3a8a;--accent-lt:#1e3a8a;--accent-mid:#1e3a8a">
+      <div class="sc-top">
+        <div class="sc-icon" style="background:#1e3a8a">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+          </svg>
+        </div>
+        <div class="sc-meta">
+          <div class="sc-label">Total Customer</div>
+          <div class="sc-value" data-target="{{ total_customers|default:0 }}">0</div>
+        </div>
+        <div class="sc-trend sc-trend-up">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+          Active
+        </div>
+      </div>
+      <div class="sc-divider"></div>
+      <div class="sc-bottom">
+        <div class="sc-sub sc-sub-green">
+          <div class="sc-sub-dot"></div>
+          <span class="sc-sub-lbl">Active</span>
+          <span class="sc-sub-val">{{ active_customers|default:0 }}</span>
+        </div>
+        <div class="sc-sep"></div>
+        <div class="sc-sub sc-sub-red">
+          <div class="sc-sub-dot" style="background:#dc2626"></div>
+          <span class="sc-sub-lbl">Inactive</span>
+          <span class="sc-sub-val">{{ inactive_customers|default:0 }}</span>
+        </div>
+        <div class="sc-bar-wrap">
+          {% if total_customers %}
+          <div class="sc-bar" style="--pct:{% widthratio active_customers total_customers 100 %}%;--clr:#2563eb"></div>
+          {% else %}
+          <div class="sc-bar" style="--pct:0%;--clr:#2563eb"></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  
     <div class="stat-card" style="--accent:#d97706;--accent-lt:#fffbeb;--accent-mid:#fde68a">
       <div class="sc-top">
         <div class="sc-icon" style="background:linear-gradient(135deg,#b45309,#f59e0b)">
@@ -272,6 +313,52 @@
           </select>
         </div>
       </div>
+
+      <!-- Customer Analytics -->
+      <div  style="display: flex; gap: 15px; margin-bottom:15px;">
+        <div class="chart-card" style="flex: 0 0 300px;">
+          <div class="chart-header">
+            <h3>Customer Status</h3>
+            <div class="chart-stats">
+              <span class="total-items">Total: {{ total_customers }}</span>
+            </div>
+          </div>
+          <div class="chart-with-stats">
+            <div class="chart-container" style="padding:50px;">
+              <canvas id="customerStatusChart" width="200" height="200"></canvas>
+            </div>
+            <div class="chart-status">
+              <div class="status-item active">
+                <div class="status-dot" style='background:#1d4ed8 !important;'></div>
+                <div class="status-info">
+                  <div class="status-label">Active</div>
+                  <div class="status-value">{{ active_customers|default:0 }}</div>
+                </div>
+              </div>
+              <div class="status-item inactive">
+                <div class="status-dot"></div>
+                <div class="status-info">
+                  <div class="status-label">Inactive</div>
+                  <div class="status-value">{{ inactive_customers|default:0 }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="analytics-card" style="flex: 1;">
+          <div class="analytics-header">
+            <h3>Customer Status Monthly Trends</h3>
+            <div class="current-stats">
+              <span class="stat-badge active" >Active: {{ active_customers|default:0 }}</span>
+              <span class="stat-badge inactive">Inactive: {{ inactive_customers|default:0 }}</span>
+            </div>
+          </div>
+          <div class="chart-container-large">
+            <canvas id="customerMonthlyChart" width="400" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+
       <!-- Employee Analytics -->
       <div  style="display: flex; gap: 15px; margin-bottom:15px;">
         <div class="chart-card" style="flex: 0 0 300px;">
@@ -844,6 +931,160 @@ function createOrderStatusChart(selectedMonth = null, selectedYear = null) {
     .catch(error => console.error('Error fetching order status data:', error));
 }
 
+/* CUSTOMER STATUS PIE CHART */
+function createCustomerStatusChart(selectedMonth = null, selectedYear = null) {
+  const ctx = document.getElementById('customerStatusChart');
+  if (!ctx) return;
+  
+  const month = selectedMonth || document.getElementById('analyticsMonth')?.value;
+  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
+  
+  // Fetch data for selected month and year
+  let url = `/get-customer-status-data/?year=${year}`;
+  if (month) {
+    url += `&month=${month}`;
+  }
+  
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.customerStatusChart = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: ['Active', 'Inactive'],
+            datasets: [{
+              data: [data.active_customers, data.inactive_customers],
+              backgroundColor: ['#1d4ed8', '#ef4444'],
+              borderColor: '#ffffff',
+              borderWidth: 3,
+              hoverBorderWidth: 4,
+              hoverOffset: 8
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  padding: 15,
+                  usePointStyle: true,
+                  pointStyle: 'circle',
+                  font: { size: 12, weight: '600' },
+                  color: '#374151'
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleColor: '#ffffff',
+                bodyColor: '#ffffff',
+                callbacks: {
+                  label: function(context) {
+                    const label = context.label || '';
+                    const value = context.parsed;
+                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                    return `${label}: ${value} (${percentage}%)`;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    })
+    .catch(error => console.error('Error fetching customer status data:', error));
+}
+
+/* CUSTOMER MONTHLY CHART */
+function createCustomerMonthlyChart(selectedMonth = null, selectedYear = null) {
+  const ctx = document.getElementById('customerMonthlyChart');
+  if (!ctx) return;
+  
+  // Get selected year (ignore month parameter, always show all 12 months)
+  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
+  
+  // Fetch real data from Django backend (only pass year, not month)
+  fetch(`/get-customer-monthly-data/?year=${year}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        window.customerChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.months,
+            datasets: [{
+              label: 'Active Customers',
+              data: data.active_data,
+              borderColor: '#1d4ed8',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: '#1d4ed8',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              pointRadius: 6
+            }, {
+              label: 'Inactive Customers',
+              data: data.inactive_data,
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: '#ef4444',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              pointRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: {
+                  padding: 20,
+                  usePointStyle: true,
+                  font: { size: 12, weight: '600' }
+                }
+              },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleColor: '#ffffff',
+                bodyColor: '#ffffff',
+                borderColor: '#374151',
+                borderWidth: 1,
+                cornerRadius: 8
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { font: { weight: '600' } }
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: '#f1f5f9' },
+                ticks: { font: { weight: '600' } }
+              }
+            },
+            interaction: {
+              intersect: false,
+              mode: 'index'
+            }
+          }
+        });
+      } else {
+        console.error('Error loading customer data:', data.error);
+      }
+    })
+    .catch(error => console.error('Error fetching customer data:', error));
+}
 /* UPDATE STATUS VALUES IN UI */
 function updateStatusValues(selectedMonth = null, selectedYear = null) {
   const month = selectedMonth || document.getElementById('analyticsMonth')?.value;
@@ -876,6 +1117,42 @@ function updateStatusValues(selectedMonth = null, selectedYear = null) {
       }
     })
     .catch(error => console.error('Error updating employee status values:', error));
+  
+  // Update customer status values
+  fetch(`/get-customer-status-data/?year=${year}${month ? `&month=${month}` : ''}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Update customer status values in the UI (4th chart-card)
+        const customerActiveElements = document.querySelectorAll('.chart-card')[3]?.querySelectorAll('.status-item.active .status-value');
+        const customerInactiveElements = document.querySelectorAll('.chart-card')[3]?.querySelectorAll('.status-item.inactive .status-value');
+        
+        if (customerActiveElements) {
+          customerActiveElements.forEach(el => el.textContent = data.active_customers);
+        }
+        if (customerInactiveElements) {
+          customerInactiveElements.forEach(el => el.textContent = data.inactive_customers);
+        }
+        
+        // Update current stats badges for customers (4th analytics-card)
+        const customerActiveStatBadges = document.querySelectorAll('.analytics-card')[3]?.querySelectorAll('.stat-badge.active');
+        const customerInactiveStatBadges = document.querySelectorAll('.analytics-card')[3]?.querySelectorAll('.stat-badge.inactive');
+        
+        if (customerActiveStatBadges) {
+          customerActiveStatBadges.forEach(el => el.textContent = `Active: ${data.active_customers}`);
+        }
+        if (customerInactiveStatBadges) {
+          customerInactiveStatBadges.forEach(el => el.textContent = `Inactive: ${data.inactive_customers}`);
+        }
+        
+        // Update total in chart header (4th chart-card)
+        const totalCustomersEl = document.querySelectorAll('.chart-card .total-items')[3];
+        if (totalCustomersEl) {
+          totalCustomersEl.textContent = `Total: ${data.total_customers}`;
+        }
+      }
+    })
+    .catch(error => console.error('Error updating customer status values:', error));
   
   // Update product status values
   fetch(`/get-product-status-data/?year=${year}${month ? `&month=${month}` : ''}`)
@@ -1269,8 +1546,8 @@ function createProductMonthlyChart(selectedMonth = null, selectedYear = null) {
             datasets: [{
               label: 'In Stock',
               data: data.in_stock_data,
-              backgroundColor: '#059669',
-              borderColor: '#047857',
+              backgroundColor: '#1e3a8a',
+              borderColor: '#1e3a8a',
               borderWidth: 1,
               borderRadius: 4
             }, {
@@ -1428,6 +1705,10 @@ document.addEventListener('DOMContentLoaded', function() {
       window.orderChart.destroy();
       window.orderChart = null;
     }
+    if (window.customerChart) {
+      window.customerChart.destroy();
+      window.customerChart = null;
+    }
     if (window.employeeStatusChart) {
       window.employeeStatusChart.destroy();
       window.employeeStatusChart = null;
@@ -1440,16 +1721,22 @@ document.addEventListener('DOMContentLoaded', function() {
       window.orderStatusChart.destroy();
       window.orderStatusChart = null;
     }
+    if (window.customerStatusChart) {
+      window.customerStatusChart.destroy();
+      window.customerStatusChart = null;
+    }
     
     // Update all charts with selected month and year
     createEmployeeMonthlyChart(month, year);
     createProductMonthlyChart(month, year);
     createOrderMonthlyChart(month, year);
+    createCustomerMonthlyChart(month, year);
     
     // Update pie charts with selected month and year
     createEmployeeStatusChart(month, year);
     createStockChart(month, year);
     createOrderStatusChart(month, year);
+    createCustomerStatusChart(month, year);
     
     // Update status values in the UI
     updateStatusValues(month, year);
@@ -1475,11 +1762,13 @@ document.addEventListener('DOMContentLoaded', function() {
   createEmployeeStatusChart(currentMonth, currentYear);
   createStockChart(currentMonth, currentYear);
   createOrderStatusChart(currentMonth, currentYear);
+  createCustomerStatusChart(currentMonth, currentYear);
   
   // Initialize monthly analytics charts
   createEmployeeMonthlyChart(currentMonth, currentYear);
   createProductMonthlyChart(currentMonth, currentYear);
   createOrderMonthlyChart(currentMonth, currentYear);
+  createCustomerMonthlyChart(currentMonth, currentYear);
 });
 
 // Handle month and year selection for attendance
@@ -1547,7 +1836,7 @@ document.addEventListener('DOMContentLoaded', function() {
 .dh-dt{font-family:var(--fh);font-size:13px;font-weight:700;color:#fff}
 
 /* ── STAT GRID ── */
-.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:18px}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:18px}
 
 @media(max-width:1024px){
   .stat-grid{grid-template-columns:repeat(2,1fr)}

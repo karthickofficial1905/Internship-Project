@@ -4,6 +4,9 @@ from . import views
 app_name = 'bio_details'
 
 urlpatterns = [
+    path('customer/register/', views.customer_register, name='customer_register'),
+    path('rewrite/<str:customer_id>/', views.rewrite_customer, name='rewrite_customer'),
+    path('delete-customer/<int:id>/', views.delete_customer, name='delete_customer'),
     path('form/', views.members, name='members'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('', views.login_page, name='login'),
@@ -44,6 +47,7 @@ urlpatterns = [
     path('get-order-items/<int:order_id>/', views.get_order_items, name='get_order_items'),
     path('print-invoice/<int:order_id>/', views.print_invoice, name='print_invoice'),
     path('my-profile/', views.my_profile, name='my_profile'),
+    path('my-profile-user/', views.my_profile_user, name='my_profile_user'),
     path('convert-currency/', views.convert_product_currency, name='convert_currency'),
     path('save-country-selection/', views.save_country_selection, name='save_country_selection'),
     path('save-currency-selection/', views.save_currency_selection, name='save_currency_selection'),
@@ -58,6 +62,8 @@ urlpatterns = [
     path('get-employee-status-data/', views.get_employee_status_data, name='get_employee_status_data'),
     path('get-product-status-data/', views.get_product_status_data, name='get_product_status_data'),
     path('get-order-status-data/', views.get_order_status_data, name='get_order_status_data'),
+    path('get-customer-monthly-data/', views.get_customer_monthly_data, name='get_customer_monthly_data'),
+    path('get-customer-status-data/', views.get_customer_status_data, name='get_customer_status_data'),
     path('manage-leave-applications/', views.manage_leave_applications, name='manage_leave_applications'),
     path('leave-action/', views.leave_action, name='leave_action'),
 ]
