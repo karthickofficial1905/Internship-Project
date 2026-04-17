@@ -901,6 +901,33 @@ def add_review(request, product_id):
     return redirect('bio_details:shop_detail', product_id=product_id)
 
 
+def delete_review(request, product_id):
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    # Check if user is a customer
+    try:
+        Customer.objects.get(user=request.user)
+    except Customer.DoesNotExist:
+        messages.error(request, 'Only customers can delete reviews.')
+        return redirect('bio_details:shop_detail', product_id=product_id)
+    
+    if request.method == 'POST':
+        try:
+            product = Product.objects.get(product_id=product_id)
+            review = ProductReview.objects.get(product=product, user=request.user)
+            review.delete()
+            messages.success(request, 'Your review has been deleted!')
+        except Product.DoesNotExist:
+            messages.error(request, 'Product not found!')
+        except ProductReview.DoesNotExist:
+            messages.error(request, 'Review not found!')
+        except Exception as e:
+            messages.error(request, f'Error deleting review: {str(e)}')
+    
+    return redirect('bio_details:shop_detail', product_id=product_id)
+
+
 
 def cart_view(request):
     if not request.user.is_authenticated:

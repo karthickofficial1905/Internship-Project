@@ -155,6 +155,7 @@
                     <button type="button" class="cancel-edit-btn" onclick="cancelEdit()">Cancel</button>
                 </form>
                 <button class="edit-review-btn" onclick="editReview()">Edit Review</button>
+                <button class="delete-review-btn" onclick="showDeleteModal()">Delete Review</button>
             </div>
         </div>
         {% endif %}
@@ -182,6 +183,20 @@
                 {% endif %}
             {% endfor %}
         </div>
+    </div>
+</div>
+
+<!-- Delete Review Modal -->
+<div id="deleteModal" class="alert-modal" style="display: none;">
+    <div class="alert-box">
+        <div class="alert-icon">!</div>
+        <h3>Delete Review?</h3>
+        <p>This action cannot be undone.</p>
+        <form method="POST" action="{% url 'bio_details:delete_review' product.product_id %}" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="delete-btn">Delete</button>
+        </form>
+        <button type="button" class="cancel-btn" onclick="closeDeleteModal()">Cancel</button>
     </div>
 </div>
 
@@ -231,6 +246,7 @@
     function editReview() {
         document.querySelector('.review-comment').style.display = 'none';
         document.querySelector('.edit-review-btn').style.display = 'none';
+        document.querySelector('.delete-review-btn').style.display = 'none';
         document.querySelector('.edit-review-form').style.display = 'block';
     }
     
@@ -238,6 +254,14 @@
         document.querySelector('.review-comment').style.display = 'block';
         document.querySelector('.edit-review-btn').style.display = 'inline-block';
         document.querySelector('.edit-review-form').style.display = 'none';
+    }
+    
+    function showDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'block';
+    }
+    
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
     }
 </script>
 
@@ -313,6 +337,34 @@
     }
 
     .alert-box button:hover{
+        background:#b91c1c;
+    }
+
+    .delete-review-btn{
+        background:#dc2626;
+        color:white;
+        border:none;
+        padding:8px 16px;
+        border-radius:4px;
+        cursor:pointer;
+        margin-left:10px;
+        font-size:14px;
+    }
+
+    .delete-review-btn:hover{
+        background:#b91c1c;
+    }
+
+    .delete-btn{
+        background:#dc2626;
+        margin-right:10px;
+    }
+
+    .cancel-btn{
+        background:#6b7280;
+    }
+
+    .cancel-btn:hover{
         background:#991b1b;
     }
     .shop-main {
