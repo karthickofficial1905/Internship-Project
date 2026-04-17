@@ -263,7 +263,7 @@
   </div>
   {% endif %}
 
-  <div class="analytics-section">
+  <div class="analytics-section" style="width:100%;box-sizing:border-box;">
     <div class="section-header">
       <h2 class="section-title">Analytics Overview</h2>
       <div class="analytics-controls">
@@ -280,8 +280,8 @@
       </div>
     </div>
     {% if user.is_superuser %}
-      <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;">
-        <div class="chart-card" style="flex:0 0 300px;">
+      <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;width:100%;box-sizing:border-box;">
+        <div class="chart-card" style="flex:0 0 300px;min-width:300px;">
           <div class="chart-header"><h3>Customer Status</h3><div class="chart-stats"><span class="total-items">Total: {{ total_customers }}</span></div></div>
           <div class="chart-with-stats">
             <div class="chart-container"><canvas id="customerStatusChart" width="200" height="200"></canvas></div>
@@ -291,13 +291,13 @@
             </div>
           </div>
         </div>
-        <div class="analytics-card" style="flex:1;">
+        <div class="analytics-card" style="flex:1;min-width:0;">
           <div class="analytics-header"><h3>Customer Status Monthly Trends</h3><div class="current-stats"><span class="stat-badge active">Active: {{ active_customers|default:0 }}</span><span class="stat-badge inactive">Inactive: {{ inactive_customers|default:0 }}</span></div></div>
           <div class="chart-container-large"><canvas id="customerMonthlyChart" width="400" height="200"></canvas></div>
         </div>
       </div>
-      <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;">
-        <div class="chart-card" style="flex:0 0 300px;">
+      <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;width:100%;box-sizing:border-box;">
+        <div class="chart-card" style="flex:0 0 300px;min-width:300px;">
           <div class="chart-header"><h3>Product Stock Status</h3><div class="chart-stats"><span class="total-items">Total: {{ total_products }}</span></div></div>
           <div class="chart-with-stats">
             <div class="chart-container"><canvas id="stockChart" width="200" height="200"></canvas></div>
@@ -307,13 +307,13 @@
             </div>
           </div>
         </div>
-        <div class="analytics-card" style="flex:1;">
+        <div class="analytics-card" style="flex:1;min-width:0;">
           <div class="analytics-header"><h3>Product Stock Monthly Trends</h3><div class="current-stats"><span class="stat-badge in-stock">In Stock: {{ available_products|default:0 }}</span><span class="stat-badge out-stock">Out of Stock: {{ out_of_stock_products|default:0 }}</span></div></div>
           <div class="chart-container-large"><canvas id="productMonthlyChart" width="400" height="200"></canvas></div>
         </div>
       </div>
-      <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;">
-        <div class="chart-card" style="flex:0 0 300px;">
+      <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;width:100%;box-sizing:border-box;">
+        <div class="chart-card" style="flex:0 0 300px;min-width:300px;">
           <div class="chart-header"><h3>Order Status</h3><div class="chart-stats"><span class="total-items">Total: {{ total_orders }}</span></div></div>
           <div class="chart-with-stats">
             <div class="chart-container"><canvas id="orderStatusChart" width="200" height="200"></canvas></div>
@@ -323,15 +323,15 @@
             </div>
           </div>
         </div>
-        <div class="analytics-card" style="flex:1;">
+        <div class="analytics-card" style="flex:1;min-width:0;">
           <div class="analytics-header"><h3>Order Status Monthly Trends</h3><div class="current-stats"><span class="stat-badge completed">Completed: {{ completed_orders|default:0 }}</span><span class="stat-badge pending">Pending: {{ pending_orders|default:0 }}</span></div></div>
           <div class="chart-container-large"><canvas id="orderMonthlyChart" width="400" height="200"></canvas></div>
         </div>
       </div>
     {% endif %}
     {% if user.is_authenticated and user.member and user.member.role == 'hr' %}
-      <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;">
-        <div class="chart-card" style="flex:0 0 300px;">
+      <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;width:100%;box-sizing:border-box;">
+        <div class="chart-card" style="flex:0 0 300px;min-width:300px;">
           <div class="chart-header"><h3>Employee Status</h3><div class="chart-stats"><span class="total-items">Total: {{ total_employees }}</span></div></div>
           <div class="chart-with-stats">
             <div class="chart-container" style="padding:50px;"><canvas id="employeeStatusChart" width="200" height="200"></canvas></div>
@@ -341,7 +341,7 @@
             </div>
           </div>
         </div>
-        <div class="analytics-card" style="flex:1;">
+        <div class="analytics-card" style="flex:1;min-width:0;">
           <div class="analytics-header"><h3>Employee Status Monthly Trends</h3><div class="current-stats"><span class="stat-badge active">Active: {{ active_employees|default:0 }}</span><span class="stat-badge inactive">Inactive: {{ inactive_employees|default:0 }}</span></div></div>
           <div class="chart-container-large"><canvas id="employeeMonthlyChart" width="400" height="200"></canvas></div>
         </div>
@@ -666,8 +666,8 @@
     --fn:'DM Sans',system-ui,sans-serif;--fh:'Syne',system-ui,sans-serif;
   }
 
-  .dash-shell{font-family:var(--fn);color:var(--text);margin:120px 40px 120px 360px;transition:margin-left .3s;}
-  .dash-shell.shifted{margin-left:90px}
+  .dash-shell{font-family:var(--fn);color:var(--text);margin:120px 20px 120px 350px;transition:margin-left .3s;}
+  .dash-shell.shifted{margin-left:70px}
 
   /* Header */
   .dash-header{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#002560 0%,#1d4ed8 100%);border-radius:16px;padding:22px 30px;margin-bottom:24px;box-shadow:0 8px 32px rgba(15,37,87,.22);}
@@ -751,7 +751,7 @@
   .stat-value{font-family:var(--fh);font-size:24px;font-weight:800;color:var(--text)}
 
   /* Analytics */
-  .analytics-section{margin-bottom:24px}
+  .analytics-section{margin-bottom:24px;}
   .analytics-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--sh);}
   .analytics-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
   .analytics-header h3{font-family:var(--fh);font-size:18px;font-weight:700;color:var(--text);margin:0}
