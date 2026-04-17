@@ -48,7 +48,6 @@
   <!-- Stat Cards Grid -->
   <div class="stat-grid">
 
-    <!-- ── EMPLOYEES ── -->
     <div class="stat-card" style="--accent:#2563eb;--accent-lt:#eff6ff;--accent-mid:#bfdbfe">
       <div class="sc-top">
         <div class="sc-icon" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6)">
@@ -90,7 +89,6 @@
       </div>
     </div>
 
-    <!-- ── PRODUCTS ── -->
     <div class="stat-card" style="--accent:#059669;--accent-lt:#ecfdf5;--accent-mid:#a7f3d0">
       <div class="sc-top">
         <div class="sc-icon" style="background:linear-gradient(135deg,#047857,#10b981)">
@@ -132,7 +130,6 @@
       </div>
     </div>
 
-    <!-- ── Customer ── -->
     <div class="stat-card" style="--accent:#1e3a8a;--accent-lt:#1e3a8a;--accent-mid:#1e3a8a">
       <div class="sc-top">
         <div class="sc-icon" style="background:#1e3a8a">
@@ -173,7 +170,7 @@
         </div>
       </div>
     </div>
-  
+
     <div class="stat-card" style="--accent:#d97706;--accent-lt:#fffbeb;--accent-mid:#fde68a">
       <div class="sc-top">
         <div class="sc-icon" style="background:linear-gradient(135deg,#b45309,#f59e0b)">
@@ -216,286 +213,257 @@
     </div>
 
   </div><!-- /stat-grid -->
+
   {% if user.is_authenticated and user.member and user.member.role == 'hr' %}
-    <!-- Attendance Section -->
-    <div class="attendance-section">
-      <div class="section-header">
-        <h2 class="section-title">Attendance Overview</h2>
-        <div class="month-selector">
-          <select id="monthSelect" class="month-select">
-            {% for month_name in month_names %}
-              <option value="{{ forloop.counter }}" {% if forloop.counter == selected_month %}selected{% endif %}>
-                {{ month_name }}
-              </option>
-            {% endfor %}
-          </select>
-          <select id="yearSelect" class="year-select">
-            {% for year in available_years %}
-              <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
-            {% endfor %}
-          </select>
+  <div class="attendance-section">
+    <div class="section-header">
+      <h2 class="section-title">Attendance Overview</h2>
+      <div class="month-selector">
+        <select id="monthSelect" class="month-select">
+          {% for month_name in month_names %}
+            <option value="{{ forloop.counter }}" {% if forloop.counter == selected_month %}selected{% endif %}>{{ month_name }}</option>
+          {% endfor %}
+        </select>
+        <select id="yearSelect" class="year-select">
+          {% for year in available_years %}
+            <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="attendance-grid">
+      <div class="attendance-chart-card">
+        <div class="chart-header">
+          <h3>Monthly Attendance</h3>
+          <div class="chart-legend">
+            <div class="legend-item"><span class="legend-dot present"></span>Present</div>
+            <div class="legend-item"><span class="legend-dot leave"></span>Leave</div>
+            <div class="legend-item"><span class="legend-dot halfday"></span>Half Day</div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="attendanceChart" width="400" height="200"></canvas>
         </div>
       </div>
-      
-      <div class="attendance-grid">
-        <!-- Attendance Chart -->
-        <div class="attendance-chart-card">
-          <div class="chart-header">
-            <h3>Monthly Attendance</h3>
-            <div class="chart-legend">
-              <div class="legend-item"><span class="legend-dot present"></span>Present</div>
-              <div class="legend-item"><span class="legend-dot leave"></span>Leave</div>
-              <div class="legend-item"><span class="legend-dot halfday"></span>Half Day</div>
+      <div class="attendance-stats">
+        <div class="stat-item present-stat">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div class="stat-info"><div class="stat-label">Present Days</div><div class="stat-value" id="presentDays">{{ present_days }}</div></div>
+        </div>
+        <div class="stat-item leave-stat">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+          <div class="stat-info"><div class="stat-label">Leave Days</div><div class="stat-value" id="leaveDays">{{ leave_days }}</div></div>
+        </div>
+        <div class="stat-item halfday-stat">
+          <div class="stat-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+          <div class="stat-info"><div class="stat-label">Half Days</div><div class="stat-value" id="halfDays">{{ half_days }}</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="analytics-section">
+    <div class="section-header">
+      <h2 class="section-title">Analytics Overview</h2>
+      <div class="analytics-controls">
+        <select id="analyticsMonth" class="month-select">
+          {% for month_name in month_names %}
+            <option value="{{ forloop.counter }}" {% if forloop.counter == selected_month %}selected{% endif %}>{{ month_name }}</option>
+          {% endfor %}
+        </select>
+        <select id="analyticsYear" class="year-select">
+          {% for year in analytics_years %}
+            <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>{{ year }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    {% if user.is_superuser %}
+      <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;">
+        <div class="chart-card" style="flex:0 0 300px;">
+          <div class="chart-header"><h3>Customer Status</h3><div class="chart-stats"><span class="total-items">Total: {{ total_customers }}</span></div></div>
+          <div class="chart-with-stats">
+            <div class="chart-container"><canvas id="customerStatusChart" width="200" height="200"></canvas></div>
+            <div class="chart-status">
+              <div class="status-item active"><div class="status-dot" style="background:#1d4ed8!important"></div><div class="status-info"><div class="status-label">Active</div><div class="status-value">{{ active_customers|default:0 }}</div></div></div>
+              <div class="status-item inactive"><div class="status-dot"></div><div class="status-info"><div class="status-label">Inactive</div><div class="status-value">{{ inactive_customers|default:0 }}</div></div></div>
             </div>
           </div>
-          <div class="chart-container">
-            <canvas id="attendanceChart" width="400" height="200"></canvas>
+        </div>
+        <div class="analytics-card" style="flex:1;">
+          <div class="analytics-header"><h3>Customer Status Monthly Trends</h3><div class="current-stats"><span class="stat-badge active">Active: {{ active_customers|default:0 }}</span><span class="stat-badge inactive">Inactive: {{ inactive_customers|default:0 }}</span></div></div>
+          <div class="chart-container-large"><canvas id="customerMonthlyChart" width="400" height="200"></canvas></div>
+        </div>
+      </div>
+      <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;">
+        <div class="chart-card" style="flex:0 0 300px;">
+          <div class="chart-header"><h3>Product Stock Status</h3><div class="chart-stats"><span class="total-items">Total: {{ total_products }}</span></div></div>
+          <div class="chart-with-stats">
+            <div class="chart-container"><canvas id="stockChart" width="200" height="200"></canvas></div>
+            <div class="chart-status">
+              <div class="status-item in-stock"><div class="status-dot"></div><div class="status-info"><div class="status-label">In Stock</div><div class="status-value">{{ available_products|default:0 }}</div></div></div>
+              <div class="status-item out-stock"><div class="status-dot"></div><div class="status-info"><div class="status-label">Out of Stock</div><div class="status-value">{{ out_of_stock_products|default:0 }}</div></div></div>
+            </div>
           </div>
+        </div>
+        <div class="analytics-card" style="flex:1;">
+          <div class="analytics-header"><h3>Product Stock Monthly Trends</h3><div class="current-stats"><span class="stat-badge in-stock">In Stock: {{ available_products|default:0 }}</span><span class="stat-badge out-stock">Out of Stock: {{ out_of_stock_products|default:0 }}</span></div></div>
+          <div class="chart-container-large"><canvas id="productMonthlyChart" width="400" height="200"></canvas></div>
+        </div>
+      </div>
+      <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;">
+        <div class="chart-card" style="flex:0 0 300px;">
+          <div class="chart-header"><h3>Order Status</h3><div class="chart-stats"><span class="total-items">Total: {{ total_orders }}</span></div></div>
+          <div class="chart-with-stats">
+            <div class="chart-container"><canvas id="orderStatusChart" width="200" height="200"></canvas></div>
+            <div class="chart-status">
+              <div class="status-item completed"><div class="status-dot"></div><div class="status-info"><div class="status-label">Completed</div><div class="status-value">{{ completed_orders|default:0 }}</div></div></div>
+              <div class="status-item pending"><div class="status-dot"></div><div class="status-info"><div class="status-label">Pending</div><div class="status-value">{{ pending_orders|default:0 }}</div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="analytics-card" style="flex:1;">
+          <div class="analytics-header"><h3>Order Status Monthly Trends</h3><div class="current-stats"><span class="stat-badge completed">Completed: {{ completed_orders|default:0 }}</span><span class="stat-badge pending">Pending: {{ pending_orders|default:0 }}</span></div></div>
+          <div class="chart-container-large"><canvas id="orderMonthlyChart" width="400" height="200"></canvas></div>
+        </div>
+      </div>
+    {% endif %}
+    {% if user.is_authenticated and user.member and user.member.role == 'hr' %}
+      <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;">
+        <div class="chart-card" style="flex:0 0 300px;">
+          <div class="chart-header"><h3>Employee Status</h3><div class="chart-stats"><span class="total-items">Total: {{ total_employees }}</span></div></div>
+          <div class="chart-with-stats">
+            <div class="chart-container" style="padding:50px;"><canvas id="employeeStatusChart" width="200" height="200"></canvas></div>
+            <div class="chart-status">
+              <div class="status-item active"><div class="status-dot"></div><div class="status-info"><div class="status-label">Active</div><div class="status-value">{{ active_employees|default:0 }}</div></div></div>
+              <div class="status-item inactive"><div class="status-dot"></div><div class="status-info"><div class="status-label">Inactive</div><div class="status-value">{{ inactive_employees|default:0 }}</div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="analytics-card" style="flex:1;">
+          <div class="analytics-header"><h3>Employee Status Monthly Trends</h3><div class="current-stats"><span class="stat-badge active">Active: {{ active_employees|default:0 }}</span><span class="stat-badge inactive">Inactive: {{ inactive_employees|default:0 }}</span></div></div>
+          <div class="chart-container-large"><canvas id="employeeMonthlyChart" width="400" height="200"></canvas></div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if user.is_superuser %}
+    <div class="reviews-dashboard-section">
+      <!-- Section Header -->
+      <div class="section-header" style="margin-bottom:20px;">
+        <h2 class="section-title">Product Reviews</h2>
+        <div class="rev-summary-chips">
+          <div class="rev-chip rev-chip-blue">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            {{ total_reviews|default:0 }} Total Reviews
+          </div>
+          <div class="rev-chip rev-chip-amber">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            Avg {{ overall_avg_rating|default:"—" }} / 5
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Reviews Table -->
+      <div class="rev-table-card">
+        <div class="rev-table-header">
+          <span class="rev-table-title">Recent Reviews</span>
+          <div class="rev-filter-row">
+            <button class="rev-filter active" onclick="filterRevs('all',this)">All</button>
+            <button class="rev-filter" onclick="filterRevs('5',this)">★ 5</button>
+            <button class="rev-filter" onclick="filterRevs('4',this)">★ 4</button>
+            <button class="rev-filter" onclick="filterRevs('3',this)">★ 3</button>
+            <button class="rev-filter" onclick="filterRevs('low',this)">★ 1-2</button>
+          </div>
+        </div>
+
+        <div class="rev-table-wrap">
+          <table class="rev-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Customer</th>
+                <th>Rating</th>
+                <th>Review</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="rev-tbody">
+              {% for review in product_reviews %}
+              <tr class="rev-row" data-rating="{{ review.rating }}">
+                <td>
+                  <div class="rev-product-cell">
+                    {% if review.product.product_image %}
+                      <img src="{{ review.product.product_image.url }}" class="rev-prod-img" alt="{{ review.product.name }}">
+                    {% else %}
+                      <div class="rev-prod-img-placeholder">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+                      </div>
+                    {% endif %}
+                    <span class="rev-prod-name">{{ review.product.name }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="rev-customer-cell">
+                    <div class="rev-avatar">{{ review.user.get_full_name|default:review.user.username|slice:":1"|upper }}</div>
+                    <span>{{ review.user.get_full_name|default:review.user.username }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="rev-stars-cell">
+                    {% for i in "12345" %}
+                      <span class="rev-star {% if review.rating >= forloop.counter %}filled{% endif %}">★</span>
+                    {% endfor %}
+                    <span class="rev-num">{{ review.rating }}.0</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="rev-comment-cell" title="{{ review.comment }}">
+                    {{ review.comment|truncatechars:60 }}
+                  </div>
+                </td>
+                <td class="rev-date-cell">{{ review.created_at|date:"d M Y" }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" class="rev-empty">
+                  <div class="rev-empty-inner">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <p>No product reviews yet</p>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
         
-        <!-- Attendance Stats -->
-        <div class="attendance-stats">
-          <div class="stat-item present-stat">
-            <div class="stat-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 6L9 17l-5-5"/>
-              </svg>
-            </div>
-            <div class="stat-info">
-              <div class="stat-label">Present Days</div>
-              <div class="stat-value" id="presentDays">{{ present_days }}</div>
-            </div>
-          </div>
+        <!-- Pagination -->
+        {% if product_reviews.has_other_pages %}
+        <div class="rev-pagination">
+          {% if product_reviews.has_previous %}
+            <button style="padding:0px !important;" onclick="loadPage({{ product_reviews.previous_page_number }})" class="rev-page-btn">‹</button>
+          {% endif %}
           
-          <div class="stat-item leave-stat">
-            <div class="stat-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </div>
-            <div class="stat-info">
-              <div class="stat-label">Leave Days</div>
-              <div class="stat-value" id="leaveDays">{{ leave_days }}</div>
-            </div>
-          </div>
+          {% for num in product_reviews.paginator.page_range %}
+            {% if product_reviews.number == num %}
+              <span class="rev-page-btn active">{{ num }}</span>
+            {% else %}
+              <button style="padding:0px !important;" onclick="loadPage({{ num }})" class="rev-page-btn">{{ num }}</button>
+            {% endif %}
+          {% endfor %}
           
-          <div class="stat-item halfday-stat">
-            <div class="stat-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
-              </svg>
-            </div>
-            <div class="stat-info">
-              <div class="stat-label">Half Days</div>
-              <div class="stat-value" id="halfDays">{{ half_days }}</div>
-            </div>
-          </div>
+          {% if product_reviews.has_next %}
+            <button style="padding:0px !important;" onclick="loadPage({{ product_reviews.next_page_number }})" class="rev-page-btn">›</button>
+          {% endif %}
         </div>
+        {% endif %}
       </div>
-    </div>
-  {% endif %}
-    <!-- Analytics Section -->
-    <div class="analytics-section">
-      <div class="section-header">
-        <h2 class="section-title">Analytics Overview</h2>
-        <div class="analytics-controls">
-          <select id="analyticsMonth" class="month-select">
-            {% for month_name in month_names %}
-              <option value="{{ forloop.counter }}" {% if forloop.counter == selected_month %}selected{% endif %}>
-                {{ month_name }}
-              </option>
-            {% endfor %}
-          </select>
-          <select id="analyticsYear" class="year-select">
-            {% for year in analytics_years %}
-              <option value="{{ year }}" {% if year == current_year %}selected{% endif %}>{{ year }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-      {% if user.is_superuser%}
-        <!-- Customer Analytics -->
-        <div  style="display: flex; gap: 15px; margin-bottom:15px;">
-          <div class="chart-card" style="flex: 0 0 300px;">
-            <div class="chart-header">
-              <h3>Customer Status</h3>
-              <div class="chart-stats">
-                <span class="total-items">Total: {{ total_customers }}</span>
-              </div>
-            </div>
-            <div class="chart-with-stats">
-              <div class="chart-container" style="padding:50px;">
-                <canvas id="customerStatusChart" width="200" height="200"></canvas>
-              </div>
-              <div class="chart-status">
-                <div class="status-item active">
-                  <div class="status-dot" style='background:#1d4ed8 !important;'></div>
-                  <div class="status-info">
-                    <div class="status-label">Active</div>
-                    <div class="status-value">{{ active_customers|default:0 }}</div>
-                  </div>
-                </div>
-                <div class="status-item inactive">
-                  <div class="status-dot"></div>
-                  <div class="status-info">
-                    <div class="status-label">Inactive</div>
-                    <div class="status-value">{{ inactive_customers|default:0 }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="analytics-card" style="flex: 1;">
-            <div class="analytics-header">
-              <h3>Customer Status Monthly Trends</h3>
-              <div class="current-stats">
-                <span class="stat-badge active" >Active: {{ active_customers|default:0 }}</span>
-                <span class="stat-badge inactive">Inactive: {{ inactive_customers|default:0 }}</span>
-              </div>
-            </div>
-            <div class="chart-container-large">
-              <canvas id="customerMonthlyChart" width="400" height="200"></canvas>
-            </div>
-          </div>
-        </div>
-        <!-- Product Analytics -->
-        <div  style="display: flex; gap: 15px; margin-bottom:15px;">
-          <div class="chart-card" style="flex: 0 0 300px;">
-            <div class="chart-header">
-              <h3>Product Stock Status</h3>
-              <div class="chart-stats">
-                <span class="total-items">Total: {{ total_products }}</span>
-              </div>
-            </div>
-            <div class="chart-with-stats">
-              <div class="chart-container" style="padding:50px;">
-                <canvas id="stockChart" width="200" height="200"></canvas>
-              </div>
-              <div class="chart-status">
-                <div class="status-item in-stock">
-                  <div class="status-dot"></div>
-                  <div class="status-info">
-                    <div class="status-label">In Stock</div>
-                    <div class="status-value">{{ available_products|default:0 }}</div>
-                  </div>
-                </div>
-                <div class="status-item out-stock">
-                  <div class="status-dot"></div>
-                  <div class="status-info">
-                    <div class="status-label">Out of Stock</div>
-                    <div class="status-value">{{ out_of_stock_products|default:0 }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="analytics-card" style="flex: 1;">
-            <div class="analytics-header">
-              <h3>Product Stock Monthly Trends</h3>
-              <div class="current-stats">
-                <span class="stat-badge in-stock">In Stock: {{ available_products|default:0 }}</span>
-                <span class="stat-badge out-stock">Out of Stock: {{ out_of_stock_products|default:0 }}</span>
-              </div>
-            </div>
-            <div class="chart-container-large">
-              <canvas id="productMonthlyChart" width="400" height="200"></canvas>
-            </div>
-          </div>
-        </div>
-        <!-- Order Analytics -->
-        <div  style="display: flex; gap: 15px; margin-bottom:15px;">
-          <div class="chart-card" style="flex: 0 0 300px;">
-            <div class="chart-header">
-              <h3>Order Status</h3>
-              <div class="chart-stats">
-                <span class="total-items">Total: {{ total_orders }}</span>
-              </div>
-            </div>
-            <div class="chart-with-stats">
-              <div class="chart-container" style="padding:50px;">
-                <canvas id="orderStatusChart" width="200" height="200"></canvas>
-              </div>
-              <div class="chart-status">
-                <div class="status-item completed">
-                  <div class="status-dot"></div>
-                  <div class="status-info">
-                    <div class="status-label">Completed</div>
-                    <div class="status-value">{{ completed_orders|default:0 }}</div>
-                  </div>
-                </div>
-                <div class="status-item pending">
-                  <div class="status-dot"></div>
-                  <div class="status-info">
-                    <div class="status-label">Pending</div>
-                    <div class="status-value">{{ pending_orders|default:0 }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="analytics-card" style="flex: 1;">
-            <div class="analytics-header">
-              <h3>Order Status Monthly Trends</h3>
-              <div class="current-stats">
-                <span class="stat-badge completed">Completed: {{ completed_orders|default:0 }}</span>
-                <span class="stat-badge pending">Pending: {{ pending_orders|default:0 }}</span>
-              </div>
-            </div>
-            <div class="chart-container-large">
-              <canvas id="orderMonthlyChart" width="400" height="200"></canvas>
-            </div>
-          </div>
-        </div>
-      {% endif %}
 
-      {% if user.is_authenticated and user.member and user.member.role == 'hr' %}
-        <!-- Employee Analytics -->
-        <div  style="display: flex; gap: 15px; margin-bottom:15px;">
-          <div class="chart-card" style="flex: 0 0 300px;">
-            <div class="chart-header">
-              <h3>Employee Status</h3>
-              <div class="chart-stats">
-                <span class="total-items">Total: {{ total_employees }}</span>
-              </div>
-            </div>
-            <div class="chart-with-stats">
-              <div class="chart-container" style="padding:50px;">
-                <canvas id="employeeStatusChart" width="200" height="200"></canvas>
-              </div>
-              <div class="chart-status">
-                <div class="status-item active">
-                  <div class="status-dot"></div>
-                  <div class="status-info">
-                    <div class="status-label">Active</div>
-                    <div class="status-value">{{ active_employees|default:0 }}</div>
-                  </div>
-                </div>
-                <div class="status-item inactive">
-                  <div class="status-dot"></div>
-                  <div class="status-info">
-                    <div class="status-label">Inactive</div>
-                    <div class="status-value">{{ inactive_employees|default:0 }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="analytics-card" style="flex: 1;">
-            <div class="analytics-header">
-              <h3>Employee Status Monthly Trends</h3>
-              <div class="current-stats">
-                <span class="stat-badge active">Active: {{ active_employees|default:0 }}</span>
-                <span class="stat-badge inactive">Inactive: {{ inactive_employees|default:0 }}</span>
-              </div>
-            </div>
-            <div class="chart-container-large">
-              <canvas id="employeeMonthlyChart" width="400" height="200"></canvas>
-            </div>
-          </div>
-        </div>
-      {% endif %}
-    </div>
-    
+    </div><!-- /reviews-dashboard-section -->
+  {% endif %}
 
   <!-- Quick Info Row -->
   <div class="quick-row">
@@ -505,9 +473,7 @@
       </div>
       <div class="qc-info">
         <div class="qc-lbl">Employee Rate</div>
-        <div class="qc-val">
-          {% if total_employees %}{% widthratio active_employees total_employees 100 %}%{% else %}—{% endif %}
-        </div>
+        <div class="qc-val">{% if total_employees %}{% widthratio active_employees total_employees 100 %}%{% else %}—{% endif %}</div>
       </div>
       <div class="qc-spark qc-spark-blue"></div>
     </div>
@@ -517,9 +483,7 @@
       </div>
       <div class="qc-info">
         <div class="qc-lbl">Stock Rate</div>
-        <div class="qc-val">
-          {% if total_products %}{% widthratio available_products total_products 100 %}%{% else %}—{% endif %}
-        </div>
+        <div class="qc-val">{% if total_products %}{% widthratio available_products total_products 100 %}%{% else %}—{% endif %}</div>
       </div>
       <div class="qc-spark qc-spark-green"></div>
     </div>
@@ -529,9 +493,7 @@
       </div>
       <div class="qc-info">
         <div class="qc-lbl">Order Completion</div>
-        <div class="qc-val">
-          {% if total_orders %}{% widthratio completed_orders total_orders 100 %}%{% else %}—{% endif %}
-        </div>
+        <div class="qc-val">{% if total_orders %}{% widthratio completed_orders total_orders 100 %}%{% else %}—{% endif %}</div>
       </div>
       <div class="qc-spark qc-spark-amber"></div>
     </div>
@@ -550,1774 +512,404 @@
 </div><!-- /dash-shell -->
 
 <script>
-/* DATE */
-(function(){
-  var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  var DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  var d=new Date();
-  var el=document.getElementById('dash-date');
-  if(el) el.innerHTML='<span class="dh-wd">'+DAYS[d.getDay()]+'</span><span class="dh-sep">·</span><span class="dh-dt">'+d.getDate()+' '+MONTHS[d.getMonth()]+' '+d.getFullYear()+'</span>';
-})();
-
-/* COUNT-UP ANIMATION */
-document.querySelectorAll('.sc-value[data-target]').forEach(function(el){
-  var target = parseInt(el.dataset.target) || 0;
-  var duration = 1200;
-  var start = performance.now();
-  function step(now){
-    var progress = Math.min((now - start) / duration, 1);
-    var eased = 1 - Math.pow(1 - progress, 3);
-    el.textContent = Math.round(eased * target).toLocaleString();
-    if(progress < 1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-});
-
-/* CHARTS */
-document.addEventListener('DOMContentLoaded', function() {
-  // Employee Joins Chart
-  const employeeCtx = document.getElementById('employeeChart');
-  if (employeeCtx) {
-    fetch('/get-employee-joins-data/')
-      .then(response => response.json())
-      .then(data => {
-        new Chart(employeeCtx, {
-          type: 'line',
-          data: {
-            labels: data.months,
-            datasets: [{
-              label: 'Employee Joins',
-              data: data.joins,
-              borderColor: '#2563eb',
-              backgroundColor: 'rgba(37, 99, 235, 0.1)',
-              borderWidth: 2,
-              fill: true,
-              tension: 0.4
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: false
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: {
-                  stepSize: 1
-                }
-              }
-            }
-          }
-        });
-      })
-      .catch(error => console.error('Error loading employee data:', error));
-  }
-
-  // Orders Chart
-  const ordersCtx = document.getElementById('ordersChart');
-  if (ordersCtx) {
-    fetch('/get-orders-data/')
-      .then(response => response.json())
-      .then(data => {
-        new Chart(ordersCtx, {
-          type: 'bar',
-          data: {
-            labels: data.months,
-            datasets: [{
-              label: 'Orders',
-              data: data.orders,
-              backgroundColor: '#059669',
-              borderColor: '#047857',
-              borderWidth: 1
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: false
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: {
-                  stepSize: 1
-                }
-              }
-            }
-          }
-        });
-      })
-      .catch(error => console.error('Error loading orders data:', error));
-  }
-});
-
-/* SIDEBAR */
-document.addEventListener('DOMContentLoaded', function(){
-  var shell = document.querySelector('.dash-shell');
-  var mb2   = document.querySelector('.menu-bar2');
-  var sv1   = document.querySelector('.svg1');
-  var sv3   = document.querySelector('.svg3');
-  if(sv1) sv1.addEventListener('click', function(){ if(mb2) mb2.classList.remove('active'); if(shell) shell.classList.remove('shifted'); });
-  if(sv3) sv3.addEventListener('click', function(){ if(mb2) mb2.classList.add('active'); if(shell) shell.classList.add('shifted'); });
-});
-
-/* TOASTS */
-setTimeout(function(){
-  document.querySelectorAll('.toast').forEach(function(t){
-    t.style.opacity='0'; t.style.transform='translateX(110%)';
-    setTimeout(function(){ t.remove(); }, 400);
-  });
-}, 3500);
-
-/* ATTENDANCE CHART */
-function createAttendanceChart() {
-  const ctx = document.getElementById('attendanceChart');
-  if (!ctx) return null;
   
-  // Get weekly data from Django context
-  const weeklyData = {{ weekly_data|safe }};
-  
-  const labels = [];
-  const presentData = [];
-  const leaveData = [];
-  const halfdayData = [];
-  
-  weeklyData.forEach((week, index) => {
-    labels.push(`Week ${index + 1}`);
-    presentData.push(week.present);
-    leaveData.push(week.leave);
-    halfdayData.push(week.halfday);
-  });
-  
-  return new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Present',
-        data: presentData,
-        backgroundColor: '#10b981',
-        borderRadius: 4
-      }, {
-        label: 'Leave',
-        data: leaveData,
-        backgroundColor: '#ef4444',
-        borderRadius: 4
-      }, {
-        label: 'Half Day',
-        data: halfdayData,
-        backgroundColor: '#f59e0b',
-        borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        x: { grid: { display: true} },
-        y: { beginAtZero: true, grid: { color: '#f1f5f9' } }
-      }
+  /* DATE */
+  (function(){
+    var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    var d=new Date();
+    var el=document.getElementById('dash-date');
+    if(el) el.innerHTML='<span class="dh-wd">'+DAYS[d.getDay()]+'</span><span class="dh-sep">·</span><span class="dh-dt">'+d.getDate()+' '+MONTHS[d.getMonth()]+' '+d.getFullYear()+'</span>';
+  })();
+
+  /* COUNT-UP */
+  document.querySelectorAll('.sc-value[data-target]').forEach(function(el){
+    var target=parseInt(el.dataset.target)||0;
+    var duration=1200,start=performance.now();
+    function step(now){
+      var p=Math.min((now-start)/duration,1);
+      var e=1-Math.pow(1-p,3);
+      el.textContent=Math.round(e*target).toLocaleString();
+      if(p<1) requestAnimationFrame(step);
     }
+    requestAnimationFrame(step);
   });
-}
 
-/* EMPLOYEE STATUS PIE CHART */
-function createEmployeeStatusChart(selectedMonth = null, selectedYear = null) {
-  const ctx = document.getElementById('employeeStatusChart');
-  if (!ctx) return;
-  
-  const month = selectedMonth || document.getElementById('analyticsMonth')?.value;
-  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
-  
-  // Fetch data for selected month and year
-  let url = `/get-employee-status-data/?year=${year}`;
-  if (month) {
-    url += `&month=${month}`;
-  }
-  
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        window.employeeStatusChart = new Chart(ctx, {
-          type: 'pie',
-          data: {
-            labels: ['Active', 'Inactive'],
-            datasets: [{
-              data: [data.active_employees, data.inactive_employees],
-              backgroundColor: ['#10b981', '#ef4444'],
-              borderColor: '#ffffff',
-              borderWidth: 3,
-              hoverBorderWidth: 4,
-              hoverOffset: 8
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'bottom',
-                labels: {
-                  padding: 15,
-                  usePointStyle: true,
-                  pointStyle: 'circle',
-                  font: { size: 12, weight: '600' },
-                  color: '#374151'
-                }
-              },
-              tooltip: {
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                titleColor: '#ffffff',
-                bodyColor: '#ffffff',
-                callbacks: {
-                  label: function(context) {
-                    const label = context.label || '';
-                    const value = context.parsed;
-                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                    return `${label}: ${value} (${percentage}%)`;
-                  }
-                }
-              }
-            }
-          }
-        });
-      }
-    })
-    .catch(error => console.error('Error fetching employee status data:', error));
-}
-
-/* PRODUCT STOCK PIE CHART */
-function createStockChart(selectedMonth = null, selectedYear = null) {
-  const ctx = document.getElementById('stockChart');
-  if (!ctx) return;
-  
-  const month = selectedMonth || document.getElementById('analyticsMonth')?.value;
-  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
-  
-  // Fetch data for selected month and year
-  let url = `/get-product-status-data/?year=${year}`;
-  if (month) {
-    url += `&month=${month}`;
-  }
-  
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        window.stockChart = new Chart(ctx, {
-          type: 'pie',
-          data: {
-            labels: ['In Stock', 'Out of Stock'],
-            datasets: [{
-              data: [data.available_products, data.out_of_stock_products],
-              backgroundColor: ['#1e3a8a', '#dc2626'],
-              borderColor: '#ffffff',
-              borderWidth: 3,
-              hoverBorderWidth: 4,
-              hoverOffset: 8
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'bottom',
-                labels: {
-                  padding: 15,
-                  usePointStyle: true,
-                  pointStyle: 'circle',
-                  font: { size: 12, weight: '600' },
-                  color: '#374151'
-                }
-              },
-              tooltip: {
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                titleColor: '#ffffff',
-                bodyColor: '#ffffff',
-                callbacks: {
-                  label: function(context) {
-                    const label = context.label || '';
-                    const value = context.parsed;
-                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                    return `${label}: ${value} (${percentage}%)`;
-                  }
-                }
-              }
-            }
-          }
-        });
-      }
-    })
-    .catch(error => console.error('Error fetching product status data:', error));
-}
-
-/* ORDER STATUS PIE CHART */
-function createOrderStatusChart(selectedMonth = null, selectedYear = null) {
-  const ctx = document.getElementById('orderStatusChart');
-  if (!ctx) return;
-  
-  const month = selectedMonth || document.getElementById('analyticsMonth')?.value;
-  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
-  
-  // Fetch data for selected month and year
-  let url = `/get-order-status-data/?year=${year}`;
-  if (month) {
-    url += `&month=${month}`;
-  }
-  
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        window.orderStatusChart = new Chart(ctx, {
-          type: 'pie',
-          data: {
-            labels: ['Completed', 'Pending'],
-            datasets: [{
-              data: [data.completed_orders, data.pending_orders],
-              backgroundColor: ['#3b82f6', '#f59e0b'],
-              borderColor: '#ffffff',
-              borderWidth: 3,
-              hoverBorderWidth: 4,
-              hoverOffset: 8
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'bottom',
-                labels: {
-                  padding: 15,
-                  usePointStyle: true,
-                  pointStyle: 'circle',
-                  font: { size: 12, weight: '600' },
-                  color: '#374151'
-                }
-              },
-              tooltip: {
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                titleColor: '#ffffff',
-                bodyColor: '#ffffff',
-                callbacks: {
-                  label: function(context) {
-                    const label = context.label || '';
-                    const value = context.parsed;
-                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                    return `${label}: ${value} (${percentage}%)`;
-                  }
-                }
-              }
-            }
-          }
-        });
-      }
-    })
-    .catch(error => console.error('Error fetching order status data:', error));
-}
-
-/* CUSTOMER STATUS PIE CHART */
-function createCustomerStatusChart(selectedMonth = null, selectedYear = null) {
-  const ctx = document.getElementById('customerStatusChart');
-  if (!ctx) return;
-  
-  const month = selectedMonth || document.getElementById('analyticsMonth')?.value;
-  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
-  
-  // Fetch data for selected month and year
-  let url = `/get-customer-status-data/?year=${year}`;
-  if (month) {
-    url += `&month=${month}`;
-  }
-  
-  fetch(url)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        window.customerStatusChart = new Chart(ctx, {
-          type: 'pie',
-          data: {
-            labels: ['Active', 'Inactive'],
-            datasets: [{
-              data: [data.active_customers, data.inactive_customers],
-              backgroundColor: ['#1d4ed8', '#ef4444'],
-              borderColor: '#ffffff',
-              borderWidth: 3,
-              hoverBorderWidth: 4,
-              hoverOffset: 8
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'bottom',
-                labels: {
-                  padding: 15,
-                  usePointStyle: true,
-                  pointStyle: 'circle',
-                  font: { size: 12, weight: '600' },
-                  color: '#374151'
-                }
-              },
-              tooltip: {
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                titleColor: '#ffffff',
-                bodyColor: '#ffffff',
-                callbacks: {
-                  label: function(context) {
-                    const label = context.label || '';
-                    const value = context.parsed;
-                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                    return `${label}: ${value} (${percentage}%)`;
-                  }
-                }
-              }
-            }
-          }
-        });
-      }
-    })
-    .catch(error => console.error('Error fetching customer status data:', error));
-}
-
-/* CUSTOMER MONTHLY CHART */
-function createCustomerMonthlyChart(selectedMonth = null, selectedYear = null) {
-  const ctx = document.getElementById('customerMonthlyChart');
-  if (!ctx) return;
-  
-  // Get selected year (ignore month parameter, always show all 12 months)
-  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
-  
-  // Fetch real data from Django backend (only pass year, not month)
-  fetch(`/get-customer-monthly-data/?year=${year}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        window.customerChart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: data.months,
-            datasets: [{
-              label: 'Active Customers',
-              data: data.active_data,
-              borderColor: '#1d4ed8',
-              backgroundColor: 'rgba(16, 185, 129, 0.1)',
-              borderWidth: 3,
-              fill: true,
-              tension: 0.4,
-              pointBackgroundColor: '#1d4ed8',
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 2,
-              pointRadius: 6
-            }, {
-              label: 'Inactive Customers',
-              data: data.inactive_data,
-              borderColor: '#ef4444',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              borderWidth: 3,
-              fill: true,
-              tension: 0.4,
-              pointBackgroundColor: '#ef4444',
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 2,
-              pointRadius: 6
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'top',
-                labels: {
-                  padding: 20,
-                  usePointStyle: true,
-                  font: { size: 12, weight: '600' }
-                }
-              },
-              tooltip: {
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                titleColor: '#ffffff',
-                bodyColor: '#ffffff',
-                borderColor: '#374151',
-                borderWidth: 1,
-                cornerRadius: 8
-              }
-            },
-            scales: {
-              x: {
-                grid: { display: false },
-                ticks: { font: { weight: '600' } }
-              },
-              y: {
-                beginAtZero: true,
-                grid: { color: '#f1f5f9' },
-                ticks: { font: { weight: '600' } }
-              }
-            },
-            interaction: {
-              intersect: false,
-              mode: 'index'
-            }
-          }
-        });
-      } else {
-        console.error('Error loading customer data:', data.error);
-      }
-    })
-    .catch(error => console.error('Error fetching customer data:', error));
-}
-/* UPDATE STATUS VALUES IN UI */
-function updateStatusValues(selectedMonth = null, selectedYear = null) {
-  const month = selectedMonth || document.getElementById('analyticsMonth')?.value;
-  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
-  
-  // Update employee status values
-  fetch(`/get-employee-status-data/?year=${year}${month ? `&month=${month}` : ''}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // Update employee status values in the UI
-        const activeElements = document.querySelectorAll('.status-item.active .status-value');
-        const inactiveElements = document.querySelectorAll('.status-item.inactive .status-value');
-        
-        activeElements.forEach(el => el.textContent = data.active_employees);
-        inactiveElements.forEach(el => el.textContent = data.inactive_employees);
-        
-        // Update current stats badges for employees
-        const activeStatBadges = document.querySelectorAll('.stat-badge.active');
-        const inactiveStatBadges = document.querySelectorAll('.stat-badge.inactive');
-        
-        activeStatBadges.forEach(el => el.textContent = `Active: ${data.active_employees}`);
-        inactiveStatBadges.forEach(el => el.textContent = `Inactive: ${data.inactive_employees}`);
-        
-        // Update total in chart header
-        const totalEmployeesEl = document.querySelector('.chart-card .total-items');
-        if (totalEmployeesEl) {
-          totalEmployeesEl.textContent = `Total: ${data.total_employees}`;
-        }
-      }
-    })
-    .catch(error => console.error('Error updating employee status values:', error));
-  
-  // Update customer status values
-  fetch(`/get-customer-status-data/?year=${year}${month ? `&month=${month}` : ''}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // Update customer status values in the UI (4th chart-card)
-        const customerActiveElements = document.querySelectorAll('.chart-card')[3]?.querySelectorAll('.status-item.active .status-value');
-        const customerInactiveElements = document.querySelectorAll('.chart-card')[3]?.querySelectorAll('.status-item.inactive .status-value');
-        
-        if (customerActiveElements) {
-          customerActiveElements.forEach(el => el.textContent = data.active_customers);
-        }
-        if (customerInactiveElements) {
-          customerInactiveElements.forEach(el => el.textContent = data.inactive_customers);
-        }
-        
-        // Update current stats badges for customers (4th analytics-card)
-        const customerActiveStatBadges = document.querySelectorAll('.analytics-card')[3]?.querySelectorAll('.stat-badge.active');
-        const customerInactiveStatBadges = document.querySelectorAll('.analytics-card')[3]?.querySelectorAll('.stat-badge.inactive');
-        
-        if (customerActiveStatBadges) {
-          customerActiveStatBadges.forEach(el => el.textContent = `Active: ${data.active_customers}`);
-        }
-        if (customerInactiveStatBadges) {
-          customerInactiveStatBadges.forEach(el => el.textContent = `Inactive: ${data.inactive_customers}`);
-        }
-        
-        // Update total in chart header (4th chart-card)
-        const totalCustomersEl = document.querySelectorAll('.chart-card .total-items')[3];
-        if (totalCustomersEl) {
-          totalCustomersEl.textContent = `Total: ${data.total_customers}`;
-        }
-      }
-    })
-    .catch(error => console.error('Error updating customer status values:', error));
-  
-  // Update product status values
-  fetch(`/get-product-status-data/?year=${year}${month ? `&month=${month}` : ''}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // Update product status values in the UI
-        const inStockElements = document.querySelectorAll('.status-item.in-stock .status-value');
-        const outStockElements = document.querySelectorAll('.status-item.out-stock .status-value');
-        
-        inStockElements.forEach(el => el.textContent = data.available_products);
-        outStockElements.forEach(el => el.textContent = data.out_of_stock_products);
-        
-        // Update current stats badges for products
-        const inStockStatBadges = document.querySelectorAll('.stat-badge.in-stock');
-        const outStockStatBadges = document.querySelectorAll('.stat-badge.out-stock');
-        
-        inStockStatBadges.forEach(el => el.textContent = `In Stock: ${data.available_products}`);
-        outStockStatBadges.forEach(el => el.textContent = `Out of Stock: ${data.out_of_stock_products}`);
-        
-        // Update total in chart header
-        const totalProductsEl = document.querySelectorAll('.chart-card .total-items')[1];
-        if (totalProductsEl) {
-          totalProductsEl.textContent = `Total: ${data.total_products}`;
-        }
-      }
-    })
-    .catch(error => console.error('Error updating product status values:', error));
-  
-  // Update order status values
-  fetch(`/get-order-status-data/?year=${year}${month ? `&month=${month}` : ''}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // Update order status values in the UI
-        const completedElements = document.querySelectorAll('.status-item.completed .status-value');
-        const pendingElements = document.querySelectorAll('.status-item.pending .status-value');
-        
-        completedElements.forEach(el => el.textContent = data.completed_orders);
-        pendingElements.forEach(el => el.textContent = data.pending_orders);
-        
-        // Update current stats badges for orders
-        const completedStatBadges = document.querySelectorAll('.stat-badge.completed');
-        const pendingStatBadges = document.querySelectorAll('.stat-badge.pending');
-        
-        completedStatBadges.forEach(el => el.textContent = `Completed: ${data.completed_orders}`);
-        pendingStatBadges.forEach(el => el.textContent = `Pending: ${data.pending_orders}`);
-        
-        // Update total in chart header
-        const totalOrdersEl = document.querySelectorAll('.chart-card .total-items')[2];
-        if (totalOrdersEl) {
-          totalOrdersEl.textContent = `Total: ${data.total_orders}`;
-        }
-      }
-    })
-    .catch(error => console.error('Error updating order status values:', error));
-}
-
-/* CATEGORY PIE CHART */
-function createCategoryChart() {
-  const ctx = document.getElementById('categoryChart');
-  if (!ctx) return;
-  
-  const totalEmployees = {{ total_employees|default:0 }};
-  const totalOrders = {{ total_orders|default:0 }};
-  const totalProducts = {{ total_products|default:0 }};
-  const activeEmployees = {{ active_employees|default:0 }};
-  const inactiveEmployees = {{ inactive_employees|default:0 }};
-  const completedOrders = {{ completed_orders|default:0 }};
-  const pendingOrders = {{ pending_orders|default:0 }};
-  const availableProducts = {{ available_products|default:0 }};
-  const outOfStockProducts = {{ out_of_stock_products|default:0 }};
-  
-  new Chart(ctx, {
-    type: 'pie',
-    data: {
-      labels: [
-        'Active Employees', 'Inactive Employees',
-        'Completed Orders', 'Pending Orders', 
-        'Avl Products', 'Out of Stock Product'
-      ],
-      datasets: [{
-        data: [
-          activeEmployees, inactiveEmployees,
-          completedOrders, pendingOrders,
-          availableProducts, outOfStockProducts
-        ],
-        backgroundColor: [
-          '#10b981', '#ef4444',
-          '#3b82f6', '#f59e0b',
-          '#059669', '#dc2626'
-        ],
-        borderColor: '#ffffff',
-        borderWidth: 3,
-        hoverBorderWidth: 4,
-        hoverOffset: 8
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'right',
-          labels: {
-            padding: 10,
-            usePointStyle: true,
-            pointStyle: 'circle',
-            font: { size: 11, weight: '600' },
-            color: '#374151',
-            generateLabels: function(chart) {
-              const data = chart.data;
-              if (data.labels.length && data.datasets.length) {
-                return data.labels.map((label, i) => {
-                  const value = data.datasets[0].data[i];
-                  const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
-                  const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                  return {
-                    text: `${label}: ${value} (${percentage}%)`,
-                    fillStyle: data.datasets[0].backgroundColor[i],
-                    strokeStyle: data.datasets[0].borderColor,
-                    lineWidth: data.datasets[0].borderWidth,
-                    hidden: false,
-                    index: i
-                  };
-                });
-              }
-              return [];
-            }
-          }
-        },
-        tooltip: {
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          titleColor: '#ffffff',
-          bodyColor: '#ffffff',
-          borderColor: '#374151',
-          borderWidth: 1,
-          cornerRadius: 8,
-          displayColors: true,
-          callbacks: {
-            label: function(context) {
-              const label = context.label || '';
-              const value = context.parsed;
-              const total = context.dataset.data.reduce((a, b) => a + b, 0);
-              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-              return `${label}: ${value} (${percentage}%)`;
-            }
-          }
-        }
-      },
-      animation: {
-        animateRotate: true,
-        animateScale: true,
-        duration: 1500,
-        easing: 'easeOutQuart'
-      },
-      interaction: {
-        intersect: false,
-        mode: 'point'
-      }
-    }
+  /* SIDEBAR */
+  document.addEventListener('DOMContentLoaded',function(){
+    var shell=document.querySelector('.dash-shell');
+    var mb2=document.querySelector('.menu-bar2');
+    var sv1=document.querySelector('.svg1');
+    var sv3=document.querySelector('.svg3');
+    if(sv1) sv1.addEventListener('click',function(){if(mb2)mb2.classList.remove('active');if(shell)shell.classList.remove('shifted');});
+    if(sv3) sv3.addEventListener('click',function(){if(mb2)mb2.classList.add('active');if(shell)shell.classList.add('shifted');});
   });
-}
 
-/* PERFORMANCE CHART */
-function createPerformanceChart() {
-  const ctx = document.getElementById('performanceChart');
-  if (!ctx) return;
-  
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-      datasets: [{
-        label: 'Employee Performance',
-        data: [85, 88, 92, 89, 94, 96],
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        fill: true,
-        tension: 0.4
-      }, {
-        label: 'Order Completion',
-        data: [78, 82, 85, 88, 91, 93],
-        borderColor: '#10b981',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        fill: true,
-        tension: 0.4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'top',
-          labels: {
-            padding: 20,
-            usePointStyle: true,
-            font: { size: 12, weight: '600' }
-          }
-        }
-      },
-      scales: {
-        x: { grid: { display: false } },
-        y: { beginAtZero: true, max: 100, grid: { color: '#f1f5f9' } }
+  /* AJAX PAGINATION */
+  function loadPage(pageNum) {
+    fetch(`?page=${pageNum}`, {
+      headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+    .then(response => response.text())
+    .then(html => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const newTbody = doc.querySelector('#rev-tbody');
+      const newPagination = doc.querySelector('.rev-pagination');
+      
+      if (newTbody) document.querySelector('#rev-tbody').innerHTML = newTbody.innerHTML;
+      if (newPagination) {
+        const currentPagination = document.querySelector('.rev-pagination');
+        if (currentPagination) currentPagination.outerHTML = newPagination.outerHTML;
       }
-    }
-  });
-}
+    })
+    .catch(err => console.error('Pagination error:', err));
+  }
 
-/* MONTH SELECTOR */
-document.addEventListener('DOMContentLoaded', function() {
-  const monthSelect = document.getElementById('monthSelect');
-  if (monthSelect) {
-    monthSelect.addEventListener('change', function() {
-      const month = this.value;
-      const year = new Date().getFullYear();
-      
-      // Show loading state
-      const presentDays = document.getElementById('presentDays');
-      const leaveDays = document.getElementById('leaveDays');
-      const halfDays = document.getElementById('halfDays');
-      
-      if (presentDays) presentDays.textContent = '...';
-      if (leaveDays) leaveDays.textContent = '...';
-      if (halfDays) halfDays.textContent = '...';
-      
-      // Fetch attendance data for selected month
-      fetch(`/get-attendance-data/?month=${month}&year=${year}`)
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            // Update attendance statistics
-            if (presentDays) presentDays.textContent = data.present_days;
-            if (leaveDays) leaveDays.textContent = data.leave_days;
-            if (halfDays) halfDays.textContent = data.half_days;
-            
-            // Update chart with new data
-            updateAttendanceChart(data.weekly_data);
-          } else {
-            console.error('Error fetching attendance data:', data.error);
-            // Reset to default values on error
-            if (presentDays) presentDays.textContent = '0';
-            if (leaveDays) leaveDays.textContent = '0';
-            if (halfDays) halfDays.textContent = '0';
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          // Reset to default values on error
-          if (presentDays) presentDays.textContent = '0';
-          if (leaveDays) leaveDays.textContent = '0';
-          if (halfDays) halfDays.textContent = '0';
-        });
+  /* TOASTS */
+  setTimeout(function(){
+    document.querySelectorAll('.toast').forEach(function(t){
+      t.style.opacity='0';t.style.transform='translateX(110%)';
+      setTimeout(function(){t.remove();},400);
+    });
+  },3500);
+
+  /* REVIEW FILTER */
+  function filterRevs(val, btn){
+    document.querySelectorAll('.rev-filter').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    document.querySelectorAll('.rev-row').forEach(function(row){
+      var r=parseInt(row.dataset.rating);
+      if(val==='all') row.style.display='';
+      else if(val==='low') row.style.display=(r<=2)?'':'none';
+      else row.style.display=(r===parseInt(val))?'':'none';
     });
   }
-});
 
-function updateAttendanceChart(weeklyData) {
-  if (!window.attendanceChart || !weeklyData) return;
-  
-  const labels = [];
-  const presentData = [];
-  const leaveData = [];
-  const halfdayData = [];
-  
-  weeklyData.forEach((week, index) => {
-    labels.push(`Week ${index + 1}`);
-    presentData.push(week.present || 0);
-    leaveData.push(week.leave || 0);
-    halfdayData.push(week.halfday || 0);
+  /* ── All existing chart JS from original template below ── */
+  document.addEventListener('DOMContentLoaded', function() {
+    const employeeCtx = document.getElementById('employeeChart');
+    if (employeeCtx) {
+      fetch('/get-employee-joins-data/')
+        .then(r=>r.json()).then(data=>{
+          new Chart(employeeCtx,{type:'line',data:{labels:data.months,datasets:[{label:'Employee Joins',data:data.joins,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.1)',borderWidth:2,fill:true,tension:0.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+        }).catch(e=>console.error(e));
+    }
+    const ordersCtx = document.getElementById('ordersChart');
+    if (ordersCtx) {
+      fetch('/get-orders-data/')
+        .then(r=>r.json()).then(data=>{
+          new Chart(ordersCtx,{type:'bar',data:{labels:data.months,datasets:[{label:'Orders',data:data.orders,backgroundColor:'#059669',borderColor:'#047857',borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+        }).catch(e=>console.error(e));
+    }
   });
-  
-  // Update chart data
-  window.attendanceChart.data.labels = labels;
-  window.attendanceChart.data.datasets[0].data = presentData;
-  window.attendanceChart.data.datasets[1].data = leaveData;
-  window.attendanceChart.data.datasets[2].data = halfdayData;
-  window.attendanceChart.update('active');
-}
 
-function updateAttendanceData(month) {
-  // This function is kept for backward compatibility
-  // The actual update is now handled by the change event listener above
-}
-
-/* MONTHLY ANALYTICS CHARTS */
-function createEmployeeMonthlyChart(selectedMonth = null, selectedYear = null) {
-  const ctx = document.getElementById('employeeMonthlyChart');
-  if (!ctx) return;
-  
-  // Get selected year (ignore month parameter, always show all 12 months)
-  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
-  
-  // Fetch real data from Django backend (only pass year, not month)
-  fetch(`/get-employee-monthly-data/?year=${year}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        window.employeeChart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: data.months,
-            datasets: [{
-              label: 'Active Employees',
-              data: data.active_data,
-              borderColor: '#10b981',
-              backgroundColor: 'rgba(16, 185, 129, 0.1)',
-              borderWidth: 3,
-              fill: true,
-              tension: 0.4,
-              pointBackgroundColor: '#10b981',
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 2,
-              pointRadius: 6
-            }, {
-              label: 'Inactive Employees',
-              data: data.inactive_data,
-              borderColor: '#ef4444',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              borderWidth: 3,
-              fill: true,
-              tension: 0.4,
-              pointBackgroundColor: '#ef4444',
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 2,
-              pointRadius: 6
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'top',
-                labels: {
-                  padding: 20,
-                  usePointStyle: true,
-                  font: { size: 12, weight: '600' }
-                }
-              },
-              tooltip: {
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                titleColor: '#ffffff',
-                bodyColor: '#ffffff',
-                borderColor: '#374151',
-                borderWidth: 1,
-                cornerRadius: 8
-              }
-            },
-            scales: {
-              x: {
-                grid: { display: false },
-                ticks: { font: { weight: '600' } }
-              },
-              y: {
-                beginAtZero: true,
-                grid: { color: '#f1f5f9' },
-                ticks: { font: { weight: '600' } }
-              }
-            },
-            interaction: {
-              intersect: false,
-              mode: 'index'
-            }
-          }
-        });
-      } else {
-        console.error('Error loading employee data:', data.error);
-      }
-    })
-    .catch(error => console.error('Error fetching employee data:', error));
-}
-
-function createProductMonthlyChart(selectedMonth = null, selectedYear = null) {
-  const ctx = document.getElementById('productMonthlyChart');
-  if (!ctx) return;
-  
-  // Get selected year (ignore month parameter, always show all 12 months)
-  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
-  
-  // Fetch real data from Django backend (only pass year, not month)
-  fetch(`/get-product-monthly-data/?year=${year}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        window.productChart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: data.months,
-            datasets: [{
-              label: 'In Stock',
-              data: data.in_stock_data,
-              backgroundColor: '#1e3a8a',
-              borderColor: '#1e3a8a',
-              borderWidth: 1,
-              borderRadius: 4
-            }, {
-              label: 'Out of Stock',
-              data: data.out_of_stock_data,
-              backgroundColor: '#dc2626',
-              borderColor: '#b91c1c',
-              borderWidth: 1,
-              borderRadius: 4
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'top',
-                labels: {
-                  padding: 20,
-                  usePointStyle: true,
-                  font: { size: 12, weight: '600' }
-                }
-              },
-              tooltip: {
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                titleColor: '#ffffff',
-                bodyColor: '#ffffff'
-              }
-            },
-            scales: {
-              x: {
-                grid: { display: false },
-                ticks: { font: { weight: '600' } }
-              },
-              y: {
-                beginAtZero: true,
-                grid: { color: '#f1f5f9' },
-                ticks: { font: { weight: '600' } }
-              }
-            }
-          }
-        });
-      } else {
-        console.error('Error loading product data:', data.error);
-      }
-    })
-    .catch(error => console.error('Error fetching product data:', error));
-}
-
-function createOrderMonthlyChart(selectedMonth = null, selectedYear = null) {
-  const ctx = document.getElementById('orderMonthlyChart');
-  if (!ctx) return;
-  
-  // Get selected year (ignore month parameter, always show all 12 months)
-  const year = selectedYear || document.getElementById('analyticsYear')?.value || new Date().getFullYear();
-  
-  // Fetch real data from Django backend (only pass year, not month)
-  fetch(`/get-order-monthly-data/?year=${year}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        window.orderChart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: data.months,
-            datasets: [{
-              label: 'Completed Orders',
-              data: data.completed_data,
-              borderColor: '#3b82f6',
-              backgroundColor: 'rgba(59, 130, 246, 0.1)',
-              borderWidth: 3,
-              fill: true,
-              tension: 0.4,
-              pointBackgroundColor: '#3b82f6',
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 2,
-              pointRadius: 6
-            }, {
-              label: 'Pending Orders',
-              data: data.pending_data,
-              borderColor: '#f59e0b',
-              backgroundColor: 'rgba(245, 158, 11, 0.1)',
-              borderWidth: 3,
-              fill: true,
-              tension: 0.4,
-              pointBackgroundColor: '#f59e0b',
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 2,
-              pointRadius: 6
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: 'top',
-                labels: {
-                  padding: 20,
-                  usePointStyle: true,
-                  font: { size: 12, weight: '600' }
-                }
-              },
-              tooltip: {
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                titleColor: '#ffffff',
-                bodyColor: '#ffffff'
-              }
-            },
-            scales: {
-              x: {
-                grid: { display: false },
-                ticks: { font: { weight: '600' } }
-              },
-              y: {
-                beginAtZero: true,
-                grid: { color: '#f1f5f9' },
-                ticks: { font: { weight: '600' } }
-              }
-            },
-            interaction: {
-              intersect: false,
-              mode: 'index'
-            }
-          }
-        });
-      } else {
-        console.error('Error loading order data:', data.error);
-      }
-    })
-    .catch(error => console.error('Error fetching order data:', error));
-}
-
-/* ANALYTICS MONTH AND YEAR SELECTOR */
-document.addEventListener('DOMContentLoaded', function() {
-  const analyticsMonth = document.getElementById('analyticsMonth');
-  const analyticsYear = document.getElementById('analyticsYear');
-  
-  function updateAnalyticsCharts() {
-    const month = analyticsMonth ? analyticsMonth.value : new Date().getMonth() + 1;
-    const year = analyticsYear ? analyticsYear.value : new Date().getFullYear();
-    
-    console.log(`Updating analytics for ${month}/${year}`);
-    
-    // Destroy existing charts before creating new ones
-    if (window.employeeChart) {
-      window.employeeChart.destroy();
-      window.employeeChart = null;
-    }
-    if (window.productChart) {
-      window.productChart.destroy();
-      window.productChart = null;
-    }
-    if (window.orderChart) {
-      window.orderChart.destroy();
-      window.orderChart = null;
-    }
-    if (window.customerChart) {
-      window.customerChart.destroy();
-      window.customerChart = null;
-    }
-    if (window.employeeStatusChart) {
-      window.employeeStatusChart.destroy();
-      window.employeeStatusChart = null;
-    }
-    if (window.stockChart) {
-      window.stockChart.destroy();
-      window.stockChart = null;
-    }
-    if (window.orderStatusChart) {
-      window.orderStatusChart.destroy();
-      window.orderStatusChart = null;
-    }
-    if (window.customerStatusChart) {
-      window.customerStatusChart.destroy();
-      window.customerStatusChart = null;
-    }
-    
-    // Update all charts with selected month and year
-    createEmployeeMonthlyChart(month, year);
-    createProductMonthlyChart(month, year);
-    createOrderMonthlyChart(month, year);
-    createCustomerMonthlyChart(month, year);
-    
-    // Update pie charts with selected month and year
-    createEmployeeStatusChart(month, year);
-    createStockChart(month, year);
-    createOrderStatusChart(month, year);
-    createCustomerStatusChart(month, year);
-    
-    // Update status values in the UI
-    updateStatusValues(month, year);
+  function createAttendanceChart(){
+    const ctx=document.getElementById('attendanceChart');
+    if(!ctx) return null;
+    const weeklyData={{ weekly_data|safe }};
+    const labels=[],presentData=[],leaveData=[],halfdayData=[];
+    weeklyData.forEach(function(week,i){labels.push('Week '+(i+1));presentData.push(week.present);leaveData.push(week.leave);halfdayData.push(week.halfday);});
+    return new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:'Present',data:presentData,backgroundColor:'#10b981',borderRadius:4},{label:'Leave',data:leaveData,backgroundColor:'#ef4444',borderRadius:4},{label:'Half Day',data:halfdayData,backgroundColor:'#f59e0b',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:true}},y:{beginAtZero:true,grid:{color:'#f1f5f9'}}}}});
   }
-  
-  if (analyticsMonth) {
-    analyticsMonth.addEventListener('change', updateAnalyticsCharts);
-  }
-  
-  if (analyticsYear) {
-    analyticsYear.addEventListener('change', updateAnalyticsCharts);
-  }
-});
 
-/* INITIALIZE CHARTS */
-document.addEventListener('DOMContentLoaded', function() {
-  window.attendanceChart = createAttendanceChart();
-  
-  // Initialize analytics charts with current month and year
-  const currentMonth = new Date().getMonth() + 1;
-  const currentYear = new Date().getFullYear();
-  
-  createEmployeeStatusChart(currentMonth, currentYear);
-  createStockChart(currentMonth, currentYear);
-  createOrderStatusChart(currentMonth, currentYear);
-  createCustomerStatusChart(currentMonth, currentYear);
-  
-  // Initialize monthly analytics charts
-  createEmployeeMonthlyChart(currentMonth, currentYear);
-  createProductMonthlyChart(currentMonth, currentYear);
-  createOrderMonthlyChart(currentMonth, currentYear);
-  createCustomerMonthlyChart(currentMonth, currentYear);
-});
+  function createEmployeeStatusChart(m,y){const ctx=document.getElementById('employeeStatusChart');if(!ctx)return;const mo=m||document.getElementById('analyticsMonth')?.value;const yr=y||document.getElementById('analyticsYear')?.value||new Date().getFullYear();fetch(`/get-employee-status-data/?year=${yr}${mo?'&month='+mo:''}`).then(r=>r.json()).then(data=>{if(data.success){window.employeeStatusChart=new Chart(ctx,{type:'pie',data:{labels:['Active','Inactive'],datasets:[{data:[data.active_employees,data.inactive_employees],backgroundColor:['#10b981','#ef4444'],borderColor:'#ffffff',borderWidth:3,hoverBorderWidth:4,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{padding:15,usePointStyle:true,pointStyle:'circle',font:{size:12,weight:'600'},color:'#374151'}},tooltip:{backgroundColor:'rgba(0,0,0,0.8)',titleColor:'#fff',bodyColor:'#fff',callbacks:{label:function(ctx){const v=ctx.parsed;const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return `${ctx.label}: ${v} (${t>0?((v/t)*100).toFixed(1):0}%)`;}}}}}})}}).catch(e=>console.error(e));}
+  function createStockChart(m,y){const ctx=document.getElementById('stockChart');if(!ctx)return;const mo=m||document.getElementById('analyticsMonth')?.value;const yr=y||document.getElementById('analyticsYear')?.value||new Date().getFullYear();fetch(`/get-product-status-data/?year=${yr}${mo?'&month='+mo:''}`).then(r=>r.json()).then(data=>{if(data.success){window.stockChart=new Chart(ctx,{type:'pie',data:{labels:['In Stock','Out of Stock'],datasets:[{data:[data.available_products,data.out_of_stock_products],backgroundColor:['#1e3a8a','#dc2626'],borderColor:'#ffffff',borderWidth:3,hoverBorderWidth:4,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{padding:15,usePointStyle:true,pointStyle:'circle',font:{size:12,weight:'600'},color:'#374151'}},tooltip:{backgroundColor:'rgba(0,0,0,0.8)',titleColor:'#fff',bodyColor:'#fff',callbacks:{label:function(ctx){const v=ctx.parsed;const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return `${ctx.label}: ${v} (${t>0?((v/t)*100).toFixed(1):0}%)`;}}}}}})}}).catch(e=>console.error(e));}
+  function createOrderStatusChart(m,y){const ctx=document.getElementById('orderStatusChart');if(!ctx)return;const mo=m||document.getElementById('analyticsMonth')?.value;const yr=y||document.getElementById('analyticsYear')?.value||new Date().getFullYear();fetch(`/get-order-status-data/?year=${yr}${mo?'&month='+mo:''}`).then(r=>r.json()).then(data=>{if(data.success){window.orderStatusChart=new Chart(ctx,{type:'pie',data:{labels:['Completed','Pending'],datasets:[{data:[data.completed_orders,data.pending_orders],backgroundColor:['#3b82f6','#f59e0b'],borderColor:'#ffffff',borderWidth:3,hoverBorderWidth:4,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{padding:15,usePointStyle:true,pointStyle:'circle',font:{size:12,weight:'600'},color:'#374151'}},tooltip:{backgroundColor:'rgba(0,0,0,0.8)',titleColor:'#fff',bodyColor:'#fff',callbacks:{label:function(ctx){const v=ctx.parsed;const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return `${ctx.label}: ${v} (${t>0?((v/t)*100).toFixed(1):0}%)`;}}}}}})}}).catch(e=>console.error(e));}
+  function createCustomerStatusChart(m,y){const ctx=document.getElementById('customerStatusChart');if(!ctx)return;const mo=m||document.getElementById('analyticsMonth')?.value;const yr=y||document.getElementById('analyticsYear')?.value||new Date().getFullYear();fetch(`/get-customer-status-data/?year=${yr}${mo?'&month='+mo:''}`).then(r=>r.json()).then(data=>{if(data.success){window.customerStatusChart=new Chart(ctx,{type:'pie',data:{labels:['Active','Inactive'],datasets:[{data:[data.active_customers,data.inactive_customers],backgroundColor:['#1d4ed8','#ef4444'],borderColor:'#ffffff',borderWidth:3,hoverBorderWidth:4,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{padding:15,usePointStyle:true,pointStyle:'circle',font:{size:12,weight:'600'},color:'#374151'}},tooltip:{backgroundColor:'rgba(0,0,0,0.8)',titleColor:'#fff',bodyColor:'#fff',callbacks:{label:function(ctx){const v=ctx.parsed;const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return `${ctx.label}: ${v} (${t>0?((v/t)*100).toFixed(1):0}%)`;}}}}}})}}).catch(e=>console.error(e));}
+  function createCustomerMonthlyChart(m,y){const ctx=document.getElementById('customerMonthlyChart');if(!ctx)return;const yr=y||document.getElementById('analyticsYear')?.value||new Date().getFullYear();fetch(`/get-customer-monthly-data/?year=${yr}`).then(r=>r.json()).then(data=>{if(data.success){window.customerChart=new Chart(ctx,{type:'line',data:{labels:data.months,datasets:[{label:'Active Customers',data:data.active_data,borderColor:'#1d4ed8',backgroundColor:'rgba(16,185,129,0.1)',borderWidth:3,fill:true,tension:0.4,pointBackgroundColor:'#1d4ed8',pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:6},{label:'Inactive Customers',data:data.inactive_data,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.1)',borderWidth:3,fill:true,tension:0.4,pointBackgroundColor:'#ef4444',pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{padding:20,usePointStyle:true,font:{size:12,weight:'600'}}},tooltip:{backgroundColor:'rgba(0,0,0,0.8)',titleColor:'#fff',bodyColor:'#fff',borderColor:'#374151',borderWidth:1,cornerRadius:8}},scales:{x:{grid:{display:false},ticks:{font:{weight:'600'}}},y:{beginAtZero:true,grid:{color:'#f1f5f9'},ticks:{font:{weight:'600'}}}},interaction:{intersect:false,mode:'index'}}})}}).catch(e=>console.error(e));}
+  function updateStatusValues(m,y){const mo=m||document.getElementById('analyticsMonth')?.value;const yr=y||document.getElementById('analyticsYear')?.value||new Date().getFullYear();fetch(`/get-employee-status-data/?year=${yr}${mo?'&month='+mo:''}`).then(r=>r.json()).then(data=>{if(data.success){document.querySelectorAll('.status-item.active .status-value').forEach(el=>el.textContent=data.active_employees);document.querySelectorAll('.status-item.inactive .status-value').forEach(el=>el.textContent=data.inactive_employees);document.querySelectorAll('.stat-badge.active').forEach(el=>el.textContent='Active: '+data.active_employees);document.querySelectorAll('.stat-badge.inactive').forEach(el=>el.textContent='Inactive: '+data.inactive_employees);}}).catch(e=>console.error(e));fetch(`/get-product-status-data/?year=${yr}${mo?'&month='+mo:''}`).then(r=>r.json()).then(data=>{if(data.success){document.querySelectorAll('.status-item.in-stock .status-value').forEach(el=>el.textContent=data.available_products);document.querySelectorAll('.status-item.out-stock .status-value').forEach(el=>el.textContent=data.out_of_stock_products);document.querySelectorAll('.stat-badge.in-stock').forEach(el=>el.textContent='In Stock: '+data.available_products);document.querySelectorAll('.stat-badge.out-stock').forEach(el=>el.textContent='Out of Stock: '+data.out_of_stock_products);}}).catch(e=>console.error(e));fetch(`/get-order-status-data/?year=${yr}${mo?'&month='+mo:''}`).then(r=>r.json()).then(data=>{if(data.success){document.querySelectorAll('.status-item.completed .status-value').forEach(el=>el.textContent=data.completed_orders);document.querySelectorAll('.status-item.pending .status-value').forEach(el=>el.textContent=data.pending_orders);document.querySelectorAll('.stat-badge.completed').forEach(el=>el.textContent='Completed: '+data.completed_orders);document.querySelectorAll('.stat-badge.pending').forEach(el=>el.textContent='Pending: '+data.pending_orders);}}).catch(e=>console.error(e));}
+  function createEmployeeMonthlyChart(m,y){const ctx=document.getElementById('employeeMonthlyChart');if(!ctx)return;const yr=y||document.getElementById('analyticsYear')?.value||new Date().getFullYear();fetch(`/get-employee-monthly-data/?year=${yr}`).then(r=>r.json()).then(data=>{if(data.success){window.employeeChart=new Chart(ctx,{type:'line',data:{labels:data.months,datasets:[{label:'Active Employees',data:data.active_data,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.1)',borderWidth:3,fill:true,tension:0.4,pointBackgroundColor:'#10b981',pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:6},{label:'Inactive Employees',data:data.inactive_data,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.1)',borderWidth:3,fill:true,tension:0.4,pointBackgroundColor:'#ef4444',pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{padding:20,usePointStyle:true,font:{size:12,weight:'600'}}},tooltip:{backgroundColor:'rgba(0,0,0,0.8)',titleColor:'#fff',bodyColor:'#fff',borderColor:'#374151',borderWidth:1,cornerRadius:8}},scales:{x:{grid:{display:false},ticks:{font:{weight:'600'}}},y:{beginAtZero:true,grid:{color:'#f1f5f9'},ticks:{font:{weight:'600'}}}},interaction:{intersect:false,mode:'index'}}})}}).catch(e=>console.error(e));}
+  function createProductMonthlyChart(m,y){const ctx=document.getElementById('productMonthlyChart');if(!ctx)return;const yr=y||document.getElementById('analyticsYear')?.value||new Date().getFullYear();fetch(`/get-product-monthly-data/?year=${yr}`).then(r=>r.json()).then(data=>{if(data.success){window.productChart=new Chart(ctx,{type:'bar',data:{labels:data.months,datasets:[{label:'In Stock',data:data.in_stock_data,backgroundColor:'#1e3a8a',borderColor:'#1e3a8a',borderWidth:1,borderRadius:4},{label:'Out of Stock',data:data.out_of_stock_data,backgroundColor:'#dc2626',borderColor:'#b91c1c',borderWidth:1,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{padding:20,usePointStyle:true,font:{size:12,weight:'600'}}},tooltip:{backgroundColor:'rgba(0,0,0,0.8)',titleColor:'#fff',bodyColor:'#fff'}},scales:{x:{grid:{display:false},ticks:{font:{weight:'600'}}},y:{beginAtZero:true,grid:{color:'#f1f5f9'},ticks:{font:{weight:'600'}}}}}})}}).catch(e=>console.error(e));}
+  function createOrderMonthlyChart(m,y){const ctx=document.getElementById('orderMonthlyChart');if(!ctx)return;const yr=y||document.getElementById('analyticsYear')?.value||new Date().getFullYear();fetch(`/get-order-monthly-data/?year=${yr}`).then(r=>r.json()).then(data=>{if(data.success){window.orderChart=new Chart(ctx,{type:'line',data:{labels:data.months,datasets:[{label:'Completed Orders',data:data.completed_data,borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.1)',borderWidth:3,fill:true,tension:0.4,pointBackgroundColor:'#3b82f6',pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:6},{label:'Pending Orders',data:data.pending_data,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.1)',borderWidth:3,fill:true,tension:0.4,pointBackgroundColor:'#f59e0b',pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{padding:20,usePointStyle:true,font:{size:12,weight:'600'}}},tooltip:{backgroundColor:'rgba(0,0,0,0.8)',titleColor:'#fff',bodyColor:'#fff'}},scales:{x:{grid:{display:false},ticks:{font:{weight:'600'}}},y:{beginAtZero:true,grid:{color:'#f1f5f9'},ticks:{font:{weight:'600'}}}},interaction:{intersect:false,mode:'index'}}})}}).catch(e=>console.error(e));}
 
-// Handle month and year selection for attendance
-document.addEventListener('DOMContentLoaded', function() {
-    const monthSelect = document.getElementById('monthSelect');
-    const yearSelect = document.getElementById('yearSelect');
-    
-    if (monthSelect && yearSelect) {
-        // Function to update attendance data
-        function updateAttendanceData() {
-            const selectedMonth = monthSelect.value;
-            const selectedYear = yearSelect.value;
-            
-            console.log('Selected Month:', selectedMonth);
-            console.log('Selected Year:', selectedYear);
-            
-            // Redirect to dashboard with selected month and year
-            const url = new URL(window.location.href);
-            url.searchParams.set('month', selectedMonth);
-            url.searchParams.set('year', selectedYear);
-            window.location.href = url.toString();
-        }
-        
-        // Add event listeners
-        monthSelect.addEventListener('change', updateAttendanceData);
-        yearSelect.addEventListener('change', updateAttendanceData);
+  document.addEventListener('DOMContentLoaded',function(){
+    var am=document.getElementById('analyticsMonth');
+    var ay=document.getElementById('analyticsYear');
+    function updateAll(){
+      var m=am?am.value:new Date().getMonth()+1;
+      var y=ay?ay.value:new Date().getFullYear();
+      ['employeeChart','productChart','orderChart','customerChart','employeeStatusChart','stockChart','orderStatusChart','customerStatusChart'].forEach(function(k){if(window[k]){window[k].destroy();window[k]=null;}});
+      createEmployeeMonthlyChart(m,y);createProductMonthlyChart(m,y);createOrderMonthlyChart(m,y);createCustomerMonthlyChart(m,y);
+      createEmployeeStatusChart(m,y);createStockChart(m,y);createOrderStatusChart(m,y);createCustomerStatusChart(m,y);
+      updateStatusValues(m,y);
     }
-});
+    if(am) am.addEventListener('change',updateAll);
+    if(ay) ay.addEventListener('change',updateAll);
+  });
+
+  document.addEventListener('DOMContentLoaded',function(){
+    var ms=document.getElementById('monthSelect');
+    if(ms){ms.addEventListener('change',function(){var pd=document.getElementById('presentDays');var ld=document.getElementById('leaveDays');var hd=document.getElementById('halfDays');if(pd)pd.textContent='...';if(ld)ld.textContent='...';if(hd)hd.textContent='...';fetch('/get-attendance-data/?month='+this.value+'&year='+new Date().getFullYear()).then(r=>r.json()).then(data=>{if(data.success){if(pd)pd.textContent=data.present_days;if(ld)ld.textContent=data.leave_days;if(hd)hd.textContent=data.half_days;updateAttendanceChart(data.weekly_data);}}).catch(e=>console.error(e));});}
+    var ys=document.getElementById('yearSelect');
+    function goURL(){var url=new URL(window.location.href);if(ms)url.searchParams.set('month',ms.value);if(ys)url.searchParams.set('year',ys.value);window.location.href=url.toString();}
+    if(ms)ms.addEventListener('change',goURL);
+    if(ys)ys.addEventListener('change',goURL);
+  });
+
+  function updateAttendanceChart(weeklyData){if(!window.attendanceChart||!weeklyData)return;var labels=[],pd=[],ld=[],hd=[];weeklyData.forEach(function(w,i){labels.push('Week '+(i+1));pd.push(w.present||0);ld.push(w.leave||0);hd.push(w.halfday||0);});window.attendanceChart.data.labels=labels;window.attendanceChart.data.datasets[0].data=pd;window.attendanceChart.data.datasets[1].data=ld;window.attendanceChart.data.datasets[2].data=hd;window.attendanceChart.update('active');}
+
+  document.addEventListener('DOMContentLoaded',function(){
+    var cm=new Date().getMonth()+1,cy=new Date().getFullYear();
+    window.attendanceChart=createAttendanceChart();
+    createEmployeeStatusChart(cm,cy);createStockChart(cm,cy);createOrderStatusChart(cm,cy);createCustomerStatusChart(cm,cy);
+    createEmployeeMonthlyChart(cm,cy);createProductMonthlyChart(cm,cy);createOrderMonthlyChart(cm,cy);createCustomerMonthlyChart(cm,cy);
+  });
 </script>
 
 <style>
-:root{
-  --navy:#1e3a8a;--accent:#2563eb;--green:#059669;--amber:#d97706;--red:#dc2626;
-  --slate:#64748b;--border:#e2e8f0;--bg:#f1f5fb;--white:#fff;--text:#0f172a;
-  --sh:0 4px 24px rgba(15,37,87,0.09);
-  --fn:'DM Sans',system-ui,sans-serif;--fh:'Syne',system-ui,sans-serif;
-}
-
-.dash-shell{
-  font-family:var(--fn);color:var(--text);
-  margin:120px 40px 120px 360px;transition:margin-left .3s;
-}
-.dash-shell.shifted{margin-left:90px}
-
-/* ── PAGE HEADER ── */
-.dash-header{
-  display:flex;align-items:center;justify-content:space-between;
-  background:linear-gradient(135deg,#002560 0%,#1d4ed8 100%);
-  border-radius:16px;padding:22px 30px;margin-bottom:24px;
-  box-shadow:0 8px 32px rgba(15,37,87,.22);
-}
-.dash-header-left{display:flex;align-items:center;gap:14px}
-.dash-header-icon{
-  width:44px;height:44px;background:rgba(255,255,255,.15);
-  border-radius:12px;display:flex;align-items:center;justify-content:center;
-}
-.dash-eyebrow{font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;
-  color:rgba(255,255,255,.6);margin:0 0 3px}
-.dash-title{font-family:var(--fh);font-size:24px;font-weight:800;color:#fff;margin:0;letter-spacing:-.5px}
-.dash-header-date{display:flex;align-items:center;gap:8px;
-  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
-  border-radius:10px;padding:10px 16px}
-.dh-wd{font-family:var(--fh);font-size:12px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase}
-.dh-sep{color:rgba(255,255,255,.3);font-size:14px}
-.dh-dt{font-family:var(--fh);font-size:13px;font-weight:700;color:#fff}
-
-/* ── STAT GRID ── */
-.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:18px}
-
-@media(max-width:1024px){
-  .stat-grid{grid-template-columns:repeat(2,1fr)}
-}
-
-@media(max-width:768px){
-  .stat-grid{grid-template-columns:1fr}
-}
-
-.stat-card{
-  background:var(--white);border:1px solid var(--border);
-  border-radius:16px;overflow:hidden;box-shadow:var(--sh);
-  transition:transform .2s,box-shadow .2s;
-  position:relative;
-}
-.stat-card::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:3px;
-  background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 60%,white));
-}
-.stat-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(15,37,87,.14)}
-
-.sc-top{display:flex;align-items:center;gap:14px;padding:20px 20px 16px}
-.sc-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;
-  justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.15)}
-.sc-meta{flex:1}
-.sc-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--slate);margin-bottom:4px}
-.sc-value{font-family:var(--fh);font-size:32px;font-weight:800;color:var(--text);line-height:1}
-.sc-trend{display:flex;align-items:center;gap:4px;font-family:var(--fh);
-  font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
-  padding:4px 10px;border-radius:20px;}
-.sc-trend-up{background:#eff6ff;color:#2563eb}
-.sc-trend-green{background:#ecfdf5;color:#059669}
-.sc-trend-amber{background:#fffbeb;color:#d97706}
-
-.sc-divider{height:1px;background:var(--border);margin:0 20px}
-
-.sc-bottom{padding:14px 20px 18px}
-.sc-sub{display:flex;align-items:center;gap:7px;margin-bottom:10px}
-.sc-sub-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.sc-sub-green .sc-sub-dot{background:var(--green)}
-.sc-sub-red .sc-sub-dot{background:var(--red)}
-.sc-sub-amber .sc-sub-dot{background:var(--amber)}
-.sc-sub-lbl{font-size:12px;color:var(--slate);font-weight:500;flex:1}
-.sc-sub-val{font-family:var(--fh);font-size:14px;font-weight:800;color:var(--text)}
-.sc-sep{height:1px;background:var(--bg);margin:2px 0 10px}
-
-/* Progress bar */
-.sc-bar-wrap{height:6px;background:var(--bg);border-radius:20px;overflow:hidden;margin-top:4px}
-.sc-bar{
-  height:100%;border-radius:20px;
-  background:var(--clr);
-  width:var(--pct);
-  transition:width 1.2s cubic-bezier(.22,1,.36,1);
-}
-
-/* ── QUICK ROW ── */
-.quick-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-.quick-card{
-  background:var(--white);border:1px solid var(--border);border-radius:12px;
-  padding:16px;display:flex;align-items:center;gap:12px;
-  box-shadow:var(--sh);transition:border-color .2s,box-shadow .2s;
-}
-.quick-card:hover{border-color:#c7d2e8;box-shadow:0 6px 20px rgba(15,37,87,.1)}
-.qc-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;
-  justify-content:center;flex-shrink:0}
-.qc-info{flex:1}
-.qc-lbl{font-size:11px;color:var(--slate);font-weight:500;margin-bottom:2px}
-.qc-val{font-family:var(--fh);font-size:18px;font-weight:800;color:var(--text)}
-.qc-spark{width:40px;height:24px;border-radius:4px;flex-shrink:0}
-.qc-spark-blue{background:linear-gradient(135deg,#dbeafe,#bfdbfe)}
-.qc-spark-green{background:linear-gradient(135deg,#d1fae5,#a7f3d0)}
-.qc-spark-amber{background:linear-gradient(135deg,#fef3c7,#fde68a)}
-.qc-spark-red{background:linear-gradient(135deg,#fee2e2,#fecaca)}
-
-/* ── TOASTS ── */
-#toast-container{position:fixed;top:28px;right:28px;z-index:9999;
-  display:flex;flex-direction:column;gap:10px}
-.toast{
-  background:var(--white);border-radius:12px;min-width:280px;max-width:380px;
-  box-shadow:0 8px 24px rgba(0,0,0,.12);overflow:hidden;
-  display:flex;align-items:center;gap:10px;padding:14px 16px;
-  animation:slideInToast .35s cubic-bezier(.68,-.55,.265,1.55) forwards;
-  position:relative;transition:opacity .4s,transform .4s;
-}
-.toast-success{border-left:4px solid var(--green)}
-.toast-success .toast-icon{background:#d1fae5;color:#065f46}
-.toast-error{border-left:4px solid var(--red)}
-.toast-error .toast-icon{background:#fee2e2;color:#991b1b}
-.toast-warning{border-left:4px solid var(--amber)}
-.toast-warning .toast-icon{background:#fef9c3;color:#854d0e}
-.toast-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;flex-shrink:0}
-.toast-msg{flex:1;font-size:13px;font-weight:600;color:var(--text)}
-.toast-bar{position:absolute;bottom:0;left:0;height:3px;width:100%;
-  background:linear-gradient(90deg,var(--accent),var(--green));
-  animation:barShrink 3.5s linear forwards}
-@keyframes slideInToast{
-  from{transform:translateX(110%);opacity:0}
-  to{transform:translateX(0);opacity:1}
-}
-@keyframes barShrink{from{width:100%}to{width:0}}
-
-/* ── ATTENDANCE SECTION ── */
-.attendance-section{
-  margin-bottom:24px;
-}
-.section-header{
-  display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:16px;
-}
-.section-title{
-  font-family:var(--fh);font-size:20px;font-weight:700;
-  color:var(--text);margin:0;
-}
-.month-selector{
-  position:relative;
-}
-.month-select{
-  background:var(--white);border:1px solid var(--border);
-  border-radius:8px;padding:8px 32px 8px 12px;
-  font-size:14px;font-weight:500;color:var(--text);
-  cursor:pointer;appearance:none;
-  background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position:right 8px center;
-  background-repeat:no-repeat;
-  background-size:16px;
-}
-.month-select:focus{
-  outline:none;border-color:var(--accent);
-  box-shadow:0 0 0 3px rgba(37,99,235,0.1);
-}
-
-.attendance-grid{
-  display:grid;grid-template-columns:2fr 1fr;gap:20px;
-}
-.attendance-chart-card{
-  background:var(--white);border:1px solid var(--border);
-  border-radius:16px;padding:20px;box-shadow:var(--sh);
-}
-.chart-header{
-  display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:16px;
-}
-.chart-header h3{
-  font-family:var(--fh);font-size:16px;font-weight:700;
-  color:var(--text);margin:0;
-}
-.chart-legend{
-  display:flex;gap:16px;
-}
-.legend-item{
-  display:flex;align-items:center;gap:6px;
-  font-size:12px;font-weight:500;color:var(--slate);
-}
-.legend-dot{
-  width:8px;height:8px;border-radius:50%;
-}
-.legend-dot.present{background:#10b981}
-.legend-dot.leave{background:#ef4444}
-.legend-dot.halfday{background:#f59e0b}
-.chart-container{
-  position:relative;height:200px;
-}
-
-.attendance-stats{
-  display:flex;flex-direction:column;gap:12px;
-}
-.stat-item{
-  background:var(--white);border:1px solid var(--border);
-  border-radius:12px;padding:16px;display:flex;align-items:center;
-  gap:12px;box-shadow:var(--sh);
-}
-.stat-item.present-stat{border-left:4px solid #10b981}
-.stat-item.leave-stat{border-left:4px solid #ef4444}
-.stat-item.halfday-stat{border-left:4px solid #f59e0b}
-.stat-icon{
-  width:36px;height:36px;border-radius:8px;
-  display:flex;align-items:center;justify-content:center;
-}
-.present-stat .stat-icon{background:#ecfdf5;color:#10b981}
-.leave-stat .stat-icon{background:#fef2f2;color:#ef4444}
-.halfday-stat .stat-icon{background:#fffbeb;color:#f59e0b}
-.stat-info{flex:1}
-.stat-label{
-  font-size:11px;color:var(--slate);font-weight:500;
-  margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em;
-}
-.stat-value{
-  font-family:var(--fh);font-size:24px;font-weight:800;
-  color:var(--text);
-}
-
-/* ── ANALYTICS SECTION ── */
-.analytics-section{
-  margin-bottom:24px;
-}
-.analytics-controls{
-  display:flex;align-items:center;gap:12px;
-}
-.month-select, .year-select{
-  background:var(--white);border:1px solid var(--border);
-  border-radius:8px;padding:8px 32px 8px 12px;
-  font-size:14px;font-weight:500;color:var(--text);
-  cursor:pointer;appearance:none;
-  background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position:right 8px center;
-  background-repeat:no-repeat;
-  background-size:16px;
-}
-.month-select:focus, .year-select:focus{
-  outline:none;border-color:var(--accent);
-  box-shadow:0 0 0 3px rgba(37,99,235,0.1);
-}
-
-.analytics-card{
-  background:var(--white);border:1px solid var(--border);
-  border-radius:16px;padding:20px;
-  box-shadow:var(--sh);
-}
-.analytics-header{
-  display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:20px;
-}
-.analytics-header h3{
-  font-family:var(--fh);font-size:18px;font-weight:700;
-  color:var(--text);margin:0;
-}
-.current-stats{
-  display:flex;gap:12px;
-}
-.stat-badge{
-  padding:6px 12px;border-radius:20px;
-  font-size:12px;font-weight:600;
-  text-transform:uppercase;letter-spacing:0.05em;
-}
-.stat-badge.active{
-  background:#ecfdf5;color:#065f46;
-}
-.stat-badge.inactive{
-  background:#fef2f2;color:#991b1b;
-}
-.stat-badge.in-stock{
-  background:#ecfdf5;color:#047857;
-}
-.stat-badge.out-stock{
-  background:#fef2f2;color:#b91c1c;
-}
-.stat-badge.completed{
-  background:#eff6ff;color:#1d4ed8;
-}
-.stat-badge.pending{
-  background:#fffbeb;color:#92400e;
-}
-
-.chart-container-large{
-  position:relative;height:300px;width:100%;
-}
-
-.summary-grid{
-  display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:24px;
-}
-.analytics-grid{
-  display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;
-}
-.chart-card{
-  background:var(--white);border:1px solid var(--border);
-  border-radius:16px;padding:20px;box-shadow:var(--sh);
-}
-.chart-with-stats{
-  display:block;align-items:center;
-}
-.chart-card .chart-container{
-  position:relative;height:200px;width:200px;flex-shrink:0;
-}
-.chart-status{
-  display:flex;gap:16px;flex:1;
-}
-.status-item{
-  display:flex;align-items:center;gap:12px;width:100%;
-  padding:10px;border-radius:8px;background:var(--bg);
-}
-.status-dot{
-  width:12px;height:12px;border-radius:50%;flex-shrink:0;
-}
-.status-item.active .status-dot{background:#10b981}
-.status-item.inactive .status-dot{background:#ef4444}
-.status-item.in-stock .status-dot{background:#1e3a8a}
-.status-item.out-stock .status-dot{background:#dc2626}
-.status-item.completed .status-dot{background:#3b82f6}
-.status-item.pending .status-dot{background:#f59e0b}
-.status-info{flex:1}
-.status-label{
-  font-size:12px;color:var(--slate);font-weight:500;
-  margin-bottom:2px;
-}
-.status-value{
-  font-family:var(--fh);font-size:18px;font-weight:800;
-  color:var(--text);
-}
-
-/* ── MOBILE TOUCH IMPROVEMENTS ── */
-@media(max-width:768px){
-  /* Increase touch targets */
-  .month-select{
-    min-height:44px;
-    padding:12px 32px 12px 12px;
-    font-size:14px;
+    
+  :root{
+    --navy:#1e3a8a;--accent:#2563eb;--green:#059669;--amber:#d97706;--red:#dc2626;
+    --slate:#64748b;--border:#e2e8f0;--bg:#f1f5fb;--white:#fff;--text:#0f172a;
+    --sh:0 4px 24px rgba(15,37,87,0.09);
+    --fn:'DM Sans',system-ui,sans-serif;--fh:'Syne',system-ui,sans-serif;
   }
-  
-  /* Better spacing for touch */
-  .stat-card:hover{
-    transform:none; /* Disable hover effects on mobile */
-  }
-  
-  .quick-card:hover{
-    transform:none;
-    border-color:var(--border);
-  }
-  
-  /* Improve chart readability */
-  .chart-container{
-    height:250px; /* Increase height on mobile */
-  }
-  
-  /* Better text sizing */
-  .sc-sub-lbl, .sc-sub-val{
-    font-size:11px;
-  }
-  
-  /* Improve attendance section */
-  .attendance-chart-card .chart-container{
-    height:220px;
-  }
-}
 
-@media(max-width:480px){
-  /* Very small screens */
-  .chart-container{
-    height:200px;
-  }
-  
-  .attendance-chart-card .chart-container{
-    height:180px;
-  }
-  
-  /* Compact legend */
-  .chart-legend{
-    gap:8px;
-  }
-  
-  .legend-item{
-    font-size:10px;
-  }
-  
-  /* Smaller icons but maintain touch targets */
-  .dash-header-icon{
-    width:36px;
-    height:36px;
-  }
-  
-  .toast-icon{
-    width:24px;
-    height:24px;
-  }
-}
+  .dash-shell{font-family:var(--fn);color:var(--text);margin:120px 40px 120px 360px;transition:margin-left .3s;}
+  .dash-shell.shifted{margin-left:90px}
 
-/* ── RESPONSIVE ── */
-@media(max-width:1200px){
-  .dash-shell{margin-left:20px;margin-right:20px;margin-top:90px;margin-bottom:100px}
-}
+  /* Header */
+  .dash-header{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#002560 0%,#1d4ed8 100%);border-radius:16px;padding:22px 30px;margin-bottom:24px;box-shadow:0 8px 32px rgba(15,37,87,.22);}
+  .dash-header-left{display:flex;align-items:center;gap:14px}
+  .dash-header-icon{width:44px;height:44px;background:rgba(255,255,255,.15);border-radius:12px;display:flex;align-items:center;justify-content:center;}
+  .dash-eyebrow{font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.6);margin:0 0 3px}
+  .dash-title{font-family:var(--fh);font-size:24px;font-weight:800;color:#fff;margin:0;letter-spacing:-.5px}
+  .dash-header-date{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:10px 16px}
+  .dh-wd{font-family:var(--fh);font-size:12px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.08em;text-transform:uppercase}
+  .dh-sep{color:rgba(255,255,255,.3);font-size:14px}
+  .dh-dt{font-family:var(--fh);font-size:13px;font-weight:700;color:#fff}
 
-@media(max-width:1024px){
-  .stat-grid{grid-template-columns:repeat(2,1fr);gap:16px}
-  .quick-row{grid-template-columns:repeat(2,1fr);gap:12px}
-  .attendance-grid{grid-template-columns:1fr;gap:16px}
-  .analytics-grid{grid-template-columns:repeat(2,1fr);gap:16px}
-  .summary-grid{grid-template-columns:repeat(2,1fr);gap:14px}
-  .dash-shell{margin:80px 16px 80px}
-  .analytics-header{flex-direction:column;align-items:flex-start;gap:12px}
-  .current-stats{flex-wrap:wrap}
-}
+  /* Stat Grid */
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:18px}
+  .stat-card{background:var(--white);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--sh);transition:transform .2s,box-shadow .2s;position:relative;}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 60%,white));}
+  .stat-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(15,37,87,.14)}
+  .sc-top{display:flex;align-items:center;gap:14px;padding:20px 20px 16px}
+  .sc-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+  .sc-meta{flex:1}
+  .sc-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--slate);margin-bottom:4px}
+  .sc-value{font-family:var(--fh);font-size:32px;font-weight:800;color:var(--text);line-height:1}
+  .sc-trend{display:flex;align-items:center;gap:4px;font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:20px;}
+  .sc-trend-up{background:#eff6ff;color:#2563eb}.sc-trend-green{background:#ecfdf5;color:#059669}.sc-trend-amber{background:#fffbeb;color:#d97706}
+  .sc-divider{height:1px;background:var(--border);margin:0 20px}
+  .sc-bottom{padding:14px 20px 18px}
+  .sc-sub{display:flex;align-items:center;gap:7px;margin-bottom:10px}
+  .sc-sub-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .sc-sub-green .sc-sub-dot{background:var(--green)}.sc-sub-red .sc-sub-dot{background:var(--red)}.sc-sub-amber .sc-sub-dot{background:var(--amber)}
+  .sc-sub-lbl{font-size:12px;color:var(--slate);font-weight:500;flex:1}
+  .sc-sub-val{font-family:var(--fh);font-size:14px;font-weight:800;color:var(--text)}
+  .sc-sep{height:1px;background:var(--bg);margin:2px 0 10px}
+  .sc-bar-wrap{height:6px;background:var(--bg);border-radius:20px;overflow:hidden;margin-top:4px}
+  .sc-bar{height:100%;border-radius:20px;background:var(--clr);width:var(--pct);transition:width 1.2s cubic-bezier(.22,1,.36,1);}
 
-@media(max-width:768px){
-  .dash-shell{margin:20px 12px 120px;transition:none}
-  .dash-shell.shifted{margin-left:12px}
-  
-  /* Header adjustments */
-  .dash-header{flex-direction:column;align-items:flex-start;gap:16px;padding:20px 16px}
-  .dash-header-left{width:100%}
-  .dash-header-date{align-self:flex-end}
-  .dash-title{font-size:20px}
-  
-  /* Grid layouts */
-  .stat-grid{grid-template-columns:1fr;gap:12px}
-  .quick-row{grid-template-columns:1fr;gap:10px}
-  .attendance-grid{grid-template-columns:1fr;gap:12px}
-  .analytics-grid{grid-template-columns:1fr;gap:12px}
-  .summary-grid{grid-template-columns:1fr;gap:12px}
-  
-  /* Analytics adjustments */
-  .analytics-card{padding:16px}
-  .chart-container-large{height:250px}
-  .analytics-header h3{font-size:16px}
-  .stat-badge{font-size:11px;padding:4px 8px}
-  
-  /* Card adjustments */
-  .stat-card{border-radius:12px}
-  .sc-top{padding:16px 16px 12px}
-  .sc-bottom{padding:12px 16px 16px}
-  .sc-value{font-size:28px}
-  .sc-icon{width:40px;height:40px}
-  
-  .quick-card{padding:14px;border-radius:10px}
-  .qc-val{font-size:16px}
-  .qc-icon{width:32px;height:32px}
-  
-  /* Section headers */
-  .section-header{flex-direction:column;align-items:flex-start;gap:12px}
-  .section-title{font-size:18px}
-  
-  /* Chart cards */
-  .chart-card, .attendance-chart-card{padding:16px;border-radius:12px}
-  .chart-header h3{font-size:14px}
-  .chart-legend{flex-wrap:wrap;gap:12px}
-  .legend-item{font-size:11px}
-  
-  /* Attendance stats */
-  .attendance-stats{gap:10px}
-  .stat-item{padding:12px;border-radius:10px}
-  .stat-icon{width:32px;height:32px}
-  .stat-value{font-size:20px}
-  .stat-label{font-size:10px}
-  
-  /* Toast adjustments */
-  #toast-container{right:8px;left:8px;top:8px}
-  .toast{min-width:auto;max-width:100%;padding:12px 14px}
-  .toast-msg{font-size:12px}
-  
-  /* Month selector */
-  .month-select{padding:6px 28px 6px 10px;font-size:13px}
-}
+  /* Quick Row */
+  .quick-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:24px}
+  .quick-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;align-items:center;gap:12px;box-shadow:var(--sh);transition:border-color .2s,box-shadow .2s;}
+  .quick-card:hover{border-color:#c7d2e8;box-shadow:0 6px 20px rgba(15,37,87,.1)}
+  .qc-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .qc-info{flex:1}.qc-lbl{font-size:11px;color:var(--slate);font-weight:500;margin-bottom:2px}
+  .qc-val{font-family:var(--fh);font-size:18px;font-weight:800;color:var(--text)}
+  .qc-spark{width:40px;height:24px;border-radius:4px;flex-shrink:0}
+  .qc-spark-blue{background:linear-gradient(135deg,#dbeafe,#bfdbfe)}.qc-spark-green{background:linear-gradient(135deg,#d1fae5,#a7f3d0)}
+  .qc-spark-amber{background:linear-gradient(135deg,#fef3c7,#fde68a)}.qc-spark-red{background:linear-gradient(135deg,#fee2e2,#fecaca)}
 
-@media(max-width:480px){
-  .dash-shell{margin:100px 10px 100px}
-  
-  .dash-header{padding:16px 12px}
-  .dash-title{font-size:18px}
-  .dash-eyebrow{font-size:10px}
-  
-  .stat-grid{gap:10px}
-  .sc-top{padding:14px 14px 10px}
-  .sc-bottom{padding:10px 14px 14px}
-  .sc-value{font-size:24px}
-  .sc-label{font-size:10px}
-  
-  .quick-row{gap:8px}
-  .quick-card{padding:12px}
-  .qc-val{font-size:14px}
-  .qc-lbl{font-size:10px}
-  .chart-card, .attendance-chart-card {
-        width: 92%;
-        padding: 10px;
-    }
-  .attendance-section{width:100%;}
-  .section-title{font-size:16px}
-  
-  .stat-item{padding:10px}
-  .stat-value{font-size:18px}
-  
-  /* Analytics mobile */
-  .analytics-card{padding:12px}
-  .chart-container-large{height:200px}
-  .analytics-header{gap:8px}
-  .analytics-header h3{font-size:14px}
-  .current-stats{gap:6px}
-  .stat-badge{font-size:10px;padding:3px 6px}
-}
+  /* Toasts */
+  #toast-container{position:fixed;top:28px;right:28px;z-index:9999;display:flex;flex-direction:column;gap:10px}
+  .toast{background:var(--white);border-radius:12px;min-width:280px;max-width:380px;box-shadow:0 8px 24px rgba(0,0,0,.12);overflow:hidden;display:flex;align-items:center;gap:10px;padding:14px 16px;animation:slideInToast .35s cubic-bezier(.68,-.55,.265,1.55) forwards;position:relative;transition:opacity .4s,transform .4s;}
+  .toast-success{border-left:4px solid var(--green)}.toast-success .toast-icon{background:#d1fae5;color:#065f46}
+  .toast-error{border-left:4px solid var(--red)}.toast-error .toast-icon{background:#fee2e2;color:#991b1b}
+  .toast-warning{border-left:4px solid var(--amber)}.toast-warning .toast-icon{background:#fef9c3;color:#854d0e}
+  .toast-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .toast-msg{flex:1;font-size:13px;font-weight:600;color:var(--text)}
+  .toast-bar{position:absolute;bottom:0;left:0;height:3px;width:100%;background:linear-gradient(90deg,var(--accent),var(--green));animation:barShrink 3.5s linear forwards}
+  @keyframes slideInToast{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+  @keyframes barShrink{from{width:100%}to{width:0}}
 
+  /* Attendance */
+  .attendance-section{margin-bottom:24px}
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .section-title{font-family:var(--fh);font-size:20px;font-weight:700;color:var(--text);margin:0}
+  .month-selector,.analytics-controls{display:flex;align-items:center;gap:8px}
+  .month-select,.year-select{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:8px 32px 8px 12px;font-size:14px;font-weight:500;color:var(--text);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");background-position:right 8px center;background-repeat:no-repeat;background-size:16px;}
+  .month-select:focus,.year-select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
+  .attendance-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+  .attendance-chart-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--sh);}
+  .chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .chart-header h3{font-family:var(--fh);font-size:16px;font-weight:700;color:var(--text);margin:0}
+  .chart-legend{display:flex;gap:16px}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--slate)}
+  .legend-dot{width:8px;height:8px;border-radius:50%}
+  .legend-dot.present{background:#10b981}.legend-dot.leave{background:#ef4444}.legend-dot.halfday{background:#f59e0b}
+  .chart-container{position:relative;height:200px; margin:auto; margin-bottom:50px;}
+  .attendance-stats{display:flex;flex-direction:column;gap:12px}
+  .stat-item{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;align-items:center;gap:12px;box-shadow:var(--sh);}
+  .stat-item.present-stat{border-left:4px solid #10b981}.stat-item.leave-stat{border-left:4px solid #ef4444}.stat-item.halfday-stat{border-left:4px solid #f59e0b}
+  .stat-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center}
+  .present-stat .stat-icon{background:#ecfdf5;color:#10b981}.leave-stat .stat-icon{background:#fef2f2;color:#ef4444}.halfday-stat .stat-icon{background:#fffbeb;color:#f59e0b}
+  .stat-info{flex:1}.stat-label{font-size:11px;color:var(--slate);font-weight:500;margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em}
+  .stat-value{font-family:var(--fh);font-size:24px;font-weight:800;color:var(--text)}
 
+  /* Analytics */
+  .analytics-section{margin-bottom:24px}
+  .analytics-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--sh);}
+  .analytics-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .analytics-header h3{font-family:var(--fh);font-size:18px;font-weight:700;color:var(--text);margin:0}
+  .current-stats{display:flex;gap:12px}
+  .stat-badge{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+  .stat-badge.active{background:#ecfdf5;color:#065f46}.stat-badge.inactive{background:#fef2f2;color:#991b1b}
+  .stat-badge.in-stock{background:#ecfdf5;color:#047857}.stat-badge.out-stock{background:#fef2f2;color:#b91c1c}
+  .stat-badge.completed{background:#eff6ff;color:#1d4ed8}.stat-badge.pending{background:#fffbeb;color:#92400e}
+  .chart-container-large{position:relative;height:300px;width:100%}
+  .chart-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--sh);}
+  .chart-with-stats{display:block;align-items:center}
+  .chart-card .chart-container{position:relative;height:200px;width:200px;flex-shrink:0}
+  .chart-stats{display:flex;gap:10px}
+  .total-items{font-size:12px;font-weight:600;color:var(--slate);background:var(--bg);padding:4px 10px;border-radius:20px}
+  .chart-status{display:flex;gap:16px;flex:1}
+  .status-item{display:flex;align-items:center;gap:12px;width:100%;padding:10px;border-radius:8px;background:var(--bg)}
+  .status-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+  .status-item.active .status-dot{background:#10b981}.status-item.inactive .status-dot{background:#ef4444}
+  .status-item.in-stock .status-dot{background:#1e3a8a}.status-item.out-stock .status-dot{background:#dc2626}
+  .status-item.completed .status-dot{background:#3b82f6}.status-item.pending .status-dot{background:#f59e0b}
+  .status-info{flex:1}.status-label{font-size:12px;color:var(--slate);font-weight:500;margin-bottom:2px}
+  .status-value{font-family:var(--fh);font-size:18px;font-weight:800;color:var(--text)}
+
+  /* ══════════════════════════════════════
+    PRODUCT REVIEWS SECTION STYLES
+  ══════════════════════════════════════ */
+  .reviews-dashboard-section{margin-bottom:32px}
+
+  /* Summary chips */
+  .rev-summary-chips{display:flex;gap:10px}
+  .rev-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;font-family:var(--fh);font-size:12px;font-weight:700;letter-spacing:.04em}
+  .rev-chip-blue{background:#eff6ff;color:#1d4ed8}
+  .rev-chip-amber{background:#fffbeb;color:#92400e}
+
+  /* Top Rated Grid */
+  .top-rated-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+    gap:14px;
+    margin-bottom:20px;
+  }
+  .top-rated-card{
+    background:var(--white);border:1px solid var(--border);
+    border-radius:14px;padding:16px;box-shadow:var(--sh);
+    display:flex;flex-direction:column;align-items:center;gap:10px;
+    text-align:center;transition:transform .2s,box-shadow .2s;
+  }
+  .top-rated-card:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(15,37,87,.12)}
+  .trc-img-wrap{width:64px;height:64px;border-radius:12px;overflow:hidden;border:1px solid var(--border);flex-shrink:0}
+  .trc-img{width:100%;height:100%;object-fit:cover}
+  .trc-img-placeholder{width:64px;height:64px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center}
+  .trc-info{flex:1;width:100%}
+  .trc-name{font-family:var(--fh);font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+  .trc-stars{display:flex;align-items:center;justify-content:center;gap:2px;margin-bottom:4px}
+  .trc-star{font-size:16px;color:#e2e8f0}
+  .trc-star.filled{color:#f59e0b}
+  .trc-avg{font-family:var(--fh);font-size:13px;font-weight:700;color:var(--text);margin-left:4px}
+  .trc-count{font-size:11px;color:var(--slate)}
+  .trc-link{
+    display:inline-flex;align-items:center;
+    background:var(--navy);color:#fff;
+    font-family:var(--fh);font-size:11px;font-weight:700;
+    padding:6px 16px;border-radius:20px;text-decoration:none;
+    transition:background .2s;
+  }
+  .trc-link:hover{background:var(--accent);color:#fff}
+
+  /* Review Table Card */
+  .rev-table-card{
+    background:var(--white);border:1px solid var(--border);
+    border-radius:16px;overflow:hidden;box-shadow:var(--sh);
+  }
+  .rev-table-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 22px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;
+  }
+  .rev-table-title{font-family:var(--fh);font-size:15px;font-weight:700;color:var(--text)}
+  .rev-filter-row{display:flex;gap:6px;flex-wrap:wrap}
+  .rev-filter{
+    font-family:var(--fh);font-size:12px;font-weight:600;
+    padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);
+    background:var(--bg);color:var(--slate);cursor:pointer;transition:all .2s;
+  }
+  .rev-filter:hover{border-color:var(--accent);color:white !important}
+  .rev-filter.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+  .rev-table-wrap{overflow-x:auto}
+  .rev-table{width:100%;border-collapse:collapse;font-family:var(--fn);min-width:700px}
+  .rev-table thead th{
+    background:var(--navy);color:rgba(255,255,255,.85);
+    font-family:var(--fh);font-size:11px;font-weight:700;
+    letter-spacing:.08em;text-transform:uppercase;
+    padding:14px 18px;text-align:left;white-space:nowrap;border:none;
+  }
+  .rev-table tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+  .rev-table tbody tr:last-child{border-bottom:none}
+  .rev-table tbody tr:hover{background:#f8faff}
+  .rev-table td{padding:14px 18px;font-size:13.5px;vertical-align:middle;border:none}
+
+  /* Table cell sub-styles */
+  .rev-product-cell{display:flex;align-items:center;gap:10px}
+  .rev-prod-img{width:40px;height:40px;border-radius:8px;object-fit:cover;border:1px solid var(--border);flex-shrink:0}
+  .rev-prod-img-placeholder{width:40px;height:40px;border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center;border:1px solid var(--border);flex-shrink:0}
+  .rev-prod-name{font-weight:600;color:var(--text);font-size:13px}
+  .rev-customer-cell{display:flex;align-items:center;gap:10px}
+  .rev-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--accent));color:#fff;font-family:var(--fh);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .rev-stars-cell{display:flex;align-items:center;gap:2px}
+  .rev-star{font-size:15px;color:#e2e8f0}
+  .rev-star.filled{color:#f59e0b}
+  .rev-num{font-family:var(--fh);font-size:12px;font-weight:700;color:var(--text);margin-left:5px}
+  .rev-comment-cell{max-width:260px;color:var(--slate);font-size:13px;cursor:help;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rev-date-cell{font-size:12px;color:var(--slate);white-space:nowrap}
+  .rev-empty{padding:0!important}
+  .rev-empty-inner{display:flex;flex-direction:column;align-items:center;padding:48px 20px;gap:8px}
+  .rev-empty-inner p{font-size:14px;color:var(--slate);margin:0}
+
+  /* ── Responsive ── */
+  @media(max-width:1200px){.dash-shell{margin-left:20px;margin-right:20px;margin-top:90px;margin-bottom:100px}}
+  @media(max-width:1024px){
+    .stat-grid{grid-template-columns:repeat(2,1fr);gap:16px}
+    .quick-row{grid-template-columns:repeat(2,1fr);gap:12px}
+    .attendance-grid{grid-template-columns:1fr;gap:16px}
+    .dash-shell{margin:80px 16px 80px}
+    .top-rated-grid{grid-template-columns:repeat(3,1fr)}
+  }
+  @media(max-width:768px){
+     .attendance-grid{ display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+      flex-direction: column;}
+      .chart-card{flex: 0 0 100px !important;
+       }
+    .chart-container{margin-bottom:50px;}
+    .dash-shell{margin:120px 12px 120px;transition:none}
+    .dash-shell.shifted{margin-left:12px}
+    .dash-header{flex-direction:column;align-items:flex-start;gap:16px;padding:20px 16px}
+    .dash-title{font-size:20px}
+    .stat-grid{grid-template-columns:1fr;gap:12px}
+    .quick-row{grid-template-columns:1fr;gap:10px}
+    .section-header{flex-direction:column;align-items:flex-start;gap:12px}
+    .top-rated-grid{grid-template-columns:repeat(2,1fr)}
+    .rev-table-header{flex-direction:column;align-items:flex-start}
+    .rev-summary-chips{flex-wrap:wrap}
+    #toast-container{right:8px;left:8px;top:8px}
+    .toast{min-width:auto;max-width:100%;padding:12px 14px}
+  }
+  @media(max-width:480px){
+    .pie{
+      display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+      flex-direction: column;
+  }
+  .chart-container{ margin: auto;}
+    .top-rated-grid{grid-template-columns:1fr}
+    .rev-filter-row{gap:4px}
+    .rev-filter{font-size:11px;padding:5px 10px}
+  }
 
 </style>
 

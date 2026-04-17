@@ -212,7 +212,7 @@ def dashboard(request):
         return redirect('bio_details:product_view')
     
     from datetime import datetime, date, timedelta
-    from django.db.models import Count, Q
+    from django.db.models import Count, Q, Avg
     from calendar import monthrange
     
     # Get selected month from request (default to current month)
@@ -243,6 +243,31 @@ def dashboard(request):
         total_orders = Order.objects.filter(user=request.user).count()
         paid_orders = Invoice.objects.filter(order__user=request.user, payment_status='paid').count()
         pending_orders = Invoice.objects.filter(order__user=request.user, payment_status='pending').count()
+    
+    # Product Reviews Statistics
+    total_reviews = ProductReview.objects.count()
+    overall_avg_rating = ProductReview.objects.aggregate(Avg('rating'))['rating__avg']
+    if overall_avg_rating:
+        overall_avg_rating = round(overall_avg_rating, 1)
+    
+    # Top rated products (with at least 1 review)
+    top_rated_products = Product.objects.filter(
+        reviews__isnull=False
+    ).annotate(
+        avg_rating=Avg('reviews__rating'),
+        review_count=Count('reviews')
+    ).filter(
+        avg_rating__gte=4.0
+    ).order_by('-avg_rating', '-review_count')[:4]
+    
+    # Recent product reviews with pagination
+    product_reviews_list = ProductReview.objects.select_related(
+        'user', 'product'
+    ).order_by('-created_at')
+    
+    paginator = Paginator(product_reviews_list, 3)  # 5 reviews per page
+    page_number = request.GET.get('page')
+    product_reviews = paginator.get_page(page_number)
     
     # Attendance statistics for selected month
     # Get all employees with employee role
@@ -373,6 +398,11 @@ def dashboard(request):
         'total_orders': total_orders,
         'completed_orders': paid_orders,
         'pending_orders': pending_orders,
+        # Product Reviews data
+        'total_reviews': total_reviews,
+        'overall_avg_rating': overall_avg_rating,
+        'top_rated_products': top_rated_products,
+        'product_reviews': product_reviews,
         # Attendance data
         'present_days': int(present_days),
         'leave_days': int(leave_days),
