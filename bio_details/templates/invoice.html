@@ -427,7 +427,7 @@
 
     .form-grid {
         display: grid;
-        grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
         gap: 15px;
         margin-bottom: 20px;
         padding: 10px;
@@ -636,108 +636,6 @@
     @keyframes timerBar {
         from { width: 100%; }
         to { width: 0%; }
-    }
-
-    @media (max-width: 1024px) {
-        .invoice-container {
-            width: auto;
-            margin: 100px 10px 100px 10px;
-            padding: 20px;
-        }
-        
-        .header-details {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            font-size: 12px;
-        }
-        
-        .input-row {
-            flex: 1;
-            margin-bottom: 15px;
-            gap: 5px;
-
-        }
-        
-        .input-row strong {
-            font-size: 14px;
-        }
-        
-        .file-input {
-            font-size: 14px;
-            padding: 8px 10px;
-            width: 100%;
-        }
-        
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 10px;
-            margin-left: 0;
-        }
-        
-        .form-footer {
-            flex-direction: column;
-            gap: 15px;
-            margin-left: 0;
-            align-items: stretch;
-        }
-        
-        .total-display {
-            text-align: center;
-            width: 100%;
-        }
-        
-        .add-btn {
-            width: 100%;
-            padding: 12px;
-        }
-        
-        .item-details h2 {
-            font-size: 1.5em;
-        }
-        
-        .amount-table, .invoice-table {
-            font-size: 12px;
-            overflow-x: auto;
-            display: block;
-            white-space: nowrap;
-        }
-        
-        .amount-table th, .amount-table td,
-        .invoice-table th, .invoice-table td {
-            padding: 8px 4px;
-            min-width: 80px;
-        }
-        
-        .terms-payment-container {
-            flex-direction: column;
-            gap: 20px;
-        }
-        
-        .summary {
-            max-width: 100%;
-        }
-        
-        button[type="button"] {
-            padding: 10px;
-            font-size: 14px;
-        }
-        
-        #toast-container{
-            right:20px;
-            left:20px;
-            top:15px;
-        }
-
-        .toast{
-            width:100%;
-            max-width:100%;
-            font-size:12px;
-            padding:10px 12px;
-            border-radius:6px;
-            min-width:auto;
-        }
     }
 
     .modal-box h2{
@@ -1573,95 +1471,7 @@
     }
 
 
-    @media (max-width: 1024px) {
-        .invoice-container {
-            width: auto;
-            margin: 100px 10px 100px 10px;
-            padding: 20px;
-        }
-        
-        .header-details {
-            display:flex;
-           flex-direction: column;
-            gap: 15px;
-            font-size: 12px;
-        }
-         .input-row {
-            flex: 1;
-        }
-        
-        .input-row {
-            margin-bottom: 15px;
-            gap: 5px;
-        }
-        
-        .input-row strong {
-            font-size: 14px;
-        }
-        
-        .file-input {
-            font-size: 14px;
-            padding: 8px 10px;
-        }
-        .info-section p{
-            font-size:16px;
-        }
-        .item-details h2{
-            font-size: 1.5em;
-        }
-        button[type="button"] {
-            padding:10px;
-        }
-
-        .terms-conditions h3 {
-        margin-bottom: 15px;
-        color: #1e3a8a;
-        font-weight: 900;
-        font-size: 1.0em;
-        }
-        .add-product-table, .amount-table {
-            font-size: 12px;
-            overflow-x: auto;
-            display: block;
-            white-space: nowrap;
-        }
-        
-        .add-product-table th, .add-product-table td,
-        .amount-table th, .amount-table td {
-            padding: 8px 4px;
-            min-width: 180px;
-        }
-        
-        #new-product-select {
-            width: 120px !important;
-            font-size: 12px !important;
-            padding: 6px !important;
-        }
-        
-        .terms-payment-container {
-            flex-direction: column;
-            gap: 20px;
-        }
-        
-        .invoice-footer {
-            margin-top: 20px;
-        }
-        
-        .summary {
-            max-width: 100%;
-        }
-        
-        div[style*="display: flex; gap:50px"] {
-            gap: 15px !important;
-            flex-wrap: wrap;
-        }
-        
-        div[style*="display: flex; gap:50px; align-items: center"] {
-            flex-direction: column;
-            align-items: stretch !important;
-            gap: 15px !important;
-        }
-    }
+  
 
     @media print {
         .invoice-container {
@@ -1920,6 +1730,343 @@
     .remove-btn {
         color: #dc2626 !important;
         border-color: #dc2626 !important;
+    }
+      @media (max-width: 1024px) {
+        .invoice-container {
+            width: auto;
+            margin: 100px 10px 100px 10px;
+            padding: 20px;
+        }
+        
+        .header-details {
+            display:flex;
+            gap: 15px;
+            font-size: 12px;
+        }
+         .input-row {
+            flex: 1;
+        }
+        
+        .input-row {
+            margin-bottom: 15px;
+            gap: 5px;
+        }
+        
+        .input-row strong {
+            font-size: 14px;
+        }
+        
+        .file-input {
+            font-size: 14px;
+            padding: 8px 10px;
+        }
+        .info-section p{
+            font-size:16px;
+        }
+        .item-details h2{
+            font-size: 1.5em;
+        }
+        button[type="button"] {
+            padding:10px;
+        }
+
+
+    }
+
+        /* Mobile First - 320px to 480px */
+    @media (max-width: 480px) {
+        .invoice-container {
+            margin: 100px 15px;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .invoice-header h1 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+        }
+        
+        .header-details {
+            flex-direction: column;
+            gap: 10px;
+            padding: 10px;
+        }
+        
+        .info-section {
+            width: 100%;
+        }
+        
+        .input-row {
+            margin-bottom: 12px;
+            gap: 4px;
+        }
+        
+        .input-row strong {
+            font-size: 12px;
+            font-weight: 700;
+        }
+        
+        .file-input {
+            font-size: 12px;
+            padding: 6px 8px;
+            width: 100%;
+        }
+        
+        .form-grid {
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-left: 0;
+            padding: 8px;
+        }
+        
+        .form-field label {
+            font-size: 12px;
+        }
+        
+        .form-field select,
+        .form-field input {
+            padding: 8px;
+            font-size: 12px;
+        }
+        
+        .add-btn {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+        }
+        
+        .item-details h2 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+        
+        .amount-table {
+            font-size: 10px;
+            overflow-x: auto;
+            display: block;
+        }
+        
+        .amount-table th,
+        .amount-table td {
+            padding: 6px 3px;
+            min-width: 60px;
+            white-space: nowrap;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .edit-btn, .remove-btn {
+            padding: 4px !important;
+            margin: 1px !important;
+        }
+        
+        .edit-btn svg, .remove-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+        
+        .terms-payment-container {
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .terms-conditions,
+        .summary {
+            padding: 15px;
+        }
+        
+        .terms-conditions h3,
+        .summary h3 {
+            font-size: 1.1em;
+        }
+        
+        .summary-item {
+            font-size: 14px;
+            padding: 8px 0;
+        }
+        
+        button[type="button"] {
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+        
+        #toast-container {
+            right: 10px;
+            left: 10px;
+            top: 10px;
+        }
+        
+        .toast {
+            font-size: 11px;
+            padding: 8px 10px;
+        }
+        
+        .modal-content {
+            width: 95%;
+            margin: 5% auto;
+        }
+        
+        .modal-header {
+            padding: 15px 20px;
+        }
+        
+        #productForm {
+            padding: 20px;
+        }
+    }
+    
+    /* Small Tablets - 481px to 768px */
+    @media (min-width: 481px) and (max-width: 768px) {
+        .invoice-container {
+            margin: 100px 15px;
+            padding: 20px;
+        }
+        
+        .invoice-header h1 {
+            font-size: 2.2em;
+        }
+        
+        .header-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 15px;
+        }
+        
+        .input-row strong {
+            font-size: 14px;
+        }
+        
+        .file-input {
+            font-size: 13px;
+            padding: 8px 10px;
+        }
+        
+        .form-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-left: 0;
+        }
+        
+        .amount-table {
+            font-size: 11px;
+            overflow-x: auto;
+        }
+        
+        .amount-table th,
+        .amount-table td {
+            padding: 8px 5px;
+            min-width: 70px;
+        }
+        
+        .terms-payment-container {
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .summary {
+            max-width: 100%;
+        }
+    }
+    
+    /* Large Tablets - 769px to 1024px */
+    @media (min-width: 769px) and (max-width: 1024px) {
+        .invoice-container {
+            margin: 100px 30px;
+            padding: 25px;
+        }
+        
+        .header-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .form-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-left: 0;
+        }
+        
+        .amount-table {
+            font-size: 12px;
+        }
+        
+        .amount-table th,
+        .amount-table td {
+            padding: 10px 6px;
+        }
+        
+        .terms-payment-container {
+            flex-direction: row;
+            gap: 25px;
+        }
+        
+        .terms-conditions,
+        .summary {
+            flex: 1;
+        }
+    }
+    
+    /* General responsive improvements for all mobile/tablet sizes */
+    @media (max-width: 1024px) {
+        .invoice-container.shifted {
+            margin-left: 15px;
+        }
+        
+        
+        .form-footer {
+            margin-left: 0;
+            justify-content: center;
+        }
+        
+        .total-row {
+            font-size: 14px;
+        }
+        
+        .total-row td {
+            padding: 10px 5px;
+        }
+        
+        .qty-controls {
+            gap: 3px;
+        }
+        
+        .qty-btn {
+            width: 18px !important;
+            height: 18px !important;
+            font-size: 10px !important;
+        }
+        
+        .save-btn,
+        .cancel-btn {
+            padding: 6px 8px !important;
+            font-size: 9px !important;
+        }
+        
+        .modal-box {
+            width: 90%;
+            padding: 25px;
+        }
+        
+        .icon {
+            width: 50px;
+            height: 50px;
+            font-size: 25px;
+        }
+        
+        .terms-conditions li {
+            font-size: 13px;
+            padding: 6px 0;
+            padding-left: 20px;
+        }
+        
+        .summary-item.total {
+            font-size: 1.1em;
+        }
     }
 </style>
 
