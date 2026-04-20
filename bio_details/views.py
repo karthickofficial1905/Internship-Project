@@ -250,6 +250,18 @@ def dashboard(request):
     if overall_avg_rating:
         overall_avg_rating = round(overall_avg_rating, 1)
     
+    # Rating distribution for pie chart
+    rating_5_count = ProductReview.objects.filter(rating=5).count()
+    rating_4_count = ProductReview.objects.filter(rating=4).count()
+    rating_3_count = ProductReview.objects.filter(rating=3).count()
+    rating_low_count = ProductReview.objects.filter(rating__in=[1, 2]).count()
+    
+    # Current month reviews
+    current_month_reviews = ProductReview.objects.filter(
+        created_at__month=datetime.now().month,
+        created_at__year=datetime.now().year
+    ).count()
+    
     # Top rated products (with at least 1 review)
     top_rated_products = Product.objects.filter(
         reviews__isnull=False
@@ -401,6 +413,11 @@ def dashboard(request):
         # Product Reviews data
         'total_reviews': total_reviews,
         'overall_avg_rating': overall_avg_rating,
+        'rating_5_count': rating_5_count,
+        'rating_4_count': rating_4_count,
+        'rating_3_count': rating_3_count,
+        'rating_low_count': rating_low_count,
+        'current_month_reviews': current_month_reviews,
         'top_rated_products': top_rated_products,
         'product_reviews': product_reviews,
         # Attendance data
@@ -871,6 +888,7 @@ def add_review(request, product_id):
             product = Product.objects.get(product_id=product_id)
             rating = int(request.POST.get('rating'))
             comment = request.POST.get('comment')
+            technical_comment = request.POST.get('technical_comment', '')
             
             # Check if user already reviewed this product
             existing_review = ProductReview.objects.filter(product=product, user=request.user).first()
@@ -879,6 +897,7 @@ def add_review(request, product_id):
                 # Update existing review
                 existing_review.rating = rating
                 existing_review.comment = comment
+                existing_review.technical_comment = technical_comment
                 existing_review.save()
                 messages.success(request, 'Your review has been updated!')
             else:
@@ -887,7 +906,8 @@ def add_review(request, product_id):
                     product=product,
                     user=request.user,
                     rating=rating,
-                    comment=comment
+                    comment=comment,
+                    technical_comment=technical_comment
                 )
                 messages.success(request, 'Thank you for your review!')
             
@@ -3946,6 +3966,44 @@ def get_customer_status_data(request):
             'active_customers': active_customers,
             'inactive_customers': inactive_customers,
             'total_customers': total_customers
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def get_review_monthly_data(request):
+    """AJAX endpoint to get monthly review data for analytics charts"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+    
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    try:
+        from datetime import datetime, timedelta
+        from django.db.models import Count
+        
+        # Get selected year from request
+        selected_year = int(request.GET.get('year', datetime.now().year))
+        
+        # Always show all 12 months
+        months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        review_counts = []
+        
+        for month_num in range(1, 13):
+            # Count reviews created in this month in the selected year
+            review_count = ProductReview.objects.filter(
+                created_at__year=selected_year,
+                created_at__month=month_num
+            ).count()
+            
+            review_counts.append(review_count)
+        
+        return JsonResponse({
+            'success': True,
+            'months': months,
+            'review_counts': review_counts
         })
         
     except Exception as e:

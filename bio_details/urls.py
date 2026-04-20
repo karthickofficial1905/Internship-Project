@@ -64,6 +64,7 @@ urlpatterns = [
     path('get-order-status-data/', views.get_order_status_data, name='get_order_status_data'),
     path('get-customer-monthly-data/', views.get_customer_monthly_data, name='get_customer_monthly_data'),
     path('get-customer-status-data/', views.get_customer_status_data, name='get_customer_status_data'),
+    path('get-review-monthly-data/', views.get_review_monthly_data, name='get_review_monthly_data'),
     path('manage-leave-applications/', views.manage_leave_applications, name='manage_leave_applications'),
     path('leave-action/', views.leave_action, name='leave_action'),
     path('add-review/<str:product_id>/', views.add_review, name='add_review'),

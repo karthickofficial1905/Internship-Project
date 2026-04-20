@@ -165,6 +165,10 @@
             <label class="field-label" for="comment">Comment</label>
             <textarea name="comment" id="comment" rows="4" class="field-textarea" placeholder="Share your experience with this product..." required></textarea>
           </div>
+          <div class="field" style="margin-top:16px">
+            <label class="field-label" for="technical_comment">Technical Comment</label>
+            <textarea name="technical_comment" id="technical_comment" rows="4" class="field-textarea" placeholder="Share technical details about this product..."></textarea>
+          </div>
           <button type="submit" class="btn-primary mt-16">&#10003;&nbsp; Submit Review</button>
         </form>
       </div>
@@ -197,6 +201,12 @@
             </div>
           </div>
           <p class="review-comment-text">{{ user_review.comment }}</p>
+          {% if user_review.technical_comment %}
+          <div class="technical-comment-section" style="">
+            <strong>Technical Comment:</strong>
+            <p class="review-comment-text">{{ user_review.technical_comment }}</p>
+          </div>
+          {% endif %}
 
           <form method="POST" action="{% url 'bio_details:add_review' product.product_id %}" class="edit-review-form" style="display:none;">
             {% csrf_token %}
@@ -213,6 +223,10 @@
             <div class="field" style="margin-top:16px">
               <label class="field-label">Comment</label>
               <textarea name="comment" rows="4" class="field-textarea" required>{{ user_review.comment }}</textarea>
+            </div>
+            <div class="field" style="margin-top:16px">
+              <label class="field-label">Technical Comment</label>
+              <textarea name="technical_comment" rows="4" class="field-textarea">{{ user_review.technical_comment }}</textarea>
             </div>
             <div class="btn-row mt-16">
               <button type="submit" class="btn-primary">&#10003;&nbsp; Update Review</button>
@@ -567,7 +581,7 @@ form{
   background:var(--bg);border:1.5px solid var(--border);
   border-radius:8px;padding:11px 13px;
   font-size:14px;color:var(--text);font-family:var(--font-body);
-  outline:none;resize:vertical;min-height:80px;width:100%;
+  outline:none;resize:vertical;min-height:80px;width:auto;
   transition:border-color .2s,box-shadow .2s;
 }
 .field-textarea:focus{

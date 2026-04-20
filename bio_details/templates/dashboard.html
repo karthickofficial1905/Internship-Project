@@ -241,7 +241,7 @@
             <div class="legend-item"><span class="legend-dot halfday"></span>Half Day</div>
           </div>
         </div>
-        <div class="chart-container">
+        <div class="chart-container" style="margin-bottom:0px">
           <canvas id="attendanceChart" width="400" height="200"></canvas>
         </div>
       </div>
@@ -329,12 +329,13 @@
         </div>
       </div>
     {% endif %}
+
     {% if user.is_authenticated and user.member and user.member.role == 'hr' %}
       <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;width:100%;box-sizing:border-box;">
         <div class="chart-card" style="flex:0 0 300px;min-width:300px;">
           <div class="chart-header"><h3>Employee Status</h3><div class="chart-stats"><span class="total-items">Total: {{ total_employees }}</span></div></div>
           <div class="chart-with-stats">
-            <div class="chart-container" style="padding:50px;"><canvas id="employeeStatusChart" width="200" height="200"></canvas></div>
+            <div class="chart-container"><canvas id="employeeStatusChart" width="200" height="200"></canvas></div>
             <div class="chart-status">
               <div class="status-item active"><div class="status-dot"></div><div class="status-info"><div class="status-label">Active</div><div class="status-value">{{ active_employees|default:0 }}</div></div></div>
               <div class="status-item inactive"><div class="status-dot"></div><div class="status-info"><div class="status-label">Inactive</div><div class="status-value">{{ inactive_employees|default:0 }}</div></div></div>
@@ -366,6 +367,26 @@
         </div>
       </div>
 
+      <!-- Reviews Analytics Charts -->
+      <div class="pie" style="display:flex;gap:15px;margin-bottom:20px;width:100%;box-sizing:border-box;">
+        <div class="chart-card" style="flex:0 0 300px;min-width:300px;">
+          <div class="chart-header"><h3>Rating Distribution</h3><div class="chart-stats"><span class="total-items">Total: {{ total_reviews|default:0 }}</span></div></div>
+          <div class="chart-with-stats">
+            <div class="chart-container"><canvas id="reviewRatingChart" width="200" height="200"></canvas></div>
+            <div class="chart-status">
+              <div class="status-item" style="--status-color:#10b981"><div class="status-dot"></div><div class="status-info"><div class="status-label">★ 5</div><div class="status-value">{{ rating_5_count|default:0 }}</div></div></div>
+              <div class="status-item" style="--status-color:#3b82f6"><div class="status-dot"></div><div class="status-info"><div class="status-label">★ 4</div><div class="status-value">{{ rating_4_count|default:0 }}</div></div></div>
+              <div class="status-item" style="--status-color:#f59e0b"><div class="status-dot"></div><div class="status-info"><div class="status-label">★ 3</div><div class="status-value">{{ rating_3_count|default:0 }}</div></div></div>
+              <div class="status-item" style="--status-color:#ef4444"><div class="status-dot"></div><div class="status-info"><div class="status-label">★ 1-2</div><div class="status-value">{{ rating_low_count|default:0 }}</div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="analytics-card" style="flex:1;min-width:0;">
+          <div class="analytics-header"><h3>Reviews Monthly Trends</h3><div class="current-stats"><span class="stat-badge" style="background:#10b981;color:white">This Month: {{ current_month_reviews|default:0 }}</span><span class="stat-badge" style="background:#6b7280;color:white">Avg Rating: {{ overall_avg_rating|default:"—" }}</span></div></div>
+          <div class="chart-container-large"><canvas id="reviewMonthlyChart" width="400" height="200"></canvas></div>
+        </div>
+      </div>
+
       <!-- Recent Reviews Table -->
       <div class="rev-table-card">
         <div class="rev-table-header">
@@ -387,6 +408,7 @@
                 <th>Customer</th>
                 <th>Rating</th>
                 <th>Review</th>
+                <th>Technical Cmd</th>
                 <th>Date</th>
               </tr>
             </thead>
@@ -422,6 +444,11 @@
                 <td>
                   <div class="rev-comment-cell" title="{{ review.comment }}">
                     {{ review.comment|truncatechars:60 }}
+                  </div>
+                </td>
+                <td>
+                  <div class="rev-comment-cell" title="{{ review.technical_comment }}">
+                    {{ review.technical_comment|truncatechars:60 }}
                   </div>
                 </td>
                 <td class="rev-date-cell">{{ review.created_at|date:"d M Y" }}</td>
@@ -604,6 +631,29 @@
     }
   });
 
+  /* REVIEW CHARTS */
+  function createReviewRatingChart(){
+    const ctx=document.getElementById('reviewRatingChart');
+    if(!ctx) return;
+    const data = {
+      rating_5: {{ rating_5_count|default:0 }},
+      rating_4: {{ rating_4_count|default:0 }},
+      rating_3: {{ rating_3_count|default:0 }},
+      rating_low: {{ rating_low_count|default:0 }}
+    };
+    new Chart(ctx,{type:'pie',data:{labels:['★ 5','★ 4','★ 3','★ 1-2'],datasets:[{data:[data.rating_5,data.rating_4,data.rating_3,data.rating_low],backgroundColor:['#10b981','#3b82f6','#f59e0b','#ef4444'],borderColor:'#ffffff',borderWidth:3,hoverBorderWidth:4,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{padding:15,usePointStyle:true,pointStyle:'circle',font:{size:12,weight:'600'},color:'#374151'}},tooltip:{backgroundColor:'rgba(0,0,0,0.8)',titleColor:'#fff',bodyColor:'#fff',callbacks:{label:function(ctx){const v=ctx.parsed;const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return `${ctx.label}: ${v} (${t>0?((v/t)*100).toFixed(1):0}%)`;}}}}}})
+  }
+  function createReviewMonthlyChart(){
+    const ctx=document.getElementById('reviewMonthlyChart');
+    if(!ctx) return;
+    fetch('/get-review-monthly-data/')
+      .then(r=>r.json()).then(data=>{
+        if(data.success){
+          new Chart(ctx,{type:'line',data:{labels:data.months,datasets:[{label:'Reviews',data:data.review_counts,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.1)',borderWidth:3,fill:true,tension:0.4,pointBackgroundColor:'#10b981',pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{padding:20,usePointStyle:true,font:{size:12,weight:'600'}}},tooltip:{backgroundColor:'rgba(0,0,0,0.8)',titleColor:'#fff',bodyColor:'#fff'}},scales:{x:{grid:{display:false},ticks:{font:{weight:'600'}}},y:{beginAtZero:true,grid:{color:'#f1f5f9'},ticks:{font:{weight:'600'}}}},interaction:{intersect:false,mode:'index'}}});
+        }
+      }).catch(e=>console.error(e));
+  }
+
   function createAttendanceChart(){
     const ctx=document.getElementById('attendanceChart');
     if(!ctx) return null;
@@ -654,6 +704,7 @@
     window.attendanceChart=createAttendanceChart();
     createEmployeeStatusChart(cm,cy);createStockChart(cm,cy);createOrderStatusChart(cm,cy);createCustomerStatusChart(cm,cy);
     createEmployeeMonthlyChart(cm,cy);createProductMonthlyChart(cm,cy);createOrderMonthlyChart(cm,cy);createCustomerMonthlyChart(cm,cy);
+    createReviewRatingChart();createReviewMonthlyChart();
   });
 </script>
 
@@ -868,6 +919,12 @@
   .rev-empty-inner{display:flex;flex-direction:column;align-items:center;padding:48px 20px;gap:8px}
   .rev-empty-inner p{font-size:14px;color:var(--slate);margin:0}
 
+  /* Pagination */
+  .rev-pagination{display:flex;align-items:center;justify-content:center;gap:6px;padding:20px;border-top:1px solid var(--border)}
+  .rev-page-btn{font-family:var(--fh);font-size:13px;font-weight:600;border-radius:8px;border:1px solid var(--border);background:var(--white);color:var(--slate);cursor:pointer;transition:all .2s;min-width:36px;display:flex;align-items:center;justify-content:center}
+  .rev-page-btn:hover{border-color:var(--accent);color:var(--accent);background:#f8faff}
+  .rev-page-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+
   /* ── Responsive ── */
   @media(max-width:1200px){.dash-shell{margin-left:20px;margin-right:20px;margin-top:90px;margin-bottom:100px}}
   @media(max-width:1024px){
@@ -899,6 +956,9 @@
     .toast{min-width:auto;max-width:100%;padding:12px 14px}
   }
   @media(max-width:480px){
+    .chart-card{flex: 0 0 100px !important;
+      min-width: 0px !important;
+       }
     .pie{
       display: flex;
       gap: 15px;
