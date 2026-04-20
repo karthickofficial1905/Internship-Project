@@ -367,26 +367,6 @@
         </div>
       </div>
 
-      <!-- Reviews Analytics Charts -->
-      <div class="pie" style="display:flex;gap:15px;margin-bottom:20px;width:100%;box-sizing:border-box;">
-        <div class="chart-card" style="flex:0 0 300px;min-width:300px;">
-          <div class="chart-header"><h3>Rating Distribution</h3><div class="chart-stats"><span class="total-items">Total: {{ total_reviews|default:0 }}</span></div></div>
-          <div class="chart-with-stats">
-            <div class="chart-container"><canvas id="reviewRatingChart" width="200" height="200"></canvas></div>
-            <div class="chart-status">
-              <div class="status-item" style="--status-color:#10b981"><div class="status-dot"></div><div class="status-info"><div class="status-label">★ 5</div><div class="status-value">{{ rating_5_count|default:0 }}</div></div></div>
-              <div class="status-item" style="--status-color:#3b82f6"><div class="status-dot"></div><div class="status-info"><div class="status-label">★ 4</div><div class="status-value">{{ rating_4_count|default:0 }}</div></div></div>
-              <div class="status-item" style="--status-color:#f59e0b"><div class="status-dot"></div><div class="status-info"><div class="status-label">★ 3</div><div class="status-value">{{ rating_3_count|default:0 }}</div></div></div>
-              <div class="status-item" style="--status-color:#ef4444"><div class="status-dot"></div><div class="status-info"><div class="status-label">★ 1-2</div><div class="status-value">{{ rating_low_count|default:0 }}</div></div></div>
-            </div>
-          </div>
-        </div>
-        <div class="analytics-card" style="flex:1;min-width:0;">
-          <div class="analytics-header"><h3>Reviews Monthly Trends</h3><div class="current-stats"><span class="stat-badge" style="background:#10b981;color:white">This Month: {{ current_month_reviews|default:0 }}</span><span class="stat-badge" style="background:#6b7280;color:white">Avg Rating: {{ overall_avg_rating|default:"—" }}</span></div></div>
-          <div class="chart-container-large"><canvas id="reviewMonthlyChart" width="400" height="200"></canvas></div>
-        </div>
-      </div>
-
       <!-- Recent Reviews Table -->
       <div class="rev-table-card">
         <div class="rev-table-header">
@@ -487,6 +467,26 @@
           {% endif %}
         </div>
         {% endif %}
+      </div>
+
+      <!-- Reviews Analytics Charts -->
+      <div class="pie" style="display:flex;gap:15px;margin-top:20px;width:100%;box-sizing:border-box;">
+        <div class="chart-card" style="flex:0 0 300px;min-width:300px;">
+          <div class="chart-header"><h3>Rating Distribution</h3><div class="chart-stats"><span class="total-items">Total: {{ total_reviews|default:0 }}</span></div></div>
+          <div class="chart-with-stats">
+            <div class="chart-container"><canvas id="reviewRatingChart" width="200" height="200"></canvas></div>
+            <div class="chart-status">
+              <div class="status-item" style="--status-color:#10b981"><div class="status-dot"></div><div class="status-info"><div class="status-label">★ 5</div><div class="status-value">{{ rating_5_count|default:0 }}</div></div></div>
+              <div class="status-item" style="--status-color:#3b82f6"><div class="status-dot"></div><div class="status-info"><div class="status-label">★ 4</div><div class="status-value">{{ rating_4_count|default:0 }}</div></div></div>
+              <div class="status-item" style="--status-color:#f59e0b"><div class="status-dot"></div><div class="status-info"><div class="status-label">★ 3</div><div class="status-value">{{ rating_3_count|default:0 }}</div></div></div>
+              <div class="status-item" style="--status-color:#ef4444"><div class="status-dot"></div><div class="status-info"><div class="status-label">★ 1-2</div><div class="status-value">{{ rating_low_count|default:0 }}</div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="analytics-card" style="flex:1;min-width:0;">
+          <div class="analytics-header"><h3>Reviews Monthly Trends</h3><div class="current-stats"><span class="stat-badge" style="background:#10b981;color:white">This Month: {{ current_month_reviews|default:0 }}</span><span class="stat-badge" style="background:#6b7280;color:white">Avg Rating: {{ overall_avg_rating|default:"—" }}</span></div></div>
+          <div class="chart-container-large"><canvas id="reviewMonthlyChart" width="400" height="200"></canvas></div>
+        </div>
       </div>
 
     </div><!-- /reviews-dashboard-section -->
