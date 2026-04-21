@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Member, Customer, Product, Cart, CartItem, Order, OrderItem, Invoice, InvoiceItem, Attendance, LeaveApplication, ProductReview, TechnicalIssueReply
+from .models import Member, Customer, Product, Cart, CartItem, Order, OrderItem, Invoice, InvoiceItem, Attendance, LeaveApplication, ProductReview,  SupportTicket, SupportTicketReply
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -888,7 +888,6 @@ def add_review(request, product_id):
             product = Product.objects.get(product_id=product_id)
             rating = int(request.POST.get('rating'))
             comment = request.POST.get('comment')
-            technical_comment = request.POST.get('technical_comment', '')
             
             # Check if user already reviewed this product
             existing_review = ProductReview.objects.filter(product=product, user=request.user).first()
@@ -897,7 +896,6 @@ def add_review(request, product_id):
                 # Update existing review
                 existing_review.rating = rating
                 existing_review.comment = comment
-                existing_review.technical_comment = technical_comment
                 existing_review.save()
                 messages.success(request, 'Your review has been updated!')
             else:
@@ -907,7 +905,6 @@ def add_review(request, product_id):
                     user=request.user,
                     rating=rating,
                     comment=comment,
-                    technical_comment=technical_comment
                 )
                 messages.success(request, 'Thank you for your review!')
             
@@ -4010,8 +4007,9 @@ def get_review_monthly_data(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-def technical_issues_dashboard(request):
-    """Dashboard for viewing and replying to technical issues"""
+
+def admin_support_dashboard(request):
+    """Admin dashboard for managing support tickets"""
     if not request.user.is_authenticated:
         return redirect('bio_details:login')
     
@@ -4019,21 +4017,26 @@ def technical_issues_dashboard(request):
         messages.error(request, "Access denied. Admin privileges required.")
         return redirect('bio_details:dashboard')
     
-    # Get all reviews with technical comments
-    technical_issues = ProductReview.objects.filter(
-        technical_comment__isnull=False,
-        technical_comment__gt=''
-    ).select_related('user', 'product').prefetch_related('technical_reply').order_by('-created_at')
+    from .models import SupportTicket
+    from django.contrib.auth.models import User
     
-    context = {
-        'technical_issues': technical_issues
-    }
+    tickets = SupportTicket.objects.select_related('user', 'product', 'order').prefetch_related('replies').order_by('-created_at')
     
-    return render(request, 'technical_issues_dashboard.html', context)
+    # Get all employees for assignment dropdown
+    employees = User.objects.filter(
+        member__isnull=False,
+        member__account_status=True,
+        member__role='employee'
+    ).select_related('member').order_by('username')
+    
+    return render(request, 'admin_support_dashboard.html', {
+        'tickets': tickets,
+        'employees': employees
+    })
 
 
-def reply_technical_issue(request, review_id):
-    """Reply to a technical issue"""
+def reply_support_ticket(request, ticket_id):
+    """Handle support ticket replies"""
     if not request.user.is_authenticated:
         return redirect('bio_details:login')
     
@@ -4043,34 +4046,303 @@ def reply_technical_issue(request, review_id):
     
     if request.method == 'POST':
         try:
-            review = ProductReview.objects.get(id=review_id)
+            from .models import SupportTicket, SupportTicketReply
+            from django.contrib.auth.models import User
+            
+            ticket = SupportTicket.objects.get(ticket_id=ticket_id)
             reply_message = request.POST.get('reply_message')
+            status = request.POST.get('status')
+            assigned_to_id = request.POST.get('assigned_to')
             
             if not reply_message:
                 messages.error(request, 'Reply message is required!')
-                return redirect('bio_details:technical_issues_dashboard')
+                return redirect('bio_details:admin_support_dashboard')
             
-            # Create or update reply
-            reply, created = TechnicalIssueReply.objects.get_or_create(
-                review=review,
-                defaults={
-                    'admin_user': request.user,
-                    'reply_message': reply_message
-                }
+            # Create reply
+            SupportTicketReply.objects.create(
+                ticket=ticket,
+                user=request.user,
+                message=reply_message,
+                is_admin_reply=True
             )
             
-            if not created:
-                reply.reply_message = reply_message
-                reply.admin_user = request.user
-                reply.save()
+            # Update ticket status if provided
+            if status:
+                ticket.status = status
             
-            messages.success(request, f'Reply sent to {review.user.username} successfully!')
+            # Update assigned employee if provided
+            if assigned_to_id:
+                try:
+                    assigned_employee = User.objects.get(id=assigned_to_id)
+                    ticket.assigned_to = assigned_employee
+                except User.DoesNotExist:
+                    pass
             
-        except ProductReview.DoesNotExist:
-            messages.error(request, 'Technical issue not found!')
+            ticket.save()
+            
+            messages.success(request, f'Reply sent to {ticket.user.username} successfully!')
+            
+        except SupportTicket.DoesNotExist:
+            messages.error(request, 'Support ticket not found!')
         except Exception as e:
             messages.error(request, f'Error sending reply: {str(e)}')
     
-    return redirect('bio_details:technical_issues_dashboard')
+    return redirect('bio_details:admin_support_dashboard')
 
 
+def customer_support_center(request):
+    """Customer support center dashboard"""
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    # Check if user is a customer
+    try:
+        customer = Customer.objects.get(user=request.user)
+    except Customer.DoesNotExist:
+        messages.error(request, 'Access denied. Customer account required.')
+        return redirect('bio_details:login')
+    
+    # Get customer's purchased products (orders with invoices)
+    purchased_products = Order.objects.filter(
+        user=request.user,
+        invoice__isnull=False
+    ).select_related('invoice').prefetch_related('items').order_by('-created_at')
+    
+    # Get customer's support tickets
+    from .models import SupportTicket
+    user_tickets = SupportTicket.objects.filter(
+        user=request.user
+    ).select_related('product', 'order').prefetch_related('replies').order_by('-created_at')
+    
+    context = {
+        'purchased_products': purchased_products,
+        'user_tickets': user_tickets
+    }
+    
+    return render(request, 'support.html', context)
+
+
+def create_support_ticket(request):
+    """Create a new support ticket"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'})
+    
+    # Check if user is a customer
+    try:
+        Customer.objects.get(user=request.user)
+    except Customer.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Customer account required'})
+    
+    if request.method == 'POST':
+        try:
+            from .models import SupportTicket
+            
+            product_name = request.POST.get('product_name')
+            order_id = request.POST.get('order_id')
+            subject = request.POST.get('subject')
+            description = request.POST.get('description')
+            priority = request.POST.get('priority', 'medium')
+            
+            if not all([product_name, order_id, subject, description]):
+                return JsonResponse({'success': False, 'error': 'All required fields must be filled'})
+            
+            # Get the product and order
+            try:
+                product = Product.objects.get(name=product_name)
+                order = Order.objects.get(order_id=order_id, user=request.user)
+            except (Product.DoesNotExist, Order.DoesNotExist):
+                return JsonResponse({'success': False, 'error': 'Invalid product or order'})
+            
+            # Create support ticket
+            ticket = SupportTicket.objects.create(
+                user=request.user,
+                product=product,
+                order=order,
+                subject=subject,
+                description=description,
+                priority=priority,
+                image=request.FILES.get('image')
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'ticket_id': ticket.ticket_id,
+                'message': 'Support ticket created successfully'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+def get_ticket_details(request, ticket_id):
+    """Get support ticket details for modal"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'})
+    
+    try:
+        from .models import SupportTicket
+        ticket = SupportTicket.objects.get(
+            ticket_id=ticket_id,
+            user=request.user
+        )
+        
+        # Get replies
+        replies = []
+        for reply in ticket.replies.all().order_by('created_at'):
+            replies.append({
+                'message': reply.message,
+                'is_admin_reply': reply.is_admin_reply,
+                'created_at': reply.created_at.strftime('%d %b %Y, %H:%M')
+            })
+        
+        ticket_data = {
+            'ticket_id': ticket.ticket_id,
+            'subject': ticket.subject,
+            'description': ticket.description,
+            'priority': ticket.priority,
+            'status': ticket.status,
+            'status_display': ticket.get_status_display(),
+            'product_name': ticket.product.name,
+            'order_id': ticket.order.order_id,
+            'created_at': ticket.created_at.strftime('%d %b %Y, %H:%M'),
+            'image': ticket.image.url if ticket.image else None
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'ticket': ticket_data,
+            'replies': replies
+        })
+        
+    except SupportTicket.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Ticket not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+
+def emp_support(request):
+    """Employee support dashboard - shows only assigned tickets"""
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    # Check if user is an employee
+    try:
+        member = Member.objects.get(user=request.user, role='employee')
+    except Member.DoesNotExist:
+        messages.error(request, 'Access denied. Employee account required.')
+        return redirect('bio_details:login')
+    
+    from .models import SupportTicket
+    
+    # Get tickets assigned to this employee
+    tickets = SupportTicket.objects.filter(
+        assigned_to=request.user
+    ).select_related('user', 'product', 'order').prefetch_related('replies').order_by('-created_at')
+    
+    return render(request, 'emp_support.html', {
+        'tickets': tickets
+    })
+
+
+def user_reply_ticket(request, ticket_id):
+    """Handle user replies to support tickets"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'})
+    
+    # Check if user is a customer
+    try:
+        Customer.objects.get(user=request.user)
+    except Customer.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Customer account required'})
+    
+    if request.method == 'POST':
+        try:
+            import json
+            from .models import SupportTicket, SupportTicketReply
+            
+            data = json.loads(request.body)
+            message = data.get('message', '').strip()
+            
+            if not message:
+                return JsonResponse({'success': False, 'error': 'Message is required'})
+            
+            # Get ticket belonging to this user
+            ticket = SupportTicket.objects.get(
+                ticket_id=ticket_id,
+                user=request.user
+            )
+            
+            # Create user reply
+            SupportTicketReply.objects.create(
+                ticket=ticket,
+                user=request.user,
+                message=message,
+                is_admin_reply=False
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Reply sent successfully'
+            })
+            
+        except SupportTicket.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Ticket not found'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+def employee_reply_ticket(request, ticket_id):
+    """Handle employee replies to support tickets"""
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    # Check if user is an employee
+    try:
+        member = Member.objects.get(user=request.user, role='employee')
+    except Member.DoesNotExist:
+        messages.error(request, 'Access denied. Employee account required.')
+        return redirect('bio_details:login')
+    
+    if request.method == 'POST':
+        try:
+            from .models import SupportTicket, SupportTicketReply
+            
+            # Get ticket assigned to this employee
+            ticket = SupportTicket.objects.get(
+                ticket_id=ticket_id,
+                assigned_to=request.user
+            )
+            
+            reply_message = request.POST.get('reply_message')
+            status = request.POST.get('status')
+            
+            if not reply_message:
+                messages.error(request, 'Reply message is required!')
+                return redirect('bio_details:emp_support')
+            
+            # Create reply
+            SupportTicketReply.objects.create(
+                ticket=ticket,
+                user=request.user,
+                message=reply_message,
+                is_admin_reply=True  # Employee replies are treated as admin replies
+            )
+            
+            # Update ticket status if provided (only allow in_progress and complete)
+            if status and status in ['in_progress', 'complete']:
+                ticket.status = status
+                ticket.save()
+            
+            messages.success(request, f'Reply sent to {ticket.user.username} successfully!')
+            
+        except SupportTicket.DoesNotExist:
+            messages.error(request, 'Support ticket not found or not assigned to you!')
+        except Exception as e:
+            messages.error(request, f'Error sending reply: {str(e)}')
+    
+    return redirect('bio_details:emp_support')

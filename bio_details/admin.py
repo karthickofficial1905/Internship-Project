@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Member,Category,Product,Brand,Cart,CartItem,Order,OrderItem,Invoice,InvoiceItem,Currency,Country,Tax,Attendance,LeaveApplication,Customer,ProductReview,TechnicalIssueReply
+from .models import Member,Category,Product,Brand,Cart,CartItem,Order,OrderItem,Invoice,InvoiceItem,Currency,Country,Tax,Attendance,LeaveApplication,Customer,ProductReview,SupportTicket,SupportTicketReply
 
 admin.site.register(Member)
 admin.site.register(Category)
@@ -15,7 +15,7 @@ admin.site.register(Currency)
 admin.site.register(Country)
 admin.site.register(Tax)
 admin.site.register(Customer)
-admin.site.register(TechnicalIssueReply)
+
 
 
 @admin.register(Attendance)
@@ -42,5 +42,24 @@ class ProductReviewAdmin(admin.ModelAdmin):
     list_display = ['product', 'user', 'rating', 'created_at']
     list_filter = ['rating', 'created_at', 'product']
     search_fields = ['product__name', 'user__username', 'comment']
+    date_hierarchy = 'created_at'
+    ordering = ['-created_at']
+
+
+@admin.register(SupportTicket)
+class SupportTicketAdmin(admin.ModelAdmin):
+    list_display = ['ticket_id', 'user', 'product', 'subject', 'priority', 'status', 'created_at']
+    list_filter = ['priority', 'status', 'created_at', 'product']
+    search_fields = ['ticket_id', 'user__username', 'subject', 'description']
+    date_hierarchy = 'created_at'
+    ordering = ['-created_at']
+    readonly_fields = ['ticket_id', 'created_at', 'updated_at']
+
+
+@admin.register(SupportTicketReply)
+class SupportTicketReplyAdmin(admin.ModelAdmin):
+    list_display = ['ticket', 'user', 'is_admin_reply', 'created_at']
+    list_filter = ['is_admin_reply', 'created_at']
+    search_fields = ['ticket__ticket_id', 'user__username', 'message']
     date_hierarchy = 'created_at'
     ordering = ['-created_at']

@@ -652,7 +652,6 @@ class ProductReview(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     comment = models.TextField()
-    technical_comment = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
@@ -664,14 +663,64 @@ class ProductReview(models.Model):
         ordering = ['-created_at']
 
 
-class TechnicalIssueReply(models.Model):
-    review = models.OneToOneField(ProductReview, on_delete=models.CASCADE, related_name='technical_reply')
-    admin_user = models.ForeignKey(User, on_delete=models.CASCADE)
-    reply_message = models.TextField()
+
+
+class SupportTicket(models.Model):
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('in_progress', 'In Progress'),
+        ('complete', 'Complete'),
+    ]
+    
+    ticket_id = models.CharField(max_length=20, unique=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='support_tickets')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='support_tickets')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='support_tickets', null=True, blank=True)
+    subject = models.CharField(max_length=200)
+    description = models.TextField()
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='open')
+    image = models.ImageField(upload_to='support_images/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tickets')
+    
+    def save(self, *args, **kwargs):
+        if not self.ticket_id:
+            last_ticket = SupportTicket.objects.order_by('-id').first()
+            if last_ticket and last_ticket.ticket_id:
+                last_id = int(last_ticket.ticket_id.replace('TKT', ''))
+                new_id = last_id + 1
+            else:
+                new_id = 1
+            self.ticket_id = f"TKT{new_id:03d}"
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.ticket_id} - {self.subject}"
+    
+    class Meta:
+        db_table = 'support_ticket'
+        ordering = ['-created_at']
+
+
+class SupportTicketReply(models.Model):
+    ticket = models.ForeignKey(SupportTicket, on_delete=models.CASCADE, related_name='replies')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    message = models.TextField()
+    is_admin_reply = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
-        return f"Reply to {self.review.user.username}'s technical issue"
+        return f"Reply to {self.ticket.ticket_id} by {self.user.username}"
     
     class Meta:
-        db_table = 'technical_issue_reply'
+        db_table = 'support_ticket_reply'
+        ordering = ['created_at']

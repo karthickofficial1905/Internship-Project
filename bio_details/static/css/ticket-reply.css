@@ -1,0 +1,103 @@
+/* Ticket Detail Styles */
+.ticket-info {
+  margin-bottom: 20px;
+}
+
+.ticket-meta {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  align-items: center;
+}
+
+.ticket-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.ticket-date {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.ticket-desc h4 {
+  margin: 0 0 8px 0;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.ticket-desc p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.5;
+}
+
+/* Message Thread */
+.message-thread {
+  margin-top: 20px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 20px;
+}
+
+.message-thread h4 {
+  margin: 0 0 15px 0;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.message {
+  margin-bottom: 15px;
+  padding: 12px;
+  border-radius: 8px;
+  border-left: 3px solid;
+}
+
+.user-msg {
+  background: #f8fafc;
+  border-left-color: #3b82f6;
+}
+
+.admin-msg {
+  background: #fef7f0;
+  border-left-color: #f59e0b;
+}
+
+.msg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.msg-header strong {
+  color: #1e293b;
+  font-size: 13px;
+}
+
+.msg-time {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.msg-content {
+  color: #475569;
+  line-height: 1.4;
+  font-size: 14px;
+}
+
+/* Reply Form */
+.reply-form {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 15px;
+}
+
+.reply-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}

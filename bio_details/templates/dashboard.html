@@ -361,10 +361,6 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             Avg {{ overall_avg_rating|default:"—" }} / 5
           </div>
-          <a href="{% url 'bio_details:technical_issues_dashboard' %}" class="rev-chip" style="background:#fef2f2;color:#dc2626;text-decoration:none;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            Technical Issues
-          </a>
         </div>
       </div>
 
@@ -389,7 +385,6 @@
                 <th>Customer</th>
                 <th>Rating</th>
                 <th>Review</th>
-                <th>Technical Cmd</th>
                 <th>Date</th>
               </tr>
             </thead>
@@ -425,13 +420,6 @@
                 <td>
                   <div class="rev-comment-cell" title="{{ review.comment }}">
                     {{ review.comment|truncatechars:60 }}
-                  </div>
-                </td>
-                <td>
-                  <div class="rev-comment-cell" title="{{ review.technical_comment }}">
-                    {% if review.technical_comment %}
-                    {{ review.technical_comment|truncatechars:60 }}
-                    {% else %}---{% endif %}
                   </div>
                 </td>
                 <td class="rev-date-cell">{{ review.created_at|date:"d M Y" }}</td>
