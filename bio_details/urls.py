@@ -69,4 +69,6 @@ urlpatterns = [
     path('leave-action/', views.leave_action, name='leave_action'),
     path('add-review/<str:product_id>/', views.add_review, name='add_review'),
     path('delete-review/<str:product_id>/', views.delete_review, name='delete_review'),
+    path('technical-issues/', views.technical_issues_dashboard, name='technical_issues_dashboard'),
+    path('reply-technical-issue/<int:review_id>/', views.reply_technical_issue, name='reply_technical_issue'),
 ]

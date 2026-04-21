@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Member, Customer, Product, Cart, CartItem, Order, OrderItem, Invoice, InvoiceItem, Attendance, LeaveApplication, ProductReview
+from .models import Member, Customer, Product, Cart, CartItem, Order, OrderItem, Invoice, InvoiceItem, Attendance, LeaveApplication, ProductReview, TechnicalIssueReply
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -4009,5 +4009,68 @@ def get_review_monthly_data(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
+def technical_issues_dashboard(request):
+    """Dashboard for viewing and replying to technical issues"""
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    # Get all reviews with technical comments
+    technical_issues = ProductReview.objects.filter(
+        technical_comment__isnull=False,
+        technical_comment__gt=''
+    ).select_related('user', 'product').prefetch_related('technical_reply').order_by('-created_at')
+    
+    context = {
+        'technical_issues': technical_issues
+    }
+    
+    return render(request, 'technical_issues_dashboard.html', context)
+
+
+def reply_technical_issue(request, review_id):
+    """Reply to a technical issue"""
+    if not request.user.is_authenticated:
+        return redirect('bio_details:login')
+    
+    if not request.user.is_superuser:
+        messages.error(request, "Access denied. Admin privileges required.")
+        return redirect('bio_details:dashboard')
+    
+    if request.method == 'POST':
+        try:
+            review = ProductReview.objects.get(id=review_id)
+            reply_message = request.POST.get('reply_message')
+            
+            if not reply_message:
+                messages.error(request, 'Reply message is required!')
+                return redirect('bio_details:technical_issues_dashboard')
+            
+            # Create or update reply
+            reply, created = TechnicalIssueReply.objects.get_or_create(
+                review=review,
+                defaults={
+                    'admin_user': request.user,
+                    'reply_message': reply_message
+                }
+            )
+            
+            if not created:
+                reply.reply_message = reply_message
+                reply.admin_user = request.user
+                reply.save()
+            
+            messages.success(request, f'Reply sent to {review.user.username} successfully!')
+            
+        except ProductReview.DoesNotExist:
+            messages.error(request, 'Technical issue not found!')
+        except Exception as e:
+            messages.error(request, f'Error sending reply: {str(e)}')
+    
+    return redirect('bio_details:technical_issues_dashboard')
 
 

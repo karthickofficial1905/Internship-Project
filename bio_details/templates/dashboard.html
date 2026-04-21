@@ -214,7 +214,6 @@
 
   </div><!-- /stat-grid -->
 
-  {% if user.is_authenticated and user.member and user.member.role == 'hr' %}
   <div class="attendance-section">
     <div class="section-header">
       <h2 class="section-title">Attendance Overview</h2>
@@ -261,7 +260,6 @@
       </div>
     </div>
   </div>
-  {% endif %}
 
   <div class="analytics-section" style="width:100%;box-sizing:border-box;">
     <div class="section-header">
@@ -280,6 +278,7 @@
       </div>
     </div>
     {% if user.is_superuser %}
+
       <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;width:100%;box-sizing:border-box;">
         <div class="chart-card" style="flex:0 0 300px;min-width:300px;">
           <div class="chart-header"><h3>Customer Status</h3><div class="chart-stats"><span class="total-items">Total: {{ total_customers }}</span></div></div>
@@ -330,7 +329,6 @@
       </div>
     {% endif %}
 
-    {% if user.is_authenticated and user.member and user.member.role == 'hr' %}
       <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;width:100%;box-sizing:border-box;">
         <div class="chart-card" style="flex:0 0 300px;min-width:300px;">
           <div class="chart-header"><h3>Employee Status</h3><div class="chart-stats"><span class="total-items">Total: {{ total_employees }}</span></div></div>
@@ -347,7 +345,6 @@
           <div class="chart-container-large"><canvas id="employeeMonthlyChart" width="400" height="200"></canvas></div>
         </div>
       </div>
-    {% endif %}
   </div>
 
   {% if user.is_superuser %}
@@ -364,6 +361,10 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
             Avg {{ overall_avg_rating|default:"—" }} / 5
           </div>
+          <a href="{% url 'bio_details:technical_issues_dashboard' %}" class="rev-chip" style="background:#fef2f2;color:#dc2626;text-decoration:none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Technical Issues
+          </a>
         </div>
       </div>
 
@@ -428,7 +429,9 @@
                 </td>
                 <td>
                   <div class="rev-comment-cell" title="{{ review.technical_comment }}">
+                    {% if review.technical_comment %}
                     {{ review.technical_comment|truncatechars:60 }}
+                    {% else %}---{% endif %}
                   </div>
                 </td>
                 <td class="rev-date-cell">{{ review.created_at|date:"d M Y" }}</td>
@@ -830,7 +833,7 @@
     PRODUCT REVIEWS SECTION STYLES
   ══════════════════════════════════════ */
   .reviews-dashboard-section{margin-bottom:32px}
-
+  .rev-chip:hover{color: red!important;}
   /* Summary chips */
   .rev-summary-chips{display:flex;gap:10px}
   .rev-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;font-family:var(--fh);font-size:12px;font-weight:700;letter-spacing:.04em}

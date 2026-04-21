@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Member,Category,Product,Brand,Cart,CartItem,Order,OrderItem,Invoice,InvoiceItem,Currency,Country,Tax,Attendance,LeaveApplication,Customer,ProductReview
+from .models import Member,Category,Product,Brand,Cart,CartItem,Order,OrderItem,Invoice,InvoiceItem,Currency,Country,Tax,Attendance,LeaveApplication,Customer,ProductReview,TechnicalIssueReply
 
 admin.site.register(Member)
 admin.site.register(Category)
@@ -15,6 +15,7 @@ admin.site.register(Currency)
 admin.site.register(Country)
 admin.site.register(Tax)
 admin.site.register(Customer)
+admin.site.register(TechnicalIssueReply)
 
 
 @admin.register(Attendance)

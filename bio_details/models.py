@@ -662,3 +662,16 @@ class ProductReview(models.Model):
         db_table = 'product_review'
         unique_together = ('product', 'user')
         ordering = ['-created_at']
+
+
+class TechnicalIssueReply(models.Model):
+    review = models.OneToOneField(ProductReview, on_delete=models.CASCADE, related_name='technical_reply')
+    admin_user = models.ForeignKey(User, on_delete=models.CASCADE)
+    reply_message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Reply to {self.review.user.username}'s technical issue"
+    
+    class Meta:
+        db_table = 'technical_issue_reply'

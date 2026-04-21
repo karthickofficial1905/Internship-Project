@@ -1,0 +1,328 @@
+{% extends "main.html" %}
+{% block content %}
+{% load static %}
+
+<div class="orders-wrapper">
+
+  <!-- ══ PAGE HEADER ══ -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" height="26px" viewBox="0 0 24 24" width="26px" fill="white">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+        </svg>
+      </div>
+      <div>
+        <p class="header-eyebrow">Support</p>
+        <h1 class="header-title">Technical Issues</h1>
+      </div>
+    </div>
+    <div class="header-right">
+      <a href="{% url 'bio_details:dashboard' %}" class="back-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to Dashboard
+      </a>
+      <div class="order-stat">
+        <span class="stat-lbl">Total Issues :</span>
+        <span class="stat-num">{{ technical_issues|length }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ISSUES LIST ══ -->
+  {% if technical_issues %}
+    {% for issue in technical_issues %}
+    <div class="issue-card">
+
+      <!-- Card Top Bar -->
+      <div class="issue-card-header">
+        <div class="customer-block">
+          <div class="customer-avatar">{{ issue.user.username|first|upper }}</div>
+          <div class="customer-info">
+            <div class="customer-name">{{ issue.user.username }}</div>
+            <div class="customer-email">{{ issue.user.email }}</div>
+          </div>
+        </div>
+        <div class="issue-meta-right">
+          <div class="issue-product-chip">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/></svg>
+            {{ issue.product.name }}
+          </div>
+          <div class="issue-stars">
+            {% for i in "12345" %}
+              <span class="istar {% if issue.rating >= i|add:0 %}filled{% endif %}">★</span>
+            {% endfor %}
+            <span class="issue-rating-num">{{ issue.rating }}/5</span>
+          </div>
+          <div class="issue-date">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            {{ issue.created_at|date:"d M Y, H:i" }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Issue Content -->
+      <div class="issue-body">
+        <div class="issue-report-box">
+          <div class="issue-report-label">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Technical Issue Reported
+          </div>
+          <p class="issue-report-text">{{ issue.technical_comment }}</p>
+        </div>
+      </div>
+
+      <!-- Reply Section -->
+      <div class="reply-section">
+        {% if issue.technical_reply %}
+        <div class="existing-reply-box">
+          <div class="existing-reply-label">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 00-4-4H4"/></svg>
+            Your Reply
+          </div>
+          <p class="existing-reply-text">{{ issue.technical_reply.reply_message }}</p>
+          <div class="reply-meta-date">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Replied on {{ issue.technical_reply.created_at|date:"d M Y, H:i" }}
+          </div>
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{% url 'bio_details:reply_technical_issue' issue.id %}" class="reply-form">
+          {% csrf_token %}
+          <div class="reply-form-label">
+            {% if issue.technical_reply %}Update Reply{% else %}Write a Reply{% endif %}
+          </div>
+          <textarea
+            name="reply_message"
+            class="reply-textarea"
+            placeholder="Type your reply to help resolve this technical issue..."
+            required
+          >{% if issue.technical_reply %}{{ issue.technical_reply.reply_message }}{% endif %}</textarea>
+          <button type="submit" class="reply-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            {% if issue.technical_reply %}Update Reply{% else %}Send Reply{% endif %}
+          </button>
+        </form>
+      </div>
+
+    </div>
+    {% endfor %}
+
+  {% else %}
+    <div class="empty-card">
+      <div class="empty-inner">
+        <div class="empty-icon-wrap">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        </div>
+        <h3 class="empty-title">No Technical Issues</h3>
+        <p class="empty-sub">There are currently no technical issues reported by customers.</p>
+      </div>
+    </div>
+  {% endif %}
+
+</div><!-- /.orders-wrapper -->
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+  var wrapper = document.querySelector(".orders-wrapper");
+  var svg1 = document.querySelector(".svg1");
+  var svg3 = document.querySelector(".svg3");
+  var mb2  = document.querySelector(".menu-bar2");
+  if(svg1) svg1.addEventListener("click", function(){ if(mb2)mb2.classList.remove('active'); wrapper.classList.remove("shifted"); });
+  if(svg3) svg3.addEventListener("click", function(){ if(mb2)mb2.classList.add('active'); wrapper.classList.add("shifted"); });
+});
+</script>
+
+<style>
+:root{
+  --navy:#1e3a8a;
+  --blue:#1a47a0;
+  --blue-lt:#e8edf8;
+  --accent:#2563eb;
+  --green:#059669;
+  --amber:#d97706;
+  --red:#dc2626;
+  --slate:#64748b;
+  --border:#e2e8f0;
+  --bg:#f1f5fb;
+  --bg2:#f8fafc;
+  --white:#ffffff;
+  --text:#0f172a;
+  --text2:#475569;
+  --shadow:0 4px 24px rgba(15,37,87,0.09);
+  --fn:'DM Sans',system-ui,sans-serif;
+  --fh:'Syne',system-ui,sans-serif;
+  --r:14px;
+}
+
+.orders-wrapper{
+  font-family:var(--fn);
+  color:var(--text);
+  margin:120px 40px 120px 360px;
+  transition:margin-left .3s ease;
+}
+.orders-wrapper.shifted{ margin-left:90px; }
+
+/* ── Header ── */
+.page-header{
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(135deg,#002560 0%,#1d4ed8 100%);
+  border-radius:16px;padding:26px 30px;margin-bottom:22px;
+  box-shadow:0 8px 32px rgba(15,37,87,.22);flex-wrap:wrap;gap:14px;
+}
+.header-left{display:flex;align-items:center;gap:16px;}
+.header-icon-wrap{
+  width:48px;height:48px;background:rgba(255,255,255,.15);
+  border-radius:12px;display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(4px);
+}
+.header-eyebrow{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.55);margin:0 0 3px;}
+.header-title{font-family:var(--fh);font-size:24px;font-weight:800;color:#fff;margin:0;letter-spacing:-.4px;}
+.header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.back-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  background:rgba(255,255,255,.15);color:#fff;
+  border:1px solid rgba(255,255,255,.25);border-radius:9px;
+  padding:9px 16px;font-family:var(--fh);font-size:12px;font-weight:700;
+  text-decoration:none;transition:background .2s;white-space:nowrap;
+}
+.back-btn:hover{background:rgba(255,255,255,.26);color:#fff;}
+.order-stat{
+  display:flex;gap:8px;align-items:center;
+  background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);
+  border-radius:10px;padding:9px 14px;
+}
+.stat-num{font-family:var(--fh);font-size:15px;font-weight:800;color:#fff;}
+.stat-lbl{font-size:12px;color:rgba(255,255,255,.6);}
+
+/* ── Issue Card ── */
+.issue-card{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);
+  margin-bottom:18px;transition:box-shadow .2s;
+}
+.issue-card:hover{box-shadow:0 8px 32px rgba(15,37,87,.13);}
+
+/* Card Header */
+.issue-card-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 22px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;
+  background:var(--bg2);
+}
+.customer-block{display:flex;align-items:center;gap:12px;}
+.customer-avatar{
+  width:42px;height:42px;border-radius:50%;
+  background:linear-gradient(135deg,var(--navy),var(--accent));
+  color:#fff;font-family:var(--fh);font-size:16px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.customer-name{font-family:var(--fh);font-size:14px;font-weight:700;color:var(--text);}
+.customer-email{font-size:12px;color:var(--slate);margin-top:2px;}
+
+.issue-meta-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.issue-product-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--blue-lt);color:var(--navy);
+  padding:5px 12px;border-radius:20px;
+  font-size:12px;font-weight:600;
+}
+.issue-stars{display:flex;align-items:center;gap:2px;}
+.istar{font-size:15px;color:#e2e8f0;}
+.istar.filled{color:#f59e0b;}
+.issue-rating-num{font-size:12px;font-weight:600;color:var(--slate);margin-left:4px;}
+.issue-date{
+  display:flex;align-items:center;gap:5px;
+  font-size:12px;color:var(--slate);white-space:nowrap;
+}
+
+/* Issue Body */
+.issue-body{padding:18px 22px;}
+.issue-report-box{
+  background:#fff5f5;border:1px solid #fecaca;
+  border-left:4px solid var(--red);
+  border-radius:10px;padding:16px 18px;
+}
+.issue-report-label{
+  display:flex;align-items:center;gap:6px;
+  font-family:var(--fh);font-size:11px;font-weight:800;
+  letter-spacing:.08em;text-transform:uppercase;
+  color:var(--red);margin-bottom:10px;
+}
+.issue-report-text{font-size:14px;color:var(--text2);line-height:1.7;margin:0;}
+
+/* Reply Section */
+.reply-section{
+  border-top:1px solid var(--border);
+  padding:18px 22px;background:var(--bg2);
+}
+.existing-reply-box{
+  background:#f0f9ff;border:1px solid #bae6fd;
+  border-left:4px solid #0ea5e9;
+  border-radius:10px;padding:16px 18px;margin-bottom:16px;
+}
+.existing-reply-label{
+  display:flex;align-items:center;gap:6px;
+  font-family:var(--fh);font-size:11px;font-weight:800;
+  letter-spacing:.08em;text-transform:uppercase;
+  color:#0284c7;margin-bottom:10px;
+}
+.existing-reply-text{font-size:14px;color:var(--text2);line-height:1.7;margin:0 0 10px;}
+.reply-meta-date{
+  display:flex;align-items:center;gap:5px;
+  font-size:11px;color:var(--slate);
+}
+
+.reply-form{display:flex;flex-direction:column;gap:10px;}
+.reply-form-label{
+  font-family:var(--fh);font-size:11px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--slate);
+}
+.reply-textarea{
+  width:auto;min-height:100px;
+  background:var(--white);border:1.5px solid var(--border);
+  border-radius:10px;padding:12px 14px;
+  font-size:14px;color:var(--text);font-family:var(--fn);
+  resize:vertical;outline:none;transition:border-color .2s,box-shadow .2s;
+}
+.reply-textarea:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(37,99,235,.1);background:var(--white);
+}
+.reply-btn{
+  align-self:flex-start;
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--navy);color:#fff;border:none;border-radius:9px;
+  padding:11px 22px;font-family:var(--fh);font-size:12px;font-weight:700;
+  letter-spacing:.05em;text-transform:uppercase;
+  cursor:pointer;transition:all .2s;
+}
+.reply-btn:hover{background:var(--accent);transform:translateY(-1px);box-shadow:0 4px 14px rgba(37,99,235,.28);}
+
+/* ── Empty State ── */
+.empty-card{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:var(--r);box-shadow:var(--shadow);
+}
+.empty-inner{display:flex;flex-direction:column;align-items:center;padding:70px 20px;gap:12px;}
+.empty-icon-wrap{
+  width:72px;height:72px;border-radius:50%;
+  background:var(--bg);display:flex;align-items:center;justify-content:center;
+  border:2px solid var(--border);
+}
+.empty-title{font-family:var(--fh);font-size:18px;font-weight:800;color:var(--text);margin:0;}
+.empty-sub{font-size:13px;color:var(--slate);margin:0;text-align:center;}
+
+/* ── Responsive ── */
+@media(max-width:1200px){ .orders-wrapper{margin-left:20px;margin-right:20px;margin-top:90px;} }
+@media(max-width:768px){
+  .orders-wrapper{margin:100px 12px 100px;}
+  .page-header{flex-direction:column;align-items:flex-start;padding:18px;}
+  .header-title{font-size:20px;}
+  .issue-card-header{flex-direction:column;align-items:flex-start;}
+  .issue-meta-right{flex-wrap:wrap;}
+  .reply-btn{width:100%;justify-content:center;}
+}
+</style>
+
+{% endblock %}
