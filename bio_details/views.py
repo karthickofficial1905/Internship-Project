@@ -4114,9 +4114,15 @@ def customer_support_center(request):
         user=request.user
     ).select_related('product', 'order').prefetch_related('replies').order_by('-created_at')
     
+    # Paginate tickets with 8 per page
+    paginator = Paginator(user_tickets, 8)
+    page_number = request.GET.get('page')
+    tickets_page = paginator.get_page(page_number)
+    
     context = {
         'purchased_products': purchased_products,
-        'user_tickets': user_tickets
+        'user_tickets': user_tickets,
+        'tickets_page': tickets_page
     }
     
     return render(request, 'support.html', context)

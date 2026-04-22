@@ -36,6 +36,52 @@
       <span>Click on any product card below to raise a support ticket for that purchase.</span>
     </div>
 
+
+     <!-- ── PRODUCTS ── -->
+    <div class="sec-title-row" style="margin-bottom:14px;">
+      <div class="sec-title-bar"></div>
+      <h2 class="sec-title">Your Purchased Products</h2>
+    </div>
+
+    <div class="product-grid">
+      {% for order in purchased_products %}
+        {% for item in order.items.all %}
+        <div class="product-card">
+          <div class="product-card-top">
+            <div class="product-icon-wrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" stroke-width="1.8">
+                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                <line x1="12" y1="22.08" x2="12" y2="12"/>
+              </svg>
+            </div>
+            <span class="support-badge"  onclick="openSupportForm('{{ item.product_name }}', '{{ order.order_id }}')">Get Support</span>
+          </div>
+          <div class="product-card-body">
+            <div class="product-name">{{ item.product_name }}</div>
+            <div class="product-meta">
+              <span class="product-meta-item">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                {{ order.order_id }}
+              </span>
+              <span class="product-meta-item">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                {{ order.created_at|date:"M d, Y" }}
+              </span>
+            </div>
+          </div>
+          <div class="product-card-footer">
+            <span class="click-hint">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              Click to raise ticket
+            </span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+        {% endfor %}
+      {% endfor %}
+    </div>
+
     <!-- ── MY TICKETS ── -->
     {% if user_tickets %}
     <div class="sec-title-row" style="margin-bottom:14px;">
@@ -45,7 +91,7 @@
     </div>
 
     <div class="tickets-grid">
-      {% for ticket in user_tickets %}
+      {% for ticket in tickets_page %}
       <div class="ticket-card" onclick="openTicketDetail('{{ ticket.ticket_id }}')">
         <div class="ticket-card-top">
           <span class="ticket-id-chip">#{{ ticket.ticket_id }}</span>
@@ -93,52 +139,31 @@
       </div>
       {% endfor %}
     </div>
+    
+    {% if tickets_page.has_other_pages %}
+    <div class="pagination-wrap">
+      <div class="pagination">
+        {% if tickets_page.has_previous %}
+          <a href="?page={{ tickets_page.previous_page_number }}" class="page-btn">&laquo;</a>
+        {% endif %}
+        
+        {% for num in tickets_page.paginator.page_range %}
+          {% if num == tickets_page.number %}
+            <span class="page-btn active">{{ num }}</span>
+          {% else %}
+            <a href="?page={{ num }}" class="page-btn">{{ num }}</a>
+          {% endif %}
+        {% endfor %}
+        
+        {% if tickets_page.has_next %}
+          <a href="?page={{ tickets_page.next_page_number }}" class="page-btn">&raquo;</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
     {% endif %}
 
-    <!-- ── PRODUCTS ── -->
-    <div class="sec-title-row" style="margin-bottom:14px;">
-      <div class="sec-title-bar"></div>
-      <h2 class="sec-title">Your Purchased Products</h2>
-    </div>
-
-    <div class="product-grid">
-      {% for order in purchased_products %}
-        {% for item in order.items.all %}
-        <div class="product-card" onclick="openSupportForm('{{ item.product_name }}', '{{ order.order_id }}')">
-          <div class="product-card-top">
-            <div class="product-icon-wrap">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e3a8a" stroke-width="1.8">
-                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                <line x1="12" y1="22.08" x2="12" y2="12"/>
-              </svg>
-            </div>
-            <span class="support-badge">Get Support</span>
-          </div>
-          <div class="product-card-body">
-            <div class="product-name">{{ item.product_name }}</div>
-            <div class="product-meta">
-              <span class="product-meta-item">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-                {{ order.order_id }}
-              </span>
-              <span class="product-meta-item">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                {{ order.created_at|date:"M d, Y" }}
-              </span>
-            </div>
-          </div>
-          <div class="product-card-footer">
-            <span class="click-hint">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-              Click to raise ticket
-            </span>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
-        </div>
-        {% endfor %}
-      {% endfor %}
-    </div>
+   
 
     {% else %}
     <div class="empty-card">
@@ -505,10 +530,9 @@ function showToast(msg, type){
 .ts-complete{background:#f0fdf4;color:#166534;} .ts-complete .ts-dot{background:#059669;box-shadow:0 0 0 2px rgba(5,150,105,.2);}
 .ts-closed{background:#f8fafc;color:var(--slate);} .ts-closed .ts-dot{background:var(--slate);}
 
-.reply-section{margin-top:16px;padding-top:16px;border-top:1px solid var(--bdr);display:flex; flex-direction: column;}
+.reply-section{margin-top:16px;padding-top:20px;border-top:1px solid var(--bdr);display:flex; flex-direction: column;}
 .reply-section textarea{width:auto;border:1px solid var(--bdr);border-radius:8px;padding:10px;font-family:var(--fn);resize:vertical;}
-.reply-btn{background:var(--accent);color:white;border:none;padding:8px 16px;border-radius:6px;margin-top:8px;cursor:pointer;font-weight:300;width:25%;}
-
+.reply-btn{background:var(--accent);color:white;border:none;padding:8px 0px !important;border-radius:6px;margin-top:20px;cursor:pointer;font-weight:300;width:15%;font-size:14px;margin-left:auto;}
 .ticket-card-body{padding:14px 16px;flex:1;}
 .ticket-subject{font-family:var(--fh);font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px;line-height:1.3;}
 .ticket-meta-row{display:flex;flex-direction:column;gap:5px;}
@@ -523,10 +547,11 @@ function showToast(msg, type){
 /* ── PRODUCT GRID ── */
 .product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:20px;}
 .product-card{background:var(--white);border:1.5px solid var(--bdr);border-radius:var(--r);overflow:hidden;cursor:pointer;box-shadow:var(--sh);transition:all .22s;display:flex;flex-direction:column;}
-.product-card:hover{border-color:var(--accent);box-shadow:var(--sh2);transform:translateY(-3px);}
+.product-card:hover{border-color:var(--accent);box-shadow:var(--sh2);}
 .product-card-top{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;background:var(--bg2);border-bottom:1px solid var(--bdr);}
 .product-icon-wrap{width:44px;height:44px;border-radius:12px;background:var(--blue-lt);display:flex;align-items:center;justify-content:center;}
 .support-badge{font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:20px;background:#eff6ff;color:var(--accent);border:1px solid #bfdbfe;}
+.support-badge:hover{border-color:var(--accent);box-shadow:var(--sh2);}
 .product-card-body{padding:14px 18px;}
 .product-name{font-family:var(--fh);font-size:14px;font-weight:800;color:var(--text);margin-bottom:8px;line-height:1.3;}
 .product-meta{display:flex;flex-direction:column;gap:5px;}
@@ -554,7 +579,7 @@ function showToast(msg, type){
 .modal-close-btn{padding:2px 5px !important;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);border-radius:8px;align-items:center;justify-content:center;cursor:pointer;transition:background .2s;flex-shrink:0;}
 .modal-close-btn:hover{background:rgba(255,255,255,.26);}
 
-.modal-body{padding:20px 22px;display:flex;flex-direction:column;gap:15px;}
+.modal-body{padding:20px 22px 40px 22px;display:flex;flex-direction:column;gap:15px;}
 .modal-footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 22px;border-top:1px solid var(--bdr);background:var(--bg2);border-radius:0 0 20px 20px;}
 .modal-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 
@@ -639,6 +664,10 @@ function showToast(msg, type){
 @keyframes slideInT{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes barS{from{width:100%}to{width:0}}
 
+.pagination a{
+  font-size:16px;
+  padding:5px 12px !important;
+}
 /* Responsive */
 @media(max-width:1200px){.orders-wrapper{margin-left:20px;margin-right:20px;margin-top:90px;}}
 @media(max-width:768px){
