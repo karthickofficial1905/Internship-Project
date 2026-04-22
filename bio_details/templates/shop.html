@@ -165,10 +165,6 @@
             <label class="field-label" for="comment">Comment</label>
             <textarea name="comment" id="comment" rows="4" class="field-textarea" placeholder="Share your experience with this product..." required></textarea>
           </div>
-          <div class="field" style="margin-top:16px">
-            <label class="field-label" for="technical_comment">Technical Issue</label>
-            <textarea name="technical_comment" id="technical_comment" rows="4" class="field-textarea" placeholder="Share technical details about this product..."></textarea>
-          </div>
           <button type="submit" class="btn-primary mt-16">&#10003;&nbsp; Submit Review</button>
         </form>
       </div>
@@ -201,20 +197,6 @@
             </div>
           </div>
           <p class="review-comment-text">{{ user_review.comment }}</p>
-          {% if user_review.technical_comment %}
-          <div class="technical-comment-section" style="">
-            <strong>Technical Issue:</strong>
-            <p class="review-comment-text">{{ user_review.technical_comment }}</p>
-            
-            {% if user_review.technical_reply %}
-            <div class="admin-reply-section" style="margin-top: 12px; padding: 12px; background: #f0f9ff; border-left: 3px solid #0ea5e9; border-radius: 4px;">
-              <strong style="color: #0ea5e9;">Admin Reply:</strong>
-              <p class="review-comment-text" style="margin-top: 4px; color: #374151;">{{ user_review.technical_reply.reply_message }}</p>
-              <small style="color: #6b7280;">Replied on {{ user_review.technical_reply.created_at|date:"d M Y" }}</small>
-            </div>
-            {% endif %}
-          </div>
-          {% endif %}
 
           <form method="POST" action="{% url 'bio_details:add_review' product.product_id %}" class="edit-review-form" style="display:none;">
             {% csrf_token %}
@@ -231,10 +213,6 @@
             <div class="field" style="margin-top:16px">
               <label class="field-label">Comment</label>
               <textarea name="comment" rows="4" class="field-textarea" required>{{ user_review.comment }}</textarea>
-            </div>
-            <div class="field" style="margin-top:16px">
-              <label class="field-label">Technical Issue</label>
-              <textarea name="technical_comment" rows="4" class="field-textarea">{{ user_review.technical_comment }}</textarea>
             </div>
             <div class="btn-row mt-16">
               <button type="submit" class="btn-primary">&#10003;&nbsp; Update Review</button>
