@@ -329,22 +329,22 @@
       </div>
     {% endif %}
 
-      <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;width:100%;box-sizing:border-box;">
-        <div class="chart-card" style="flex:0 0 300px;min-width:300px;">
-          <div class="chart-header"><h3>Employee Status</h3><div class="chart-stats"><span class="total-items">Total: {{ total_employees }}</span></div></div>
-          <div class="chart-with-stats">
-            <div class="chart-container"><canvas id="employeeStatusChart" width="200" height="200"></canvas></div>
-            <div class="chart-status">
-              <div class="status-item active"><div class="status-dot"></div><div class="status-info"><div class="status-label">Active</div><div class="status-value">{{ active_employees|default:0 }}</div></div></div>
-              <div class="status-item inactive"><div class="status-dot"></div><div class="status-info"><div class="status-label">Inactive</div><div class="status-value">{{ inactive_employees|default:0 }}</div></div></div>
-            </div>
+    <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;width:100%;box-sizing:border-box;">
+      <div class="chart-card" style="flex:0 0 300px;min-width:300px;">
+        <div class="chart-header"><h3>Employee Status</h3><div class="chart-stats"><span class="total-items">Total: {{ total_employees }}</span></div></div>
+        <div class="chart-with-stats">
+          <div class="chart-container"><canvas id="employeeStatusChart" width="200" height="200"></canvas></div>
+          <div class="chart-status">
+            <div class="status-item active"><div class="status-dot"></div><div class="status-info"><div class="status-label">Active</div><div class="status-value">{{ active_employees|default:0 }}</div></div></div>
+            <div class="status-item inactive"><div class="status-dot"></div><div class="status-info"><div class="status-label">Inactive</div><div class="status-value">{{ inactive_employees|default:0 }}</div></div></div>
           </div>
         </div>
-        <div class="analytics-card" style="flex:1;min-width:0;">
-          <div class="analytics-header"><h3>Employee Status Monthly Trends</h3><div class="current-stats"><span class="stat-badge active">Active: {{ active_employees|default:0 }}</span><span class="stat-badge inactive">Inactive: {{ inactive_employees|default:0 }}</span></div></div>
-          <div class="chart-container-large"><canvas id="employeeMonthlyChart" width="400" height="200"></canvas></div>
-        </div>
       </div>
+      <div class="analytics-card" style="flex:1;min-width:0;">
+        <div class="analytics-header"><h3>Employee Status Monthly Trends</h3><div class="current-stats"><span class="stat-badge active">Active: {{ active_employees|default:0 }}</span><span class="stat-badge inactive">Inactive: {{ inactive_employees|default:0 }}</span></div></div>
+        <div class="chart-container-large"><canvas id="employeeMonthlyChart" width="400" height="200"></canvas></div>
+      </div>
+    </div>
   </div>
 
   {% if user.is_superuser %}
@@ -527,6 +527,61 @@
     </div>
   </div>
 
+  <!-- Support & Help Analytics -->
+  <div class="support-analytics" style="margin-top:30px;">
+    <div class="section-header" style="margin-bottom:20px;">
+      <h2 style="color:#1f2937;font-size:24px;font-weight:600;margin:0;">Support & Help Analytics</h2>
+      <p style="color:#6b7280;margin:5px 0 0 0;">Product report insights and support trends</p>
+    </div>
+    
+    <div class="pie" style="display:flex;gap:15px;margin-bottom:15px;width:100%;box-sizing:border-box;">
+      <div class="chart-card" style="flex:0 0 300px;min-width:300px;">
+        <div class="chart-header"><h3>Product Reports Distribution</h3><div class="chart-stats"><span class="total-items">Total: {{ total_product_reports|default:0 }}</span></div></div>
+        <div class="chart-with-stats">
+          <div class="chart-container"><canvas id="productReportsChart" width="200" height="200"></canvas></div>
+          <div class="chart-status" style="display: grid; grid-template-columns: repeat(3,1fr); gap: 10px;">
+            {% for report in top_reported_products %}
+            <div class="status-item">
+              <div class="status-dot" style="background:{{ report.color }}!important"></div>
+              <div class="status-info">
+                <div class="status-value">{{ report.report_count }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="analytics-card" style="flex:1;min-width:0;">
+        <div class="analytics-header"><h3>Monthly Support Trends</h3><div class="current-stats"><span class="stat-badge" style="background:#ef4444;">This Month: {{ current_month_reports|default:0 }}</span><span class="stat-badge" style="background:#6b7280;">Avg/Month: {{ avg_monthly_reports|default:0 }}</span></div></div>
+        <div class="chart-container-large"><canvas id="supportTrendsChart" width="400" height="200"></canvas></div>
+      </div>
+    </div>
+    
+    <!-- Top Issues Summary -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;">
+      <div style="background:white;border-radius:8px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,0.1);border-left:4px solid #ef4444;">
+        <div style="color:#ef4444;font-size:12px;font-weight:600;text-transform:uppercase;margin-bottom:5px;">Critical Issues</div>
+        <div style="color:#1f2937;font-size:24px;font-weight:700;">{{ critical_reports|default:0 }}</div>
+        <div style="color:#6b7280;font-size:12px;">Requires immediate attention</div>
+      </div>
+      <div style="background:white;border-radius:8px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,0.1);border-left:4px solid #f59e0b;">
+        <div style="color:#f59e0b;font-size:12px;font-weight:600;text-transform:uppercase;margin-bottom:5px;">Pending</div>
+        <div style="color:#1f2937;font-size:24px;font-weight:700;">{{ pending_reports|default:0 }}</div>
+        <div style="color:#6b7280;font-size:12px;">Awaiting response</div>
+      </div>
+      <div style="background:white;border-radius:8px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,0.1);border-left:4px solid #10b981;">
+        <div style="color:#10b981;font-size:12px;font-weight:600;text-transform:uppercase;margin-bottom:5px;">Resolved</div>
+        <div style="color:#1f2937;font-size:24px;font-weight:700;">{{ resolved_reports|default:0 }}</div>
+        <div style="color:#6b7280;font-size:12px;">Successfully closed</div>
+      </div>
+      <div style="background:white;border-radius:8px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,0.1);border-left:4px solid #3b82f6;">
+        <div style="color:#3b82f6;font-size:12px;font-weight:600;text-transform:uppercase;margin-bottom:5px;">Avg Response</div>
+        <div style="color:#1f2937;font-size:24px;font-weight:700;">{{ avg_response_time|default:"—" }}</div>
+        <div style="color:#6b7280;font-size:12px;">Hours to first response</div>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /dash-shell -->
 
 <script>
@@ -606,6 +661,74 @@
 
   /* ── All existing chart JS from original template below ── */
   document.addEventListener('DOMContentLoaded', function() {
+    
+    // Product Reports Pie Chart
+    const productReportsCtx = document.getElementById('productReportsChart');
+    if (productReportsCtx) {
+      new Chart(productReportsCtx, {
+        type: 'doughnut',
+        data: {
+          labels: {{ product_report_labels|safe }},
+          datasets: [{
+            data: {{ product_report_data|safe }},
+            backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'],
+            borderWidth: 0,
+            cutout: '60%'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return context.label + ': ' + context.parsed + ' reports';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // Support Trends Bar Chart
+    const supportTrendsCtx = document.getElementById('supportTrendsChart');
+    if (supportTrendsCtx) {
+      new Chart(supportTrendsCtx, {
+        type: 'bar',
+        data: {
+          labels: {{ monthly_labels|safe }},
+          datasets: [{
+            label: 'Reports',
+            data: {{ monthly_report_data|safe }},
+            backgroundColor: '#ef4444',
+            borderRadius: 4,
+            maxBarThickness: 40
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: { color: '#f3f4f6' },
+              ticks: { color: '#6b7280' }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { color: '#6b7280' }
+            }
+          }
+        }
+      });
+    }
+    
     const employeeCtx = document.getElementById('employeeChart');
     if (employeeCtx) {
       fetch('/get-employee-joins-data/')
@@ -809,7 +932,7 @@
   .chart-stats{display:flex;gap:10px}
   .total-items{font-size:12px;font-weight:600;color:var(--slate);background:var(--bg);padding:4px 10px;border-radius:20px}
   .chart-status{display:flex;gap:16px;flex:1}
-  .status-item{display:flex;align-items:center;gap:12px;width:100%;padding:10px;border-radius:8px;background:var(--bg)}
+  .status-item{display:flex;align-items:center;gap:12px;width:80%;padding:10px;border-radius:8px;background:var(--bg)}
   .status-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
   .status-item.active .status-dot{background:#10b981}.status-item.inactive .status-dot{background:#ef4444}
   .status-item.in-stock .status-dot{background:#1e3a8a}.status-item.out-stock .status-dot{background:#dc2626}

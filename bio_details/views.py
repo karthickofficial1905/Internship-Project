@@ -262,6 +262,93 @@ def dashboard(request):
         created_at__year=datetime.now().year
     ).count()
     
+    # Support Analytics Data
+    from .models import SupportTicket
+    
+    # Total support reports
+    total_product_reports = SupportTicket.objects.count()
+    
+    # Top reported products
+    top_reported_products = SupportTicket.objects.values('product__name').annotate(
+        report_count=Count('id')
+    ).order_by('-report_count')[:6]
+    
+    # Add colors for pie chart
+    colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899']
+    for i, product in enumerate(top_reported_products):
+        product['color'] = colors[i % len(colors)]
+        product['product_name'] = product['product__name']
+    
+    # Monthly support trends (last 6 months)
+    monthly_support_data = []
+    monthly_labels = []
+    for i in range(5, -1, -1):
+        month_date = datetime.now() - timedelta(days=30*i)
+        month_name = month_date.strftime('%b')
+        monthly_labels.append(month_name)
+        
+        month_reports = SupportTicket.objects.filter(
+            created_at__year=month_date.year,
+            created_at__month=month_date.month
+        ).count()
+        monthly_support_data.append(month_reports)
+    
+    # Support status counts
+    critical_reports = SupportTicket.objects.filter(priority='high').count()
+    pending_reports = SupportTicket.objects.filter(status='open').count()
+    resolved_reports = SupportTicket.objects.filter(status='complete').count()
+    
+    # Current month reports
+    current_month_reports = SupportTicket.objects.filter(
+        created_at__month=datetime.now().month,
+        created_at__year=datetime.now().year
+    ).count()
+    
+    # Calculate dynamic average response time
+    from django.db.models import Avg, F, ExpressionWrapper, DurationField
+    from django.utils import timezone as django_timezone
+    
+    # Get tickets that have at least one admin reply (last 30 days for better performance)
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+    tickets_with_replies = SupportTicket.objects.filter(
+        replies__is_admin_reply=True,
+        created_at__gte=thirty_days_ago
+    ).prefetch_related('replies').distinct()
+    
+    total_response_time = timedelta(0)
+    response_count = 0
+    
+    for ticket in tickets_with_replies:
+        # Get first admin reply
+        first_admin_reply = ticket.replies.filter(is_admin_reply=True).order_by('created_at').first()
+        if first_admin_reply:
+            # Calculate time difference between ticket creation and first admin reply
+            response_time = first_admin_reply.created_at - ticket.created_at
+            total_response_time += response_time
+            response_count += 1
+    
+    # Calculate average response time in hours
+    if response_count > 0:
+        avg_response_seconds = total_response_time.total_seconds() / response_count
+        avg_response_hours = avg_response_seconds / 3600  # Convert to hours
+        
+        if avg_response_hours < 1:
+            avg_response_time = f"{int(avg_response_seconds / 60)}m"  # Show in minutes if less than 1 hour
+        elif avg_response_hours < 24:
+            avg_response_time = f"{avg_response_hours:.1f}h"  # Show in hours if less than 24 hours
+        else:
+            avg_response_days = avg_response_hours / 24
+            avg_response_time = f"{avg_response_days:.1f}d"  # Show in days if more than 24 hours
+    else:
+        avg_response_time = "—"  # No data available
+    
+    # Average monthly reports
+    avg_monthly_reports = round(total_product_reports / 6) if total_product_reports > 0 else 0
+    
+    # Prepare data for JavaScript
+    product_report_labels = [p['product_name'] for p in top_reported_products]
+    product_report_data = [p['report_count'] for p in top_reported_products]
+    
     # Top rated products (with at least 1 review)
     top_rated_products = Product.objects.filter(
         reviews__isnull=False
@@ -420,6 +507,19 @@ def dashboard(request):
         'current_month_reviews': current_month_reviews,
         'top_rated_products': top_rated_products,
         'product_reviews': product_reviews,
+        # Support Analytics data
+        'total_product_reports': total_product_reports,
+        'top_reported_products': top_reported_products,
+        'product_report_labels': json.dumps(product_report_labels),
+        'product_report_data': json.dumps(product_report_data),
+        'monthly_labels': json.dumps(monthly_labels),
+        'monthly_report_data': json.dumps(monthly_support_data),
+        'critical_reports': critical_reports,
+        'pending_reports': pending_reports,
+        'resolved_reports': resolved_reports,
+        'current_month_reports': current_month_reports,
+        'avg_response_time': avg_response_time,
+        'avg_monthly_reports': avg_monthly_reports,
         # Attendance data
         'present_days': int(present_days),
         'leave_days': int(leave_days),
